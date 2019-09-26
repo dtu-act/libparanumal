@@ -1,3 +1,31 @@
+## libParanumal for acoustics master project at DTU
+Forked from https://github.com/paranumal/libparanumal
+
+### Installation
+
+#### Clone: libParanumal
+`git clone https://github.com/E-Stroem/libparanumal`
+
+#### OCCA dependency (currently OCCA 1.0 forked by Noel Chalmers) 
+`git clone https://github.com/noelchalmers/occa`
+
+##### Build OCCA 
+`cd occa`    
+export OCCA_DIR=\`pwd\`  
+`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib`    
+`make -j`    
+`cd ../  `  
+OCCA must be build on a system with GPU access for GPU support.
+
+
+### Running the code
+See RUN.bsub for CPU. (Build occa on CPU)
+See RUNGPU.bsub for GPU. (Build Occa on GPU)
+
+
+Anders Melander - s144277@student.dtu.dk
+Emil Strøm - s144259@student.dtu.dk
+---
 ## libParanumal
 An experimental set of finite element flow solvers for heterogeneous (GPU/CPU) systems. The initial development of libParanumal was performed by the [Parallel Numerical Algorithms Group at Virginia Tech](http://paranumal.com).   
 
