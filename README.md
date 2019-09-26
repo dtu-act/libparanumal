@@ -23,8 +23,10 @@ See RUN.bsub for CPU. (Build occa on CPU)
 See RUNGPU.bsub for GPU. (Build Occa on GPU)
 
 
-Anders Melander - s144277@student.dtu.dk
+Anders Melander - s144277@student.dtu.dk 
+
 Emil Strøm - s144259@student.dtu.dk
+
 ---
 ## libParanumal
 An experimental set of finite element flow solvers for heterogeneous (GPU/CPU) systems. The initial development of libParanumal was performed by the [Parallel Numerical Algorithms Group at Virginia Tech](http://paranumal.com).   
