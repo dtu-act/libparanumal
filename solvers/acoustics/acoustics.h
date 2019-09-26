@@ -48,6 +48,12 @@ typedef struct{
   dlong Nblock;
 
   dfloat *q, *rhsq, *resq;
+  //---------RECEIVER---------
+  dfloat *qRecv; // Saves pres in receiver element in each timestep
+  dlong qRecvCounter; // To keep track of which timestep we are on
+  dlong recvElement; // Index to element where the receiver is located
+  dfloat *recvXYZ; // XYZ coordinates of receiver
+  //---------RECEIVER---------
 
   dfloat *Vort;
 
@@ -63,11 +69,13 @@ typedef struct{
   occa::kernel rkStageKernel;
   occa::kernel rkUpdateKernel;
   occa::kernel rkErrorEstimateKernel;
+  occa::kernel receiverKernel;
 
   occa::memory o_q;
   occa::memory o_rhsq;
   occa::memory o_resq;
   occa::memory o_saveq;
+  occa::memory o_qRecv;
   
   occa::memory o_rkq, o_rkrhsq, o_rkerr;
   occa::memory o_errtmp;
@@ -114,6 +122,10 @@ void acousticsDopriStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
 void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOoptions, const dfloat time);
 
 dfloat acousticsDopriEstimate(acoustics_t *acoustics);
+
+void acousticsReceiverInterpolation(acoustics_t *acoustics);
+
+void acousticsFindReceiverElement(acoustics_t *acoustics);
 
 #define TRIANGLES 3
 #define QUADRILATERALS 4

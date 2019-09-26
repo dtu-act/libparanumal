@@ -53,6 +53,7 @@ mesh3D *meshSetupTet3D(char *filename, int N){
   meshGeometricFactorsTet3D(mesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
+  // [AE] Halo nodes are u^+ on other procs
   meshHaloSetup(mesh);
   
   // connect face nodes (find trace indices)

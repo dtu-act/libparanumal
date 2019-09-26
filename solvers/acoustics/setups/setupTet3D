@@ -2,8 +2,10 @@
 1.0
 
 [MESH FILE]
-../../meshes/cubeTetH0125.msh
-
+#../../meshes/cubeTetH05.msh
+#../../meshes/CubeTet_libP_EA_10.msh
+#../../meshes/CubeTet_libP_EA_24.msh
+../../meshes/CubeTet_libP_EA_17.msh
 [MESH DIMENSION]
 3
 
@@ -11,10 +13,11 @@
 6
 
 [POLYNOMIAL DEGREE]
-6
+3
 
 [THREAD MODEL]
 CUDA
+
 
 [PLATFORM NUMBER]
 0
@@ -65,6 +68,15 @@ NODAL
 [FINAL TIME]
 .01
 
+[RECEIVER X]
+0.420
+
+[RECEIVER Y]
+0.69
+
+[RECEIVER Z]
+0.42069
+
 [OUTPUT INTERVAL]
 .14
 
@@ -72,7 +84,7 @@ NODAL
 1
 
 [CFL]
-0.1
+0.5
 
 [RESTART FROM FILE]
 0

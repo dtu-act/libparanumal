@@ -1,0 +1,23 @@
+#!/bin/bash
+#BSUB -n 1
+#BSUB -R "span[block=1]"
+#BSUB -W 1:00
+#BSUB -R "select[model == XeonGold6126]"
+#BSUB -R "rusage[mem=4GB]"
+#BSUB -J LP_1
+
+# Load modules
+module purge
+module load mpi/3.1.3-gcc-8.2.0
+
+
+export OCCA_DIR=/zhome/b1/2/97982/libparanumal/occa
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
+
+# Build project
+#make clean
+#make -j
+
+#mpirun -n 24 ./main Meshes/Box_01_ESF0-5.neu
+#mpiexec -n 1 ./acousticsMain setups/setupTet3D
+./ellipticMain setups/setupQuad2D.rc

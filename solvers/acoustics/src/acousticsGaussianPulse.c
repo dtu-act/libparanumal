@@ -26,11 +26,28 @@ SOFTWARE.
 
 #include <math.h>
 #include "mesh.h"
-
+/*
 void acousticsGaussianPulse(dfloat x, dfloat y, dfloat z, dfloat t,
 		      dfloat *r, dfloat *u, dfloat *v, dfloat *w){
 
   *r = 1 + exp(-3*(x*x+y*y+z*z));
+  *u = 0;
+  *v = 0;
+  *w = 0;
+
+}
+*/
+
+// [AE] - Our version
+// TODO: Allow source to be moved
+void acousticsGaussianPulse(dfloat x, dfloat y, dfloat z, dfloat t,
+		      dfloat *r, dfloat *u, dfloat *v, dfloat *w){
+  dfloat sloc = 0.5;
+  dfloat sxyzSQ = 0.1*0.1;
+  dfloat temp = (x - sloc)*(x - sloc) + (y - sloc)*(y - sloc) + (z - sloc)*(z - sloc);
+  temp /= sxyzSQ;
+
+  *r = exp(-temp);
   *u = 0;
   *v = 0;
   *w = 0;

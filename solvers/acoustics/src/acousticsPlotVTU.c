@@ -28,7 +28,6 @@ SOFTWARE.
 
 // interpolate data to plot nodes and save to file (one per process
 void acousticsPlotVTU(acoustics_t *acoustics, char *fileName){
-
   mesh_t *mesh = acoustics->mesh;
 
   FILE *fp;
@@ -40,7 +39,6 @@ void acousticsPlotVTU(acoustics_t *acoustics, char *fileName){
   fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", 
           mesh->Nelements*mesh->plotNp, 
           mesh->Nelements*mesh->plotNelements);
-  
   // write out nodes
   fprintf(fp, "      <Points>\n");
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");

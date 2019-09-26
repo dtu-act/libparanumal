@@ -41,6 +41,7 @@ $(HDRDIR)/mesh3D.h
 # list of objects to be compiled
 OBJS    = \
 ./src/acousticsEstimate.o \
+./src/acousticsReceiver.o \
 ./src/acousticsStep.o \
 ./src/acousticsMain.o \
 ./src/acousticsError.o \

@@ -167,5 +167,40 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
 		      acoustics->o_rhsq, 
 		      acoustics->o_resq, 
 		      acoustics->o_q);
+
   }
+
+  //---------RECEIVER---------
+  dlong qRecvOffset = acoustics->qRecvCounter*mesh->Np; // Offset writing location by # time steps taken*Np
+  dlong qOffset = acoustics->recvElement*mesh->Np*acoustics->Nfields; // Offset in q to get the correct element pres
+  /* acoustics->receiverKernel(mesh->Np, 
+        qOffset, 
+        qRecvOffset, 
+        acoustics->o_q, 
+        acoustics->o_qRecv);
+  */
+
+  // If reciver element is on this core, copy to o_qRecv
+  if(acoustics->recvElement != -1){
+    acoustics->o_q.copyTo(acoustics->o_qRecv,
+          mesh->Np*sizeof(dfloat), 
+          qRecvOffset*sizeof(dfloat),
+          qOffset*sizeof(dfloat));
+    acoustics->qRecvCounter++;
+  }
+
+  #if 0 
+  // Old code that copied from device to host every time step.
+  // copy data back to host 
+  acoustics->o_q.copyTo(acoustics->q);
+  // Offset in qRecv by Np*counter
+  size_t qRecvOffset = acoustics->qRecvCounter*mesh->Np; // Offset writing location by # time steps taken*Np
+  size_t qOffset = acoustics->recvElement*mesh->Np*acoustics->Nfields; // Offset in q to get the correct element pres
+
+  for(int n=0;n<mesh->Np;++n){
+    acoustics->qRecv[qRecvOffset+n] = acoustics->q[qOffset+n]; // See in acousticsReport where we print how to find a specific element. Currently just saves the 0th element.
+  }
+  acoustics->qRecvCounter++;
+  #endif
+  //---------RECEIVER---------
 }

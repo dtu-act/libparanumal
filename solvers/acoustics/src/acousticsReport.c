@@ -33,6 +33,67 @@ void acousticsReport(acoustics_t *acoustics, dfloat time, setupAide &newOptions)
   // copy data back to host
   acoustics->o_q.copyTo(acoustics->q);
 
+// Print output to txt files
+#if 1
+  int nprocs, procid;
+  MPI_Comm_rank(MPI_COMM_WORLD,&procid);
+  MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
+
+  hlong globalNelements;
+  MPI_Reduce(&mesh->Nelements, &globalNelements, 1, MPI_HLONG, MPI_SUM, 0, mesh->comm);
+  
+  FILE * xFP, * yFP, * zFP, * pFP;
+  char xFN[50] = "data/x.txt";
+  char yFN[50] = "data/y.txt";
+  char zFN[50] = "data/z.txt";
+  char pFN[50] = "data/p.txt";  
+  for(int i = 0; i < nprocs; i++){
+    if(procid == i){
+      if(procid == 0){
+          xFP = fopen(xFN, "w");
+          yFP = fopen(yFN, "w");
+          zFP = fopen(zFN, "w");
+          pFP = fopen(pFN, "w");
+
+          // Write Np and Nelements as first line in x output
+          fprintf(xFP, "%d %d\n",mesh->Np, globalNelements);
+      } else {
+          xFP = fopen(xFN, "a");
+          yFP = fopen(yFN, "a");
+          zFP = fopen(zFN, "a");
+          pFP = fopen(pFN, "a");
+      }
+      for(dlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      dfloat xEA = mesh->x[n + mesh->Np*e];
+      dfloat yEA = mesh->y[n + mesh->Np*e];
+      dfloat zEA = mesh->z[n + mesh->Np*e];
+
+      dlong qbaseEA = e*mesh->Np*mesh->Nfields + n;
+
+      dfloat rEA = acoustics->q[qbaseEA+0*mesh->Np];
+
+      fprintf(xFP, "%.15lf ",xEA);
+      fprintf(yFP, "%.15lf ",yEA);
+      fprintf(zFP, "%.15lf ",zEA);
+      fprintf(pFP, "%.15lf ",rEA);
+        }
+        fprintf(xFP, "\n");
+        fprintf(yFP, "\n");
+        fprintf(zFP, "\n");
+        fprintf(pFP, "\n");
+      }
+
+      fclose(xFP);
+      fclose(yFP);
+      fclose(zFP);
+      fclose(pFP);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+#endif
+
+
   // do error stuff on host
   acousticsError(acoustics, time);
 

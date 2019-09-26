@@ -52,6 +52,35 @@ void upwind(const dfloat nx,
   
 }
 
+void central(const dfloat nx,
+	    const dfloat ny,
+	    const dfloat nz,
+	    const dfloat rM,
+	    const dfloat uM,
+	    const dfloat vM,
+	    const dfloat wM,
+	    const dfloat rP,
+	    const dfloat uP,
+	    const dfloat vP,
+	    const dfloat wP,
+	    dfloat *rflux,
+	    dfloat *uflux,
+	    dfloat *vflux,
+	    dfloat *wflux){
+
+
+
+  dfloat ndotUM = nx*uM + ny*vM + nz*wM;
+  dfloat ndotUP = nx*uP + ny*vP + nz*wP;
+  *rflux = p_half * (ndotUP - ndotUM);
+  *uflux  = p_half*nx*(rP-rM);
+  *vflux  = p_half*ny*(rP-rM);
+  *wflux  = p_half*nz*(rP-rM);
+
+}
+
+
+
 // batch process elements
 @kernel void acousticsSurfaceTet3D(const dlong Nelements,
 				  @restrict const  dfloat *  sgeo,
@@ -70,7 +99,7 @@ void upwind(const dfloat nx,
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     
     // @shared storage for flux terms
-    @shared dfloat s_rflux [p_NblockS][p_NfacesNfp];
+    @shared dfloat s_rflux[p_NblockS][p_NfacesNfp];
     @shared dfloat s_uflux[p_NblockS][p_NfacesNfp];
     @shared dfloat s_vflux[p_NblockS][p_NfacesNfp];
     @shared dfloat s_wflux[p_NblockS][p_NfacesNfp];
@@ -124,10 +153,16 @@ void upwind(const dfloat nx,
             }
 #else
 	    if(idP==idM){ // breaks for parallel
-	      dfloat ndotU = nx*uM+ny*vM+nz*wM;
-	      uP -= 2*ndotU*nx;
-	      vP -= 2*ndotU*ny;
-	      wP -= 2*ndotU*nz;
+	      //dfloat ndotU = nx*uM+ny*vM+nz*wM;
+	      //uP -= 2*ndotU*nx;
+	      //vP -= 2*ndotU*ny;
+	      //wP -= 2*ndotU*nz;
+
+
+        // [EA] - CHANGED HERE FOR CENTRAL FLUX
+          uP = -uP;
+          vP = -vP;
+          wP = -wP;
 	    }
 #endif
             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
@@ -135,7 +170,10 @@ void upwind(const dfloat nx,
 
             dfloat rflux, uflux, vflux, wflux;
             
-            upwind(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux);
+            // [EA] - CHANGED HERE FOR CENTRAL FLUX
+            //upwind(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux);
+            central(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux);
+
 
             s_rflux[es][n]  = sc*(-rflux );
             s_uflux[es][n] = sc*(-uflux);
@@ -162,17 +200,23 @@ void upwind(const dfloat nx,
             #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
                 const dfloat L = LIFTT[n+m*p_Np];
-                Lrflux  += L*s_rflux[es][m];
+                Lrflux += L*s_rflux[es][m];
                 Luflux += L*s_uflux[es][m];
                 Lvflux += L*s_vflux[es][m];
-		Lwflux += L*s_wflux[es][m];
+		            Lwflux += L*s_wflux[es][m];
               }
             
             const dlong base = e*p_Np*p_Nfields+n;
             rhsq[base+0*p_Np] += Lrflux;
             rhsq[base+1*p_Np] += Luflux;
             rhsq[base+2*p_Np] += Lvflux;
-	    rhsq[base+3*p_Np] += Lwflux;
+	          rhsq[base+3*p_Np] += Lwflux;
+            
+            //[EA] - Scaled to our equations
+            rhsq[base+0*p_Np] *= 1.2*343.0*343.0;
+            rhsq[base+1*p_Np] /= 1.2;
+            rhsq[base+2*p_Np] /= 1.2;
+	          rhsq[base+3*p_Np] /= 1.2;
           }
         }
       }

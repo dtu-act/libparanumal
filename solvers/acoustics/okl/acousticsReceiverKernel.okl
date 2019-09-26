@@ -1,0 +1,14 @@
+
+@kernel void acousticsReceiverKernel(const dlong Np,
+						  const dlong qOffset, 
+						  const dlong qRecvOffset,
+							@restrict const dfloat *q,
+							@restrict dfloat *qRecv){
+	for(dlong i = 0; i < 1; i++;@outer){
+		for(dlong n=0;n<Np;++n;@inner){
+			qRecv[qRecvOffset+n] = q[qOffset+n];
+		}
+	}
+}
+
+

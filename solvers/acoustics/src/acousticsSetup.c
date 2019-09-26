@@ -129,6 +129,106 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     }
   }
 
+  /* DEBUG INITIAL CONDITIONS */
+  #if 0
+  FILE * xFP, * yFP, * zFP, * pFP;
+  char xFN[50] = "data/x.txt";
+  char yFN[50] = "data/y.txt";
+  char zFN[50] = "data/z.txt";
+  char pFN[50] = "data/p.txt"; 
+  xFP = fopen(xFN, "w");
+  yFP = fopen(yFN, "w");
+  zFP = fopen(zFN, "w");
+  pFP = fopen(pFN, "w"); 
+
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      dfloat xEA = mesh->x[n + mesh->Np*e];
+      dfloat yEA = mesh->y[n + mesh->Np*e];
+      dfloat zEA = mesh->z[n + mesh->Np*e];
+
+      dlong qbaseEA = e*mesh->Np*mesh->Nfields + n;
+
+      dfloat rEA = acoustics->q[qbaseEA+0*mesh->Np];
+
+      fprintf(xFP, "%.15lf ",xEA);
+      fprintf(yFP, "%.15lf ",yEA);
+      fprintf(zFP, "%.15lf ",zEA);
+      fprintf(pFP, "%.15lf ",rEA);
+
+    }
+    fprintf(xFP, "\n");
+    fprintf(yFP, "\n");
+    fprintf(zFP, "\n");
+    fprintf(pFP, "\n");
+  }
+
+  fclose(xFP);
+  fclose(yFP);
+  fclose(zFP);
+  fclose(pFP);
+
+  #endif
+// DEBUG INITIAL: Print on multiple cores, same as bove
+#if 0
+
+  int nprocs, procid;
+  
+  MPI_Comm_rank(MPI_COMM_WORLD,&procid);
+  MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
+  
+  FILE * xFP, * yFP, * zFP, * pFP;
+  char xFN[50] = "data/x.txt";
+  char yFN[50] = "data/y.txt";
+  char zFN[50] = "data/z.txt";
+  char pFN[50] = "data/p.txt";  
+  for(int i = 0; i < nprocs; i++){
+    if(procid == i){
+      if(procid == 0){
+        printf("nprocs: %d\n",nprocs);
+          xFP = fopen(xFN, "w");
+          yFP = fopen(yFN, "w");
+          zFP = fopen(zFN, "w");
+          pFP = fopen(pFN, "w");
+      } else {
+          xFP = fopen(xFN, "a");
+          yFP = fopen(yFN, "a");
+          zFP = fopen(zFN, "a");
+          pFP = fopen(pFN, "a");
+      }
+      for(dlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      dfloat xEA = mesh->x[n + mesh->Np*e];
+      dfloat yEA = mesh->y[n + mesh->Np*e];
+      dfloat zEA = mesh->z[n + mesh->Np*e];
+
+      dlong qbaseEA = e*mesh->Np*mesh->Nfields + n;
+
+      dfloat rEA = acoustics->q[qbaseEA+0*mesh->Np];
+
+      fprintf(xFP, "%.15lf ",xEA);
+      fprintf(yFP, "%.15lf ",yEA);
+      fprintf(zFP, "%.15lf ",zEA);
+      fprintf(pFP, "%.15lf ",rEA);
+        }
+        fprintf(xFP, "\n");
+        fprintf(yFP, "\n");
+        fprintf(zFP, "\n");
+        fprintf(pFP, "\n");
+      }
+
+      fclose(xFP);
+      fclose(yFP);
+      fclose(zFP);
+      fclose(pFP);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+
+#endif
+
+
+
   // set penalty parameter
   mesh->Lambda2 = 0.5;
   
@@ -148,14 +248,17 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       
       dfloat hest = .5/(sJ*invJ);
 
+
       hmin = mymin(hmin, hest);
     }
   }
 
   // need to change cfl and defn of dt
-  dfloat cfl = 0.5; // depends on the stability region size
+  //dfloat cfl = 0.5; // depends on the stability region size
+  dfloat cfl;
+  newOptions.getArgs("CFL", cfl);
 
-  dfloat dtAdv  = hmin/((mesh->N+1.)*(mesh->N+1.));
+  dfloat dtAdv  = hmin/(343.0*(mesh->N+1.)*(mesh->N+1.));
   dfloat dt = cfl*dtAdv;
   
   // MPI_Allreduce to get global minimum dt
@@ -171,6 +274,24 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   if (mesh->rank ==0) printf("dtAdv = %lg (before cfl), dt = %lg\n",
    dtAdv, dt);
+
+
+  //---------RECEIVER---------
+  //acoustics->qRecv = (dfloat*) calloc(mesh->Np*mesh->NtimeSteps, sizeof(dfloat)); // Removed here, to only allocate if receiver is on this core
+  acoustics->qRecvCounter = 0;
+  //printf("ReciverArray length: %d\n",mesh->Np*mesh->NtimeSteps);
+
+  acoustics->recvElement = -1;
+  acoustics->recvXYZ = (dfloat*) calloc(3, sizeof(dfloat));
+
+  newOptions.getArgs("RECEIVER X", acoustics->recvXYZ[0]);
+  newOptions.getArgs("RECEIVER Y", acoustics->recvXYZ[1]);
+  newOptions.getArgs("RECEIVER Z", acoustics->recvXYZ[2]);
+  //---------RECEIVER---------
+
+
+
+
 
   acoustics->frame = 0;
   // errorStep
@@ -202,6 +323,10 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   
   acoustics->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), acoustics->rhsq);
+
+  // [EA] Allocate space on device for qRecv
+  acoustics->o_qRecv =
+    mesh->device.malloc(mesh->Np*mesh->NtimeSteps*sizeof(dfloat), acoustics->qRecv);
 
   cout << "TIME INTEGRATOR (" << newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
   
@@ -331,6 +456,12 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 				       "acousticsErrorEstimate",
 				       kernelInfo);
 
+  // [EA] Copy from q to qRecv (Currently not in use, changed to using copyTo instead)
+  acoustics->receiverKernel =
+  mesh->device.buildKernel(DACOUSTICS "/okl/acousticsReceiverKernel.okl",
+              "acousticsReceiverKernel",
+              kernelInfo);
+              
   // fix this later
   mesh->haloExtractKernel =
     mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl",

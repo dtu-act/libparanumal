@@ -30,14 +30,12 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 
   mesh_t *mesh = acoustics->mesh;
 
-  //  acousticsReport(acoustics, 0, newOptions);
+  //acousticsReport(acoustics, 0, newOptions);
 
-  occa::timer timer;
+  //occa::timer timer; // OCCA TIMER CAUSES CRASHES
   
-  timer.initTimer(mesh->device);
-
-  timer.tic("Run");
-  
+  //timer.initTimer(mesh->device);
+  //timer.tic("Run");
   if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")) {
     
     // hard code this for the moment
@@ -141,8 +139,7 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
     
     mesh->device.finish();
     
-    double elapsed  = timer.toc("Run");
-
+    double elapsed  = 1.0;//timer.toc("Run");
     printf("run took %lg seconds for %d accepted steps and %d total steps\n", elapsed, tstep, allStep);
     
   } else if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")) {
@@ -153,6 +150,10 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 
       acousticsLserkStep(acoustics, newOptions, time);
 
+      if(tstep % 100 == 0){
+        printf("step: %d, out of: %d\n",tstep, mesh->NtimeSteps);
+      }
+
 #if 0
       if(((tstep+1)%mesh->errorStep)==0){
 	time += mesh->dt;
@@ -161,5 +162,9 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 #endif
     }
   }
-  
+  // [EA] Copy qRecv from device to host
+  if(acoustics->recvElement != -1){
+    acoustics->o_qRecv.copyTo(acoustics->qRecv);
+  }
+  acousticsReport(acoustics, mesh->finalTime, newOptions);
 }
