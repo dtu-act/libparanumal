@@ -7,7 +7,7 @@ Forked from https://github.com/paranumal/libparanumal
 `git clone https://github.com/E-Stroem/libparanumal`
 
 #### OCCA dependency (currently OCCA 1.0 forked by Noel Chalmers) 
-`cd libparanumal/`
+`cd libparanumal/`  
 `git clone https://github.com/noelchalmers/occa`
 
 ##### Build OCCA 
@@ -24,8 +24,7 @@ See RUN.bsub for CPU. (Build occa on CPU)
 See RUNGPU.bsub for GPU. (Build Occa on GPU)
 
 
-Anders Melander - s144277@student.dtu.dk 
-
+Anders Melander - s144277@student.dtu.dk  
 Emil Strøm - s144259@student.dtu.dk
 
 ---
