@@ -7,6 +7,7 @@ Forked from https://github.com/paranumal/libparanumal
 `git clone https://github.com/E-Stroem/libparanumal`
 
 #### OCCA dependency (currently OCCA 1.0 forked by Noel Chalmers) 
+`cd libparanumal/`
 `git clone https://github.com/noelchalmers/occa`
 
 ##### Build OCCA 
