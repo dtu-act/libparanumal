@@ -114,7 +114,6 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(int rk=0;rk<mesh->Nrk;++rk){
-      
     dfloat currentTime = time + mesh->rkc[rk]*mesh->dt;
       
     // extract q halo on DEVICE
@@ -129,13 +128,11 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
       // start halo exchange
       meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
     }
-
     acoustics->volumeKernel(mesh->Nelements, 
 		      mesh->o_vgeo, 
 		      mesh->o_Dmatrices,
 		      acoustics->o_q, 
 		      acoustics->o_rhsq);
-    
     
     // wait for q halo data to arrive
     if(mesh->totalHaloPairs>0){
@@ -145,7 +142,6 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
       size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
       acoustics->o_q.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
     }
-
     acoustics->surfaceKernel(mesh->Nelements, 
 		       mesh->o_sgeo, 
 		       mesh->o_LIFTT, 
@@ -157,8 +153,20 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
 		       mesh->o_y,
 		       mesh->o_z, 
 		       acoustics->o_q, 
-		       acoustics->o_rhsq);
-        
+		       acoustics->o_rhsq,
+           acoustics->o_acc,
+           acoustics->o_rhsacc,
+           mesh->o_mapAcc,
+           acoustics->o_LRA,
+           acoustics->o_LRB,
+           acoustics->o_LRC,
+           acoustics->o_LRLambda,
+           acoustics->o_LRAlpha,
+           acoustics->o_LRBeta,
+           acoustics->LRYinf,
+           acoustics->Npoles,
+           acoustics->NRealPoles,
+           acoustics->NImagPoles);
     // update solution using Runge-Kutta
     acoustics->updateKernel(mesh->Nelements, 
 		      mesh->dt, 
@@ -167,6 +175,14 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
 		      acoustics->o_rhsq, 
 		      acoustics->o_resq, 
 		      acoustics->o_q);
+    acoustics->updateKernelLR(mesh->NboundaryPointsLocal,
+          acoustics->Npoles,
+		      mesh->dt,  
+		      mesh->rka[rk],
+		      mesh->rkb[rk],
+		      acoustics->o_rhsacc,
+		      acoustics->o_resacc,
+		      acoustics->o_acc);
 
   }
 

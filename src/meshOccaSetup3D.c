@@ -615,6 +615,11 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
                         mesh->vmapP);
 
+  // [EA] mapAcc to device
+  mesh->o_mapAcc =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
+                        mesh->mapAcc);
+
   mesh->o_EToB =
     mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int),
                         mesh->EToB);
@@ -745,6 +750,18 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
   kernelInfo["defines/" "p_JID"]= JID;
   kernelInfo["defines/" "p_JWID"]= JWID;
   kernelInfo["defines/" "p_IJWID"]= IJWID;
+
+  // [EA] Kernel defines
+  double rho,c,Z_IND;
+  newOptions.getArgs("RHO", rho);
+  newOptions.getArgs("C", c);
+  newOptions.getArgs("Z_IND", Z_IND);
+
+  kernelInfo["defines/" "p_rho"]= rho;
+  kernelInfo["defines/" "p_c"]= c;
+  kernelInfo["defines/" "p_AcConstant"]= rho*c*c;
+  kernelInfo["defines/" "p_Z_IND"]= Z_IND;
+
 }
 
 

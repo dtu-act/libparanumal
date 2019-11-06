@@ -10,15 +10,7 @@ dlong factorial(dlong x){
 }
 
 
-
-
-
 void acousticsReceiverInterpolation(acoustics_t *acoustics){
-
-  // [TODO]: ADD CHECK IF RECEIVER IS ON THIS CORE!
-
-
-	// Currently assume that receiver is in element 0.
 
   // mesh->invVB row storage.
   // mesh->EToV is saved as elementNum*nVertices + 0,1,2,3

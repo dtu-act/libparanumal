@@ -72,6 +72,8 @@ void meshConnectBoundary(mesh_t *mesh){
       if(mesh->EToE[e*mesh->Nfaces+f]==-1) // || mesh->EToE[e*mesh->Nfaces+f]==e)
         ++bcnt;
 
+  // [EA] record number of local bcfaces
+  mesh->NboundaryFacesLocal = bcnt;
 #if 0
   printf("Nbf = %d\n", mesh->NboundaryFaces);
   printf("Nfv = %d\n", mesh->NfaceVertices);
@@ -92,7 +94,6 @@ void meshConnectBoundary(mesh_t *mesh){
           dlong vid = e*mesh->Nverts + mesh->faceVertices[f*mesh->NfaceVertices+n];
           boundaryFaces[bcnt].v[n] = mesh->EToV[vid];
         }
-      
         mysort(boundaryFaces[bcnt].v,mesh->NfaceVertices, "descending");
 
         boundaryFaces[bcnt].NfaceVertices = mesh->NfaceVertices;
@@ -107,9 +108,9 @@ void meshConnectBoundary(mesh_t *mesh){
   /* add boundary info */
   for(hlong b=0;b<mesh->NboundaryFaces;++b){
     
-    for(int n=0;n<mesh->NfaceVertices;++n)
+    for(int n=0;n<mesh->NfaceVertices;++n){
       boundaryFaces[bcnt].v[n] = mesh->boundaryInfo[b*(mesh->NfaceVertices+1)+n+1];
-    
+    }
     mysort(boundaryFaces[bcnt].v,mesh->NfaceVertices, "descending");
 
     boundaryFaces[bcnt].NfaceVertices = mesh->NfaceVertices;
@@ -135,16 +136,15 @@ void meshConnectBoundary(mesh_t *mesh){
   
   /* sort boundaryFaces by their vertex number pairs */
   qsort(boundaryFaces, bcnt, sizeof(boundaryFace_t), compareBoundaryFaces);
-
   /* scan through sorted face lists looking for element-boundary matches */
   mesh->EToB = (int*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(int));
   for(dlong n=0;n<mesh->Nelements*mesh->Nfaces;++n) mesh->EToB[n] = -1;
+
 
   for(hlong cnt=0;cnt<bcnt-1;++cnt){
     if(!compareBoundaryFaces(boundaryFaces+cnt, boundaryFaces+cnt+1)){
       dlong e = mymax(boundaryFaces[cnt].element, boundaryFaces[cnt+1].element);
       int f   = mymax(boundaryFaces[cnt].face,    boundaryFaces[cnt+1].face);
-
       mesh->EToB[e*mesh->Nfaces+f] =
         mymax(boundaryFaces[cnt].bctype, boundaryFaces[cnt+1].bctype);
     }

@@ -143,14 +143,13 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
     printf("run took %lg seconds for %d accepted steps and %d total steps\n", elapsed, tstep, allStep);
     
   } else if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")) {
-
     for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
       dfloat time = tstep*mesh->dt;
 
       acousticsLserkStep(acoustics, newOptions, time);
 
-      if(tstep % 100 == 0){
+      if(tstep % 500 == 0){
         printf("step: %d, out of: %d\n",tstep, mesh->NtimeSteps);
       }
 

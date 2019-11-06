@@ -5,7 +5,13 @@
 #../../meshes/cubeTetH05.msh
 #../../meshes/CubeTet_libP_EA_10.msh
 #../../meshes/CubeTet_libP_EA_24.msh
-../../meshes/CubeTet_libP_EA_17.msh
+#../../meshes/CubeTet_libP_EA_17.msh
+#../../meshes/cubeTet_01_PerfRefl.msh
+#../../meshes/cubeTet_01_FreqIndep.msh
+#../../meshes/cubeTet_01_LocalReac.msh
+../../meshes/cubeTet_01_1LR5FI.msh
+#../../meshes/cubeTet_01_ExtendReac.msh
+
 [MESH DIMENSION]
 3
 
@@ -13,7 +19,7 @@
 6
 
 [POLYNOMIAL DEGREE]
-3
+4
 
 [THREAD MODEL]
 CUDA
@@ -67,15 +73,10 @@ NODAL
 
 [FINAL TIME]
 .01
+#0.00001
 
-[RECEIVER X]
-0.420
-
-[RECEIVER Y]
-0.69
-
-[RECEIVER Z]
-0.42069
+[RECEIVER]
+setups/setupdata/ReceiverLocations.dat
 
 [OUTPUT INTERVAL]
 .14
@@ -91,3 +92,19 @@ NODAL
 
 [OUTPUT FILE NAME]
 vtkOut/tshape
+
+[RHO] # Density of the medium
+1.2
+
+[C] # Speed of sound in the medium
+343.0
+
+[Z_IND] # Z value for frequency independent boundary condition
+#411.6   			# rho*c 		   - ~100% absorption
+#2399.628 		# 5.83*rho*c   - ~50% absorption
+4116000.0    # 10000*rho*c  - ~rigid boundary
+
+[VECTFIT] # Vectorfit filename from vectorfitDriver.m
+setups/setupdata/LRDATA14.dat
+
+

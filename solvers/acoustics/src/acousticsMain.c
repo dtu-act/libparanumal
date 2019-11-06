@@ -70,12 +70,14 @@ int main(int argc, char **argv){
 
   // set up acoustics stuff
   acoustics_t *acoustics = acousticsSetup(mesh, newOptions, boundaryHeaderFileName);
-  
   acousticsFindReceiverElement(acoustics);
+
   // If receiver is on this core, allocate array for storage
   if(acoustics->recvElement != -1){
     acoustics->qRecv = (dfloat*) calloc(mesh->Np*mesh->NtimeSteps, sizeof(dfloat));
   }
+
+
   // run
   double startTime, endTime;
   startTime = MPI_Wtime();
@@ -86,48 +88,8 @@ int main(int argc, char **argv){
 
   //---------RECEIVER---------
   
-  
-
   acousticsReceiverInterpolation(acoustics);
   
-
-
-  #if 0
-  FILE * xyzFP, * pFP;
-  pFP = fopen("data/pRecv.txt", "w");
-  xyzFP = fopen("data/xyzRecv.txt", "w");
-
-  printf("acoustics->qRecvCounter: %d\n",acoustics->qRecvCounter);
-  for(dlong i = 0; i < acoustics->qRecvCounter; i++){
-    size_t qRecvOffset = i*mesh->Np;
-	for(dlong j = 0; j < mesh->Np; j++){
-      fprintf(pFP, "%.15lf ",acoustics->qRecv[qRecvOffset+j]);
-	}
-    fprintf(pFP, "\n");
-  }
-  for(dlong i = 0; i < mesh->Np; i++){ //Prints x
-    dfloat xEA = mesh->x[i + mesh->Np*0];
-	fprintf(xyzFP, "%.15lf ",xEA);
-  }
-  fprintf(xyzFP, "\n");
-  for(dlong i = 0; i < mesh->Np; i++){ //Prints y
-    dfloat yEA = mesh->y[i + mesh->Np*0];
-	fprintf(xyzFP, "%.15lf ",yEA);
-  }
-  fprintf(xyzFP, "\n");
-  for(dlong i = 0; i < mesh->Np; i++){ //Prints z
-    dfloat zEA = mesh->z[i + mesh->Np*0];
-	fprintf(xyzFP, "%.15lf ",zEA);
-  }
-  
-
-  fclose(xyzFP);
-  fclose(pFP);
-  #endif
-  //---------RECEIVER---------
-
-
-
   // close down MPI
   MPI_Finalize();
 

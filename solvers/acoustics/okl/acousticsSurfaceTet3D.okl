@@ -79,6 +79,31 @@ void central(const dfloat nx,
 
 }
 
+void centralBC(const dfloat nx,
+	    const dfloat ny,
+	    const dfloat nz,
+	    const dfloat rM,
+	    const dfloat uM,
+	    const dfloat vM,
+	    const dfloat wM,
+	    const dfloat rP,
+	    const dfloat uP,
+	    const dfloat vP,
+	    const dfloat wP,
+      const dfloat vn,
+	    dfloat *rflux,
+	    dfloat *uflux,
+	    dfloat *vflux,
+	    dfloat *wflux){
+
+  dfloat ndotUM = nx*uM + ny*vM + nz*wM;
+  dfloat ndotUP = nx*uP + ny*vP + nz*wP;
+  *rflux = p_half * (ndotUP - ndotUM) + vn;
+  *uflux  = p_half*nx*(rP-rM);
+  *vflux  = p_half*ny*(rP-rM);
+  *wflux  = p_half*nz*(rP-rM);
+
+}
 
 
 // batch process elements
@@ -93,7 +118,20 @@ void central(const dfloat nx,
 				  @restrict const  dfloat *  y,
 				  @restrict const  dfloat *  z,	
 				  @restrict const  dfloat *  q,
-				  @restrict dfloat *  rhsq){
+				  @restrict dfloat *  rhsq,
+          @restrict const dfloat *acc,
+          @restrict dfloat *rhsacc,
+          @restrict const  dlong *mapAcc,
+          @restrict const  dfloat *LRA,
+          @restrict const  dfloat *LRB,
+          @restrict const  dfloat *LRC,
+          @restrict const  dfloat *LRLambda,
+          @restrict const  dfloat *LRAlpha,
+          @restrict const  dfloat *LRBeta,
+          const dfloat LRYinf,
+          const dlong Npoles,
+          const dlong NRealPoles,
+          const dlong NImagPoles){
   
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -144,27 +182,52 @@ void central(const dfloat nx,
             dfloat uP = q[qbaseP + 1*p_Np];
             dfloat vP = q[qbaseP + 2*p_Np];
 	    dfloat wP = q[qbaseP + 3*p_Np];
+
+      // [EA] Boundary term
+      dfloat vn = 0.0;
             
             // apply boundary condition
-#if 0    
-            const int bc = EToB[face+p_Nfaces*e];
-            if(bc>0){
-              acousticsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, rM, uM, vM, wM, &rP, &uP, &vP, &wP);
+          const int bc = EToB[face+p_Nfaces*e];
+
+          if(bc > 0){
+            uP = -uP;
+            vP = -vP;
+            wP = -wP;
+          
+          // Frequency independent
+          if(bc == 2)
+            vn = rM / p_Z_IND;
+          }
+
+          // Local Reaction
+          if(bc == 3){
+            const dlong idAcc = mapAcc[id];
+            
+            vn = LRYinf * rM;
+            // Real poles
+            for(int piEA = 0; piEA < NRealPoles; piEA++){
+              rhsacc[Npoles*idAcc+piEA] = -LRLambda[piEA]*acc[Npoles*idAcc+piEA] + rM;  
             }
-#else
-	    if(idP==idM){ // breaks for parallel
-	      //dfloat ndotU = nx*uM+ny*vM+nz*wM;
-	      //uP -= 2*ndotU*nx;
-	      //vP -= 2*ndotU*ny;
-	      //wP -= 2*ndotU*nz;
+            // [EA] Can't be in the above loop for some OCCA reason? Causes crashes if there.
+            for(int piEA = 0; piEA < NRealPoles; piEA++){
+              vn = vn + LRA[piEA]*acc[Npoles*idAcc+piEA];
+            }
 
+            // Imag poles
+            int pIdx;
+            for(int piEA = NRealPoles; piEA < Npoles; piEA+=2){
+              pIdx = (piEA - NRealPoles) / 2;
+              rhsacc[Npoles*idAcc+piEA] = -LRAlpha[pIdx]*acc[Npoles*idAcc+piEA] - LRBeta[pIdx]*acc[Npoles*idAcc+piEA+1] + rM;
+              rhsacc[Npoles*idAcc+piEA+1] = -LRAlpha[pIdx]*acc[Npoles*idAcc+piEA+1] + LRBeta[pIdx]*acc[Npoles*idAcc+piEA];
+              vn += 2.0 * (LRB[pIdx]*acc[Npoles*idAcc+piEA]+LRC[pIdx]*acc[Npoles*idAcc+piEA+1]);
+            }
+          }
 
-        // [EA] - CHANGED HERE FOR CENTRAL FLUX
-          uP = -uP;
-          vP = -vP;
-          wP = -wP;
-	    }
-#endif
+          // Extended Reaction
+          if(bc == 3){
+            // Hej;
+          }
+
             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
             const dfloat sc = invJ*sJ;
 
@@ -172,7 +235,8 @@ void central(const dfloat nx,
             
             // [EA] - CHANGED HERE FOR CENTRAL FLUX
             //upwind(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux);
-            central(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux);
+            //central(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux);
+            centralBC(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, vn, &rflux, &uflux, &vflux, &wflux);
 
 
             s_rflux[es][n]  = sc*(-rflux );
@@ -213,10 +277,10 @@ void central(const dfloat nx,
 	          rhsq[base+3*p_Np] += Lwflux;
             
             //[EA] - Scaled to our equations
-            rhsq[base+0*p_Np] *= 1.2*343.0*343.0;
-            rhsq[base+1*p_Np] /= 1.2;
-            rhsq[base+2*p_Np] /= 1.2;
-	          rhsq[base+3*p_Np] /= 1.2;
+            rhsq[base+0*p_Np] *= p_AcConstant;
+            rhsq[base+1*p_Np] /= p_rho;
+            rhsq[base+2*p_Np] /= p_rho;
+	          rhsq[base+3*p_Np] /= p_rho;
           }
         }
       }

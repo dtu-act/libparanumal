@@ -71,6 +71,8 @@ typedef struct {
   // boundary faces
   hlong NboundaryFaces; // number of boundary faces
   hlong *boundaryInfo; // list of boundary faces (type, vertex-1, vertex-2, vertex-3)
+  hlong NboundaryFacesLocal; // [EA] number of boundary faces local to this core
+  hlong NboundaryPointsLocal; // [EA] number of boundary points local to this core
 
   // MPI halo exchange info
   dlong  totalHaloPairs;  // number of elements to be sent in halo exchange
@@ -174,6 +176,10 @@ typedef struct {
   dlong *vmapP;     // list of volume nodes that are paired with face nodes
   dlong *mapP;     // list of surface nodes that are paired with -ve surface  nodes
   int *faceVertices; // list of mesh vertices on each face
+  
+  // [EA] Added map to LR accumulator
+  dlong *mapAcc; // maps boundary point to accumulator index
+  occa::memory o_mapAcc;
 
   dfloat *LIFT; // lift matrix
   dfloat *FMM;  // Face Mass Matrix

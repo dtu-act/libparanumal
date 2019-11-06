@@ -53,7 +53,39 @@ typedef struct{
   dlong qRecvCounter; // To keep track of which timestep we are on
   dlong recvElement; // Index to element where the receiver is located
   dfloat *recvXYZ; // XYZ coordinates of receiver
+  dlong NReceivers; // Total number of receivers
   //---------RECEIVER---------
+
+  //---------Local reaction accumulators---------
+  dfloat *acc;
+  dfloat *rhsacc;
+  dfloat *resacc;
+  dlong Npoles;
+  dlong NRealPoles;
+  dlong NImagPoles; // Number of complex conjugate pairs
+  dlong NBoundaryPoints;
+
+
+  dfloat *LRA;
+  dfloat *LRB;
+  dfloat *LRC;
+  dfloat *LRLambda;
+  dfloat *LRAlpha;
+  dfloat *LRBeta;
+  dfloat LRYinf;
+  
+
+  occa::memory o_LRA;
+  occa::memory o_LRB;
+  occa::memory o_LRC;
+  occa::memory o_LRLambda;
+  occa::memory o_LRAlpha;
+  occa::memory o_LRBeta;
+  occa::memory o_acc;
+  occa::memory o_rhsacc;
+  occa::memory o_resacc;
+
+  //---------Local reaction accumulators---------
 
   dfloat *Vort;
 
@@ -70,13 +102,18 @@ typedef struct{
   occa::kernel rkUpdateKernel;
   occa::kernel rkErrorEstimateKernel;
   occa::kernel receiverKernel;
+  occa::kernel updateKernelLR;
 
   occa::memory o_q;
   occa::memory o_rhsq;
   occa::memory o_resq;
   occa::memory o_saveq;
+  
+  //[EA] 
   occa::memory o_qRecv;
   
+  
+
   occa::memory o_rkq, o_rkrhsq, o_rkerr;
   occa::memory o_errtmp;
   

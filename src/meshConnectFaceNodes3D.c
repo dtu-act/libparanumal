@@ -63,6 +63,10 @@ void meshConnectFaceNodes3D(mesh3D *mesh){
   mesh->vmapM = (dlong*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(dlong));
   mesh->vmapP = (dlong*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(dlong));
   mesh->mapP  = (dlong*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(dlong));
+
+  // [EA] Added map to LR accumulator
+  mesh->mapAcc = (dlong*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(dlong));
+  dlong counter = 0;
   
   /* assume elements already connected */
   for(dlong e=0;e<mesh->Nelements;++e){
@@ -92,8 +96,14 @@ void meshConnectFaceNodes3D(mesh3D *mesh){
         mesh->vmapM[id] = idM;
         mesh->vmapP[id] = idP + eP*mesh->Np;
         mesh->mapP[id] = eP*mesh->Nfaces*mesh->Nfp + fP*mesh->Nfp + nP;
+        
+        // [EA] Map boundary point to LR accumulator
+        if (mesh->vmapM[id] == mesh->vmapP[id]){
+          mesh->mapAcc[id] = counter;
+          counter++;
+        }
       }
     }
-  }
+  }  
 }
 

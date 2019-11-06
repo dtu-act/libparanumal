@@ -56,6 +56,34 @@ SOFTWARE.
   }
 }
 
+//[EA] Update kernel for explicit LR
+@kernel void acousticsUpdateLRAcc(const dlong NboundaryPoints,
+          const dlong Npoles,
+		      const dfloat dt,  
+		      const dfloat rka,
+		      const dfloat rkb,
+		      @restrict const  dfloat *  rhsacc,
+		      @restrict dfloat *  resacc,
+		      @restrict dfloat *  acc){
+  // [EA] Should look into performance of this function!
+  for(dlong n=0;n<NboundaryPoints;++n;@outer(0)){
+    for(dlong e=0;e<Npoles;++e;@inner(0)){
+      const dlong id = (n*Npoles)+e;
+      dfloat r_resacc = resacc[id];
+      dfloat r_rhsacc = rhsacc[id]; 
+      dfloat r_acc    = acc[id];
+
+      r_resacc = rka*r_resacc + dt*r_rhsacc;
+      r_acc   += rkb*r_resacc;
+      
+      resacc[id] = r_resacc;
+      acc[id]    = r_acc;
+      
+    }
+  }
+}
+
+
 @kernel void acousticsRkStage(const dlong Nelements,
 		       const int rk,
 		       const dfloat dt,  

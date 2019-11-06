@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "acoustics.h"
+#include <stdio.h>
 
 acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileName){
 	
@@ -129,106 +130,6 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     }
   }
 
-  /* DEBUG INITIAL CONDITIONS */
-  #if 0
-  FILE * xFP, * yFP, * zFP, * pFP;
-  char xFN[50] = "data/x.txt";
-  char yFN[50] = "data/y.txt";
-  char zFN[50] = "data/z.txt";
-  char pFN[50] = "data/p.txt"; 
-  xFP = fopen(xFN, "w");
-  yFP = fopen(yFN, "w");
-  zFP = fopen(zFN, "w");
-  pFP = fopen(pFN, "w"); 
-
-  for(dlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      dfloat xEA = mesh->x[n + mesh->Np*e];
-      dfloat yEA = mesh->y[n + mesh->Np*e];
-      dfloat zEA = mesh->z[n + mesh->Np*e];
-
-      dlong qbaseEA = e*mesh->Np*mesh->Nfields + n;
-
-      dfloat rEA = acoustics->q[qbaseEA+0*mesh->Np];
-
-      fprintf(xFP, "%.15lf ",xEA);
-      fprintf(yFP, "%.15lf ",yEA);
-      fprintf(zFP, "%.15lf ",zEA);
-      fprintf(pFP, "%.15lf ",rEA);
-
-    }
-    fprintf(xFP, "\n");
-    fprintf(yFP, "\n");
-    fprintf(zFP, "\n");
-    fprintf(pFP, "\n");
-  }
-
-  fclose(xFP);
-  fclose(yFP);
-  fclose(zFP);
-  fclose(pFP);
-
-  #endif
-// DEBUG INITIAL: Print on multiple cores, same as bove
-#if 0
-
-  int nprocs, procid;
-  
-  MPI_Comm_rank(MPI_COMM_WORLD,&procid);
-  MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
-  
-  FILE * xFP, * yFP, * zFP, * pFP;
-  char xFN[50] = "data/x.txt";
-  char yFN[50] = "data/y.txt";
-  char zFN[50] = "data/z.txt";
-  char pFN[50] = "data/p.txt";  
-  for(int i = 0; i < nprocs; i++){
-    if(procid == i){
-      if(procid == 0){
-        printf("nprocs: %d\n",nprocs);
-          xFP = fopen(xFN, "w");
-          yFP = fopen(yFN, "w");
-          zFP = fopen(zFN, "w");
-          pFP = fopen(pFN, "w");
-      } else {
-          xFP = fopen(xFN, "a");
-          yFP = fopen(yFN, "a");
-          zFP = fopen(zFN, "a");
-          pFP = fopen(pFN, "a");
-      }
-      for(dlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      dfloat xEA = mesh->x[n + mesh->Np*e];
-      dfloat yEA = mesh->y[n + mesh->Np*e];
-      dfloat zEA = mesh->z[n + mesh->Np*e];
-
-      dlong qbaseEA = e*mesh->Np*mesh->Nfields + n;
-
-      dfloat rEA = acoustics->q[qbaseEA+0*mesh->Np];
-
-      fprintf(xFP, "%.15lf ",xEA);
-      fprintf(yFP, "%.15lf ",yEA);
-      fprintf(zFP, "%.15lf ",zEA);
-      fprintf(pFP, "%.15lf ",rEA);
-        }
-        fprintf(xFP, "\n");
-        fprintf(yFP, "\n");
-        fprintf(zFP, "\n");
-        fprintf(pFP, "\n");
-      }
-
-      fclose(xFP);
-      fclose(yFP);
-      fclose(zFP);
-      fclose(pFP);
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-  }
-
-#endif
-
-
-
   // set penalty parameter
   mesh->Lambda2 = 0.5;
   
@@ -277,22 +178,34 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
 
   //---------RECEIVER---------
-  //acoustics->qRecv = (dfloat*) calloc(mesh->Np*mesh->NtimeSteps, sizeof(dfloat)); // Removed here, to only allocate if receiver is on this core
-  acoustics->qRecvCounter = 0;
-  //printf("ReciverArray length: %d\n",mesh->Np*mesh->NtimeSteps);
+  acoustics->qRecvCounter = 0; // Counter needed for later
 
-  acoustics->recvElement = -1;
-  acoustics->recvXYZ = (dfloat*) calloc(3, sizeof(dfloat));
+  acoustics->recvElement = -1; // Assume that no receivers on this core
 
-  newOptions.getArgs("RECEIVER X", acoustics->recvXYZ[0]);
-  newOptions.getArgs("RECEIVER Y", acoustics->recvXYZ[1]);
-  newOptions.getArgs("RECEIVER Z", acoustics->recvXYZ[2]);
+
+  // Read from receiver locations file
+  string RecvDATAFileName;
+  newOptions.getArgs("RECEIVER", RecvDATAFileName);
+
+  FILE * RecvDATAFILE = fopen((char*)RecvDATAFileName.c_str(),"r");
+  if (RecvDATAFILE == NULL) {
+    printf("Could not find Reciver Locations file: %s\n", (char*)RecvDATAFileName.c_str());
+    exit(-1);
+  }
+
+  fscanf(RecvDATAFILE,"%d",&acoustics->NReceivers);
+  acoustics->recvXYZ = (dfloat*) calloc(acoustics->NReceivers*3, sizeof(dfloat));
+
+  for(int iRead = 0; iRead < acoustics->NReceivers*3; iRead+=3){
+    fscanf(RecvDATAFILE,"%lf %lf %lf",&acoustics->recvXYZ[iRead],
+                                      &acoustics->recvXYZ[iRead+1],
+                                      &acoustics->recvXYZ[iRead+2]);
+  }
+  fclose(RecvDATAFILE);
   //---------RECEIVER---------
 
 
-
-
-
+  
   acoustics->frame = 0;
   // errorStep
   mesh->errorStep = 1000;
@@ -324,9 +237,72 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   acoustics->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), acoustics->rhsq);
 
-  // [EA] Allocate space on device for qRecv
+  // [EA] Allocate space on device for qRecv - currently allocates on all devices, even if recv is not on the associated core
   acoustics->o_qRecv =
     mesh->device.malloc(mesh->Np*mesh->NtimeSteps*sizeof(dfloat), acoustics->qRecv);
+
+  // [EA] Read and allocate space for LR accumulators
+  string LRDATAFileName;
+  newOptions.getArgs("VECTFIT", LRDATAFileName);
+
+  FILE * LRDATAFILE = fopen((char*)LRDATAFileName.c_str(),"r");
+  if (LRDATAFILE == NULL) {
+    printf("Could not find LRDATA file: %s\n", (char*)LRDATAFileName.c_str());
+    exit(-1);
+  }
+
+  fscanf(LRDATAFILE,"%d %d %d",&acoustics->Npoles, &acoustics->NRealPoles,&acoustics->NImagPoles);
+  acoustics->LRA = (dfloat*) calloc(acoustics->NRealPoles, sizeof(dfloat));
+  acoustics->LRLambda = (dfloat*) calloc(acoustics->NRealPoles, sizeof(dfloat));
+
+  acoustics->LRB = (dfloat*) calloc(acoustics->NImagPoles, sizeof(dfloat));
+  acoustics->LRC = (dfloat*) calloc(acoustics->NImagPoles, sizeof(dfloat));
+  acoustics->LRAlpha = (dfloat*) calloc(acoustics->NImagPoles, sizeof(dfloat));
+  acoustics->LRBeta = (dfloat*) calloc(acoustics->NImagPoles, sizeof(dfloat));
+
+  for(int iRead = 0; iRead < acoustics->NRealPoles; iRead++){
+    fscanf(LRDATAFILE,"%lf",&acoustics->LRA[iRead]);
+  }
+  for(int iRead = 0; iRead < acoustics->NImagPoles; iRead++){
+    fscanf(LRDATAFILE,"%lf",&acoustics->LRB[iRead]);
+  }
+  for(int iRead = 0; iRead < acoustics->NImagPoles; iRead++){
+    fscanf(LRDATAFILE,"%lf",&acoustics->LRC[iRead]);
+  }
+  for(int iRead = 0; iRead < acoustics->NRealPoles; iRead++){
+    fscanf(LRDATAFILE,"%lf",&acoustics->LRLambda[iRead]);
+  }
+  for(int iRead = 0; iRead < acoustics->NImagPoles; iRead++){
+    fscanf(LRDATAFILE,"%lf",&acoustics->LRAlpha[iRead]);
+  }
+  for(int iRead = 0; iRead < acoustics->NImagPoles; iRead++){
+    fscanf(LRDATAFILE,"%lf",&acoustics->LRBeta[iRead]);
+  }
+  fscanf(LRDATAFILE,"%lf",&acoustics->LRYinf);
+  fclose(LRDATAFILE);
+
+  acoustics->o_LRA = mesh->device.malloc(acoustics->NRealPoles*sizeof(dfloat), acoustics->LRA);
+  acoustics->o_LRB = mesh->device.malloc(acoustics->NImagPoles*sizeof(dfloat), acoustics->LRB);
+  acoustics->o_LRC = mesh->device.malloc(acoustics->NImagPoles*sizeof(dfloat), acoustics->LRC);
+  acoustics->o_LRLambda = mesh->device.malloc(acoustics->NRealPoles*sizeof(dfloat), acoustics->LRLambda);
+  acoustics->o_LRAlpha = mesh->device.malloc(acoustics->NImagPoles*sizeof(dfloat), acoustics->LRAlpha);
+  acoustics->o_LRBeta = mesh->device.malloc(acoustics->NImagPoles*sizeof(dfloat), acoustics->LRBeta);
+
+  mesh->NboundaryPointsLocal = mesh->Nfp*mesh->NboundaryFacesLocal;
+  
+
+  acoustics->acc = 
+    (dfloat*) calloc(mesh->NboundaryPointsLocal*acoustics->Npoles, sizeof(dfloat));
+  acoustics->rhsacc = 
+    (dfloat*) calloc(mesh->NboundaryPointsLocal*acoustics->Npoles, sizeof(dfloat));
+  acoustics->resacc = 
+    (dfloat*) calloc(mesh->NboundaryPointsLocal*acoustics->Npoles, sizeof(dfloat));
+  acoustics->o_acc =
+    mesh->device.malloc(mesh->NboundaryPointsLocal*acoustics->Npoles*sizeof(dfloat), acoustics->acc);
+  acoustics->o_rhsacc =
+    mesh->device.malloc(mesh->NboundaryPointsLocal*acoustics->Npoles*sizeof(dfloat), acoustics->rhsacc);
+  acoustics->o_resacc =
+    mesh->device.malloc(mesh->NboundaryPointsLocal*acoustics->Npoles*sizeof(dfloat), acoustics->resacc);
 
   cout << "TIME INTEGRATOR (" << newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
   
@@ -440,6 +416,12 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   acoustics->updateKernel =
     mesh->device.buildKernel(DACOUSTICS "/okl/acousticsUpdate.okl",
 				       "acousticsUpdate",
+				       kernelInfo);
+
+  // [EA] LR update kernel
+  acoustics->updateKernelLR = 
+    mesh->device.buildKernel(DACOUSTICS "/okl/acousticsUpdate.okl",
+				       "acousticsUpdateLRAcc",
 				       kernelInfo);
 
   acoustics->rkUpdateKernel =
