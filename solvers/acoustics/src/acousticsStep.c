@@ -187,24 +187,17 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
   }
 
   //---------RECEIVER---------
-  dlong qRecvOffset = acoustics->qRecvCounter*mesh->Np; // Offset writing location by # time steps taken*Np
-  dlong qOffset = acoustics->recvElement*mesh->Np*acoustics->Nfields; // Offset in q to get the correct element pres
-  /* acoustics->receiverKernel(mesh->Np, 
-        qOffset, 
-        qRecvOffset, 
-        acoustics->o_q, 
-        acoustics->o_qRecv);
-  */
 
-  // If reciver element is on this core, copy to o_qRecv
-  if(acoustics->recvElement != -1){
+
+  for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
+    dlong qRecvOffset = acoustics->qRecvCounter*mesh->Np + iRecv*mesh->Np*mesh->NtimeSteps; // Offset writing location by # time steps taken*Np
+    dlong qOffset = acoustics->recvElements[acoustics->recvElementsIdx[iRecv]]*mesh->Np*acoustics->Nfields; // Offset in q to get the correct element pres
     acoustics->o_q.copyTo(acoustics->o_qRecv,
           mesh->Np*sizeof(dfloat), 
           qRecvOffset*sizeof(dfloat),
           qOffset*sizeof(dfloat));
-    acoustics->qRecvCounter++;
   }
-
+  acoustics->qRecvCounter++;
   #if 0 
   // Old code that copied from device to host every time step.
   // copy data back to host 

@@ -162,7 +162,7 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
     }
   }
   // [EA] Copy qRecv from device to host
-  if(acoustics->recvElement != -1){
+  if(acoustics->NReceiversLocal > 0){
     acoustics->o_qRecv.copyTo(acoustics->qRecv);
   }
   acousticsReport(acoustics, mesh->finalTime, newOptions);

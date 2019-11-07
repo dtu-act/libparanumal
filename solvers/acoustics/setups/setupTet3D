@@ -9,8 +9,9 @@
 #../../meshes/cubeTet_01_PerfRefl.msh
 #../../meshes/cubeTet_01_FreqIndep.msh
 #../../meshes/cubeTet_01_LocalReac.msh
-../../meshes/cubeTet_01_1LR5FI.msh
+#../../meshes/cubeTet_01_1LR5FI.msh
 #../../meshes/cubeTet_01_ExtendReac.msh
+boxUnstruct4Opt.msh
 
 [MESH DIMENSION]
 3
@@ -100,11 +101,11 @@ vtkOut/tshape
 343.0
 
 [Z_IND] # Z value for frequency independent boundary condition
-#411.6   			# rho*c 		   - ~100% absorption
+411.6   			# rho*c 		   - ~100% absorption
 #2399.628 		# 5.83*rho*c   - ~50% absorption
-4116000.0    # 10000*rho*c  - ~rigid boundary
+#4116000.0    # 10000*rho*c  - ~rigid boundary
 
 [VECTFIT] # Vectorfit filename from vectorfitDriver.m
-setups/setupdata/LRDATA14.dat
+setups/setupdata/LRDATA6.dat
 
 

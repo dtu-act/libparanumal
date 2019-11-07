@@ -180,7 +180,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   //---------RECEIVER---------
   acoustics->qRecvCounter = 0; // Counter needed for later
 
-  acoustics->recvElement = -1; // Assume that no receivers on this core
+  
 
 
   // Read from receiver locations file
@@ -202,6 +202,15 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
                                       &acoustics->recvXYZ[iRead+2]);
   }
   fclose(RecvDATAFILE);
+  acoustics->recvElements = (dlong*) calloc(acoustics->NReceivers, sizeof(dlong));
+  // Assume that no receivers on this core
+  for(int i = 0; i < acoustics->NReceivers;i++){
+    acoustics->recvElements[i] = -1;
+  } 
+  acoustics->NReceiversLocal = 0; 
+  
+  acoustics->recvElementsIdx = (dlong*) calloc(acoustics->NReceivers, sizeof(dlong));
+
   //---------RECEIVER---------
 
 
@@ -236,10 +245,6 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   
   acoustics->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), acoustics->rhsq);
-
-  // [EA] Allocate space on device for qRecv - currently allocates on all devices, even if recv is not on the associated core
-  acoustics->o_qRecv =
-    mesh->device.malloc(mesh->Np*mesh->NtimeSteps*sizeof(dfloat), acoustics->qRecv);
 
   // [EA] Read and allocate space for LR accumulators
   string LRDATAFileName;

@@ -193,9 +193,9 @@ void centralBC(const dfloat nx,
             uP = -uP;
             vP = -vP;
             wP = -wP;
-          
+          }          
           // Frequency independent
-          if(bc == 2)
+          if(bc == 2){
             vn = rM / p_Z_IND;
           }
 

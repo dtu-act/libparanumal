@@ -32,7 +32,6 @@ void acousticsReport(acoustics_t *acoustics, dfloat time, setupAide &newOptions)
 
   // copy data back to host
   acoustics->o_q.copyTo(acoustics->q);
-
 // Print output to txt files
 #if 1
   int nprocs, procid;
@@ -93,15 +92,12 @@ void acousticsReport(acoustics_t *acoustics, dfloat time, setupAide &newOptions)
   }
 #endif
 
-
   // do error stuff on host
   acousticsError(acoustics, time);
-
   // output field files
   char fname[BUFSIZ];
 
   sprintf(fname, "foo_%04d_%04d.vtu", mesh->rank, acoustics->frame++);
 
   acousticsPlotVTU(acoustics, fname);
-  
 }

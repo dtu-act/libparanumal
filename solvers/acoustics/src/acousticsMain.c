@@ -73,11 +73,12 @@ int main(int argc, char **argv){
   acousticsFindReceiverElement(acoustics);
 
   // If receiver is on this core, allocate array for storage
-  if(acoustics->recvElement != -1){
-    acoustics->qRecv = (dfloat*) calloc(mesh->Np*mesh->NtimeSteps, sizeof(dfloat));
+  if(acoustics->NReceiversLocal > 0){
+    acoustics->qRecv = (dfloat*) calloc(acoustics->NReceiversLocal*mesh->Np*mesh->NtimeSteps, sizeof(dfloat));
+  acoustics->o_qRecv =
+    mesh->device.malloc(acoustics->NReceiversLocal*mesh->Np*mesh->NtimeSteps*sizeof(dfloat), acoustics->qRecv);
   }
-
-
+  
   // run
   double startTime, endTime;
   startTime = MPI_Wtime();
@@ -87,7 +88,6 @@ int main(int argc, char **argv){
 
 
   //---------RECEIVER---------
-  
   acousticsReceiverInterpolation(acoustics);
   
   // close down MPI

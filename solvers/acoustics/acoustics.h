@@ -51,9 +51,11 @@ typedef struct{
   //---------RECEIVER---------
   dfloat *qRecv; // Saves pres in receiver element in each timestep
   dlong qRecvCounter; // To keep track of which timestep we are on
-  dlong recvElement; // Index to element where the receiver is located
+  dlong *recvElements; // Index to elements where the receivers are located
+  dlong *recvElementsIdx; // Index into recvElements
   dfloat *recvXYZ; // XYZ coordinates of receiver
   dlong NReceivers; // Total number of receivers
+  dlong NReceiversLocal; // Total number of receivers
   //---------RECEIVER---------
 
   //---------Local reaction accumulators---------

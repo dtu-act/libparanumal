@@ -34,7 +34,7 @@ SOFTWARE.
 void acousticsError(acoustics_t *acoustics, dfloat time){
 
   mesh_t *mesh = acoustics->mesh;
-
+  
   dfloat maxR = 0;
   dfloat minR = 1E9;
   for(int e=0;e<mesh->Nelements;++e){
