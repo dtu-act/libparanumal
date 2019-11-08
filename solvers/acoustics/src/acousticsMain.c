@@ -79,6 +79,7 @@ int main(int argc, char **argv){
     mesh->device.malloc(acoustics->NReceiversLocal*mesh->Np*mesh->NtimeSteps*sizeof(dfloat), acoustics->qRecv);
   }
   
+  printf("Core: %d, recvLocal: %d\n", mesh->rank,acoustics->NReceiversLocal);
   // run
   double startTime, endTime;
   startTime = MPI_Wtime();
