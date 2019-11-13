@@ -72,7 +72,11 @@ typedef struct {
   hlong NboundaryFaces; // number of boundary faces
   hlong *boundaryInfo; // list of boundary faces (type, vertex-1, vertex-2, vertex-3)
   hlong NboundaryFacesLocal; // [EA] number of boundary faces local to this core
-  hlong NboundaryPointsLocal; // [EA] number of boundary points local to this core
+  dlong NboundaryPointsLocal; // [EA] number of boundary points local to this core
+  dlong NLRFaces; // [EA] Number of faces with local reaction BC
+  dlong NERFaces; // [EA] Number of faces with extended reaction BC
+  dlong NLRPoints; // [EA] Number of points with local reaction BC
+  dlong NERPoints; // [EA] Number of points with extended reaction BC
 
   // MPI halo exchange info
   dlong  totalHaloPairs;  // number of elements to be sent in halo exchange
@@ -178,8 +182,10 @@ typedef struct {
   int *faceVertices; // list of mesh vertices on each face
   
   // [EA] Added map to LR accumulator
-  dlong *mapAcc; // maps boundary point to accumulator index
+  dlong *mapAcc; // maps element boundary point to accumulator index
   occa::memory o_mapAcc;
+  dlong *mapAccToQ; // Maps accumulator to pressure in q
+  occa::memory o_mapAccToQ;
 
   dfloat *LIFT; // lift matrix
   dfloat *FMM;  // Face Mass Matrix
@@ -276,6 +282,17 @@ typedef struct {
   int   errorStep; // number of steps between error calculations
   int   Nrk;
   dfloat rka[5], rkb[5], rkc[6]; // AK: deprecated
+
+
+  // [EA] ERK/ESDIRK time stepping
+  int INrk;
+  dfloat erka[36], erkb[6], erkc[6];
+  dfloat esdirka[36], esdirkb[6], esdirkc[6];
+  occa::memory o_erka;
+  occa::memory o_erkb;
+  occa::memory o_esdirka;
+  occa::memory o_esdirkb;
+
 
   // MRAB,SAAB coefficients
   dfloat mrab[3], mrabb[3], saab[3], saabexp; // AK: deprecated 

@@ -74,6 +74,8 @@ void meshConnectBoundary(mesh_t *mesh){
 
   // [EA] record number of local bcfaces
   mesh->NboundaryFacesLocal = bcnt;
+  mesh->NLRFaces = 0;
+  mesh->NERFaces = 0;
 #if 0
   printf("Nbf = %d\n", mesh->NboundaryFaces);
   printf("Nfv = %d\n", mesh->NfaceVertices);
@@ -147,6 +149,13 @@ void meshConnectBoundary(mesh_t *mesh){
       int f   = mymax(boundaryFaces[cnt].face,    boundaryFaces[cnt+1].face);
       mesh->EToB[e*mesh->Nfaces+f] =
         mymax(boundaryFaces[cnt].bctype, boundaryFaces[cnt+1].bctype);
+      
+      if(mesh->EToB[e*mesh->Nfaces+f] == 3){
+        mesh->NLRFaces++;
+      } 
+      if(mesh->EToB[e*mesh->Nfaces+f] == 4){
+        mesh->NERFaces++; 
+      } 
     }
   }
 

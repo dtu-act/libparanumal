@@ -202,6 +202,8 @@ void centralBC(const dfloat nx,
           // Local Reaction
           if(bc == 3){
             const dlong idAcc = mapAcc[id];
+
+            //printf("Surf: idAcc=%ld, rM = %f\n",idAcc,rM);
             
             vn = LRYinf * rM;
             // Real poles
@@ -224,7 +226,7 @@ void centralBC(const dfloat nx,
           }
 
           // Extended Reaction
-          if(bc == 3){
+          if(bc == 4){
             // Hej;
           }
 

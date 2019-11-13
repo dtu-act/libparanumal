@@ -87,6 +87,41 @@ typedef struct{
   occa::memory o_rhsacc;
   occa::memory o_resacc;
 
+
+
+  // EIRK4 storage
+  dfloat *k1acc;
+  dfloat *k2acc;
+  dfloat *k3acc;
+  dfloat *k4acc;
+  dfloat *k5acc;
+  dfloat *k6acc;
+
+  dfloat *Xacc;
+
+  dfloat *k1rhsq;
+  dfloat *k2rhsq;
+  dfloat *k3rhsq;
+  dfloat *k4rhsq;
+  dfloat *k5rhsq;
+  dfloat *k6rhsq;
+
+  occa::memory o_k1acc;
+  occa::memory o_k2acc;
+  occa::memory o_k3acc;
+  occa::memory o_k4acc;
+  occa::memory o_k5acc;
+  occa::memory o_k6acc;
+
+  occa::memory o_Xacc;
+
+  occa::memory o_k1rhsq;
+  occa::memory o_k2rhsq;
+  occa::memory o_k3rhsq;
+  occa::memory o_k4rhsq;
+  occa::memory o_k5rhsq;
+  occa::memory o_k6rhsq;
+
   //---------Local reaction accumulators---------
 
   dfloat *Vort;
@@ -105,6 +140,8 @@ typedef struct{
   occa::kernel rkErrorEstimateKernel;
   occa::kernel receiverKernel;
   occa::kernel updateKernelLR;
+  occa::kernel acousticsUpdateEIRK4;
+  occa::kernel acousticsUpdateEIRK4Acc;
 
   occa::memory o_q;
   occa::memory o_rhsq;
@@ -165,6 +202,8 @@ dfloat acousticsDopriEstimate(acoustics_t *acoustics);
 void acousticsReceiverInterpolation(acoustics_t *acoustics);
 
 void acousticsFindReceiverElement(acoustics_t *acoustics);
+
+void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dfloat time);
 
 #define TRIANGLES 3
 #define QUADRILATERALS 4

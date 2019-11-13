@@ -150,8 +150,9 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
       acousticsLserkStep(acoustics, newOptions, time);
 
       if(tstep % 500 == 0){
-        printf("step: %d, out of: %d\n",tstep, mesh->NtimeSteps);
+        printf("LSERK4 - Step: %d, out of: %d\n",tstep, mesh->NtimeSteps);
       }
+    
 
 #if 0
       if(((tstep+1)%mesh->errorStep)==0){
@@ -159,6 +160,17 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
         acousticsReport(acoustics, time, newOptions);
       }
 #endif
+    }
+  } else if (newOptions.compareArgs("TIME INTEGRATOR","EIRK4")){
+    for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+
+      dfloat time = tstep*mesh->dt;
+
+      acousticsEirkStep(acoustics, newOptions, time);
+
+      if(tstep % 500 == 0){
+        printf("EIRK4 - Step: %d, out of: %d\n",tstep, mesh->NtimeSteps);
+      }
     }
   }
   // [EA] Copy qRecv from device to host

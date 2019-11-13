@@ -66,6 +66,9 @@ void meshConnectFaceNodes3D(mesh3D *mesh){
 
   // [EA] Added map to LR accumulator
   mesh->mapAcc = (dlong*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(dlong));
+  for(dlong i = 0; i < mesh->Nfp*mesh->Nfaces*mesh->Nelements; i++){
+    mesh->mapAcc[i] = -1;
+  }
   dlong counter = 0;
   
   /* assume elements already connected */

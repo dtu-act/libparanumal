@@ -615,11 +615,6 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
                         mesh->vmapP);
 
-  // [EA] mapAcc to device
-  mesh->o_mapAcc =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
-                        mesh->mapAcc);
-
   mesh->o_EToB =
     mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int),
                         mesh->EToB);

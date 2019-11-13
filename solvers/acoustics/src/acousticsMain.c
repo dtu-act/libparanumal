@@ -48,7 +48,6 @@ int main(int argc, char **argv){
   newOptions.getArgs("POLYNOMIAL DEGREE", N);
   newOptions.getArgs("ELEMENT TYPE", elementType);
   newOptions.getArgs("MESH DIMENSION", dim);
-  
   // set up mesh
   mesh_t *mesh;
   switch(elementType){
@@ -61,7 +60,6 @@ int main(int argc, char **argv){
   case HEXAHEDRA:
     mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
   }
-
   char *boundaryHeaderFileName; // could sprintf
   if(dim==2)
     boundaryHeaderFileName = strdup(DACOUSTICS "/acousticsUniform2D.h"); // default
@@ -71,15 +69,12 @@ int main(int argc, char **argv){
   // set up acoustics stuff
   acoustics_t *acoustics = acousticsSetup(mesh, newOptions, boundaryHeaderFileName);
   acousticsFindReceiverElement(acoustics);
-
   // If receiver is on this core, allocate array for storage
   if(acoustics->NReceiversLocal > 0){
     acoustics->qRecv = (dfloat*) calloc(acoustics->NReceiversLocal*mesh->Np*mesh->NtimeSteps, sizeof(dfloat));
   acoustics->o_qRecv =
     mesh->device.malloc(acoustics->NReceiversLocal*mesh->Np*mesh->NtimeSteps*sizeof(dfloat), acoustics->qRecv);
   }
-  
-  printf("Core: %d, recvLocal: %d\n", mesh->rank,acoustics->NReceiversLocal);
   // run
   double startTime, endTime;
   startTime = MPI_Wtime();

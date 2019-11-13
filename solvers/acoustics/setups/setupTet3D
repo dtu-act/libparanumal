@@ -8,8 +8,8 @@
 #../../meshes/CubeTet_libP_EA_17.msh
 #../../meshes/cubeTet_01_PerfRefl.msh
 #../../meshes/cubeTet_01_FreqIndep.msh
-#../../meshes/cubeTet_01_LocalReac.msh
-../../meshes/cubeTet_01_1LR5FI.msh
+../../meshes/cubeTet_01_LocalReac.msh
+#../../meshes/cubeTet_01_1LR5FI.msh
 #../../meshes/cubeTet_01_ExtendReac.msh
 #boxUnstruct5Opt.msh
 
@@ -34,7 +34,8 @@ CUDA
 
 [TIME INTEGRATOR]
 #DOPRI5
-LSERK4
+#LSERK4
+EIRK4
 
 [ADVECTION TYPE]
 NODAL
@@ -106,6 +107,6 @@ vtkOut/tshape
 4116000.0    # 10000*rho*c  - ~rigid boundary
 
 [VECTFIT] # Vectorfit filename from vectorfitDriver.m
-setups/setupdata/LRDATA14.dat
+setups/setupdata/LRDATA6.dat
 
 

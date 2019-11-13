@@ -82,6 +82,126 @@ SOFTWARE.
     }
   }
 }
+//[EA] - EIRK4 update kernel
+@kernel void acousticsUpdateEIRK4(const dlong Nelements,
+		      const dfloat dt,  
+		      const dfloat *erka,
+		      const dfloat *erkb,
+		      @restrict const  dfloat *  k1rhsq,
+          @restrict const  dfloat *  k2rhsq,
+          @restrict const  dfloat *  k3rhsq,
+          @restrict const  dfloat *  k4rhsq,
+          @restrict const  dfloat *  k5rhsq,
+          @restrict const  dfloat *  k6rhsq,
+		      @restrict dfloat *  resq,
+		      @restrict dfloat *  q,
+          const dlong Stage){
+  
+  // Explicit time-stepping of acoustic system
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+
+      for(int fld=0; fld< p_Nfields; ++fld){
+
+        const dlong id = e*p_Np*p_Nfields + fld*p_Np + n;
+        
+        if(Stage == 1){
+          resq[id] = q[id] + dt*erka[6]*k1rhsq[id];
+        } else if(Stage == 2){
+          resq[id] = q[id] + dt*(erka[12]*k1rhsq[id] + erka[13]*k2rhsq[id]);
+        } else if(Stage == 3){
+          resq[id] = q[id] + dt*(erka[18]*k1rhsq[id] + erka[19]*k2rhsq[id] + erka[20]*k3rhsq[id]);
+        } else if(Stage == 4){
+          resq[id] = q[id] + dt*(erka[24]*k1rhsq[id] + erka[25]*k2rhsq[id] + erka[26]*k3rhsq[id] + erka[27]*k4rhsq[id]);
+        } else if(Stage == 5){
+          resq[id] = q[id] + dt*(erka[30]*k1rhsq[id] + erka[31]*k2rhsq[id] + erka[32]*k3rhsq[id] + erka[33]*k4rhsq[id] + erka[34]*k5rhsq[id]);
+        } else if(Stage == 6){
+          q[id] = q[id] + dt*(erkb[0]*k1rhsq[id] + erkb[1]*k2rhsq[id] + erkb[2]*k3rhsq[id] + erkb[3]*k4rhsq[id] + erkb[4]*k5rhsq[id] + erkb[5]*k6rhsq[id]);
+        }
+      }
+    }
+  }
+}
+
+
+//[EA] - EIRK4 accumulator update kernel
+@kernel void acousticsUpdateEIRK4Acc(const dlong NLRPoints,
+		      const dfloat dt,  
+		      @restrict const dfloat *esdirka,
+		      @restrict const dfloat *esdirkb,
+          const dlong Npoles,
+          const dlong NRealPoles,
+          @restrict const dlong * mapAccToQ,
+          @restrict const dfloat * LRAlpha,
+          @restrict const dfloat * LRBeta,
+          @restrict const dfloat * LRLambda,
+		      @restrict const  dfloat *  k1acc,
+          @restrict const  dfloat *  k2acc,
+          @restrict const  dfloat *  k3acc,
+          @restrict const  dfloat *  k4acc,
+          @restrict const  dfloat *  k5acc,
+          @restrict const  dfloat *  k6acc,
+		      @restrict const  dfloat *  resq,
+          @restrict dfloat * acc,
+          @restrict dfloat * Xacc,
+          const dlong Stage){
+  
+  // Implicit time-stepping of accumulators
+  // [EA] Should look into performance of this function!
+  
+  for(dlong n1=0; n1<(NLRPoints+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
+    for(dlong n2=0; n2 < p_blockSize; ++n2;@inner(0)){    
+      dlong n = n1*p_blockSize+n2;
+      if(n < NLRPoints){
+        dfloat dt2 = dt*dt;  
+        dlong presIdx = mapAccToQ[n];
+        // Real poles
+        for(dlong e=0;e<NRealPoles;++e){
+          const dlong id = (n*Npoles)+e;
+          if(Stage == 1){
+            Xacc[id] = (acc[id] + dt*esdirka[6]*k1acc[id] + dt*esdirka[7]*resq[presIdx]) / (1-dt*esdirka[7]*(-LRLambda[e]));
+          } else if(Stage == 2){
+            Xacc[id] = (acc[id] + dt*esdirka[12]*k1acc[id] + dt*esdirka[13]*k2acc[id] + dt*esdirka[14]*resq[presIdx]) / (1-dt*esdirka[14]*(-LRLambda[e]));
+          } else if(Stage == 3){
+            Xacc[id] = (acc[id] + dt*esdirka[18]*k1acc[id]+dt*esdirka[19]*k2acc[id]+dt*esdirka[20]*k3acc[id]+dt*esdirka[21]*resq[presIdx]) / (1-dt*esdirka[21]*(-LRLambda[e]));
+          } else if(Stage == 4){
+            Xacc[id] = (acc[id] + dt*esdirka[24]*k1acc[id]+dt*esdirka[25]*k2acc[id]+dt*esdirka[26]*k3acc[id]+dt*esdirka[27]*k4acc[id]+dt*esdirka[28]*resq[presIdx]) / (1-dt*esdirka[28]*(-LRLambda[e]));
+          } else if(Stage == 5){
+            Xacc[id] = (acc[id] + dt*esdirka[30]*k1acc[id]+dt*esdirka[31]*k2acc[id]+dt*esdirka[32]*k3acc[id]+dt*esdirka[33]*k4acc[id]+dt*esdirka[34]*k5acc[id]+dt*esdirka[35]*resq[presIdx]) / (1-dt*esdirka[35]*(-LRLambda[e]));
+          } else if(Stage == 6){
+            acc[id] = acc[id] + dt*(esdirkb[0]*k1acc[id]+esdirkb[1]*k2acc[id]+esdirkb[2]*k3acc[id]+esdirkb[3]*k4acc[id]+esdirkb[4]*k5acc[id]+esdirkb[5]*k6acc[id]);
+          }
+        }
+        // Imag poles
+        for(dlong e=NRealPoles;e<Npoles;e+=2){
+          const dlong id = (n*Npoles)+e;
+          const dlong pIdx = (e-NRealPoles) / 2;
+          if(Stage == 1){
+            Xacc[id] = (esdirka[7]*(resq[presIdx]*LRAlpha[pIdx]*esdirka[7] - esdirka[6]*(-LRAlpha[pIdx]*k1acc[id] + LRBeta[pIdx]*k1acc[id+1]))*dt2 + ((LRAlpha[pIdx]*acc[id] - acc[id+1]*LRBeta[pIdx] + resq[presIdx])*esdirka[7] + esdirka[6]*k1acc[id])*dt + acc[id])/(1 + esdirka[7]*esdirka[7]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[7]*dt);
+            Xacc[id+1] = ((resq[presIdx]*LRBeta[pIdx]*esdirka[7] + esdirka[6]*(LRAlpha[pIdx]*k1acc[id+1] + LRBeta[pIdx]*k1acc[id]))*esdirka[7]*dt2 + ((LRAlpha[pIdx]*acc[id+1] + acc[id]*LRBeta[pIdx])*esdirka[7] + esdirka[6]*k1acc[id+1])*dt + acc[id+1])/(1 + esdirka[7]*esdirka[7]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[7]*dt);
+          } else if(Stage == 2){
+            Xacc[id] = ((resq[presIdx]*LRAlpha[pIdx]*esdirka[14] + (esdirka[12]*k1acc[id] + esdirka[13]*k2acc[id])*LRAlpha[pIdx] - LRBeta[pIdx]*(esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1]))*esdirka[14]*dt2 + ((LRAlpha[pIdx]*acc[id] - acc[id+1]*LRBeta[pIdx] + resq[presIdx])*esdirka[14] + k1acc[id]*esdirka[12] + k2acc[id]*esdirka[13])*dt + acc[id])/(1 + esdirka[14]*esdirka[14]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[14]*dt);
+            Xacc[id+1] = (esdirka[14]*(resq[presIdx]*LRBeta[pIdx]*esdirka[14] + (esdirka[12]*k1acc[id] + esdirka[13]*k2acc[id])*LRBeta[pIdx] + LRAlpha[pIdx]*(esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1]))*dt2 + ((LRAlpha[pIdx]*acc[id+1] + acc[id]*LRBeta[pIdx])*esdirka[14] + esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1])*dt + acc[id+1])/(1 + esdirka[14]*esdirka[14]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[14]*dt);
+          } else if(Stage == 3){
+            Xacc[id] = (esdirka[21]*(esdirka[21]*resq[presIdx]*LRAlpha[pIdx] + (esdirka[18]*k1acc[id] + esdirka[19]*k2acc[id] + esdirka[20]*k3acc[id])*LRAlpha[pIdx] - LRBeta[pIdx]*(esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1]))*dt2 + ((LRAlpha[pIdx]*acc[id] - acc[id+1]*LRBeta[pIdx] + resq[presIdx])*esdirka[21] + k1acc[id]*esdirka[18] + k2acc[id]*esdirka[19] + k3acc[id]*esdirka[20])*dt + acc[id])/(1 + esdirka[21]*esdirka[21]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[21]*dt);
+            Xacc[id+1] = (esdirka[21]*(esdirka[21]*resq[presIdx]*LRBeta[pIdx] + (esdirka[18]*k1acc[id] + esdirka[19]*k2acc[id] + esdirka[20]*k3acc[id])*LRBeta[pIdx] + LRAlpha[pIdx]*(esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1]))*dt2 + ((LRAlpha[pIdx]*acc[id+1] + acc[id]*LRBeta[pIdx])*esdirka[21] + esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[21]*esdirka[21]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[21]*dt);
+          } else if(Stage == 4){
+            Xacc[id] = ((resq[presIdx]*LRAlpha[pIdx]*esdirka[28] + (esdirka[24]*k1acc[id] + esdirka[25]*k2acc[id] + esdirka[26]*k3acc[id] + esdirka[27]*k4acc[id])*LRAlpha[pIdx] - LRBeta[pIdx]*(esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1] + esdirka[27]*k4acc[id+1]))*esdirka[28]*dt2 + ((LRAlpha[pIdx]*acc[id] - acc[id+1]*LRBeta[pIdx] + resq[presIdx])*esdirka[28] + esdirka[27]*k4acc[id] + k1acc[id]*esdirka[24] + k2acc[id]*esdirka[25] + k3acc[id]*esdirka[26])*dt + acc[id])/(1 + esdirka[28]*esdirka[28]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[28]*dt);
+            Xacc[id+1] = ((resq[presIdx]*LRBeta[pIdx]*esdirka[28] + (esdirka[24]*k1acc[id] + esdirka[25]*k2acc[id] + esdirka[26]*k3acc[id] + esdirka[27]*k4acc[id])*LRBeta[pIdx] + LRAlpha[pIdx]*(esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1] + esdirka[27]*k4acc[id+1]))*esdirka[28]*dt2 + ((LRAlpha[pIdx]*acc[id+1] + acc[id]*LRBeta[pIdx])*esdirka[28] + esdirka[27]*k4acc[id+1] + esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[28]*esdirka[28]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[28]*dt);
+          } else if(Stage == 5){
+            Xacc[id] = (esdirka[35]*(resq[presIdx]*LRAlpha[pIdx]*esdirka[35] + (esdirka[30]*k1acc[id] + esdirka[31]*k2acc[id] + esdirka[32]*k3acc[id] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id])*LRAlpha[pIdx] - LRBeta[pIdx]*(esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1]))*dt2 + ((LRAlpha[pIdx]*acc[id] - acc[id+1]*LRBeta[pIdx] + resq[presIdx])*esdirka[35] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id] + k1acc[id]*esdirka[30] + k2acc[id]*esdirka[31] + k3acc[id]*esdirka[32])*dt + acc[id])/(1 + esdirka[35]*esdirka[35]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[35]*dt);
+            Xacc[id+1] = ((resq[presIdx]*LRBeta[pIdx]*esdirka[35] + (esdirka[30]*k1acc[id] + esdirka[31]*k2acc[id] + esdirka[32]*k3acc[id] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id])*LRBeta[pIdx] + LRAlpha[pIdx]*(esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1]))*esdirka[35]*dt2 + ((LRAlpha[pIdx]*acc[id+1] + acc[id]*LRBeta[pIdx])*esdirka[35] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1] + esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[35]*esdirka[35]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[35]*dt);
+          } else if(Stage == 6){
+            acc[id] = acc[id] + dt*(esdirkb[0]*k1acc[id]+esdirkb[1]*k2acc[id]+esdirkb[2]*k3acc[id]+esdirkb[3]*k4acc[id]+esdirkb[4]*k5acc[id]+esdirkb[5]*k6acc[id]);
+            acc[id+1] = acc[id+1] + dt*(esdirkb[0]*k1acc[id+1]+esdirkb[1]*k2acc[id+1]+esdirkb[2]*k3acc[id+1]+esdirkb[3]*k4acc[id+1]+esdirkb[4]*k5acc[id+1]+esdirkb[5]*k6acc[id+1]);
+          }
+        }
+      }
+    }
+  }
+}
+
 
 
 @kernel void acousticsRkStage(const dlong Nelements,
