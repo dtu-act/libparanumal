@@ -747,7 +747,7 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
   kernelInfo["defines/" "p_IJWID"]= IJWID;
 
   // [EA] Kernel defines
-  double rho,c,Z_IND;
+  dfloat rho,c,Z_IND;
   newOptions.getArgs("RHO", rho);
   newOptions.getArgs("C", c);
   newOptions.getArgs("Z_IND", Z_IND);

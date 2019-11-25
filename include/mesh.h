@@ -186,6 +186,10 @@ typedef struct {
   occa::memory o_mapAcc;
   dlong *mapAccToQ; // Maps accumulator to pressure in q
   occa::memory o_mapAccToQ;
+  dlong *mapAccToXYZ;
+  occa::memory o_mapAccToXYZ;
+  dlong *mapAccToN;
+  occa::memory o_mapAccToN;
 
   dfloat *LIFT; // lift matrix
   dfloat *FMM;  // Face Mass Matrix
