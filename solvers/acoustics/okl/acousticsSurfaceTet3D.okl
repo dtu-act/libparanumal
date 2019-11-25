@@ -129,9 +129,21 @@ void centralBC(const dfloat nx,
           @restrict const  dfloat *LRAlpha,
           @restrict const  dfloat *LRBeta,
           const dfloat LRYinf,
-          const dlong Npoles,
-          const dlong NRealPoles,
-          const dlong NImagPoles){
+          const dlong NLRpoles,
+          const dlong NLRRealPoles,
+          const dlong NLRImagPoles,
+          const dlong NLRPoints,
+          @restrict const dlong * anglei,
+          @restrict const dfloat * ERYinf,
+          const dlong NERRealPoles,
+          const dlong NERImagPoles,
+          const dlong NERpoles,
+          @restrict const dfloat * ERLambda,
+          @restrict const dfloat * ERA,
+          @restrict const dfloat * ERAlpha,
+          @restrict const dfloat * ERBeta,
+          @restrict const dfloat * ERB,
+          @restrict const dfloat * ERC){
   
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -155,7 +167,7 @@ void centralBC(const dfloat nx,
             const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
-	    const dfloat nz   = sgeo[sid+p_NZID];
+	          const dfloat nz   = sgeo[sid+p_NZID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];
 
@@ -207,29 +219,51 @@ void centralBC(const dfloat nx,
             
             vn = LRYinf * rM;
             // Real poles
-            for(int piEA = 0; piEA < NRealPoles; piEA++){
-              rhsacc[Npoles*idAcc+piEA] = -LRLambda[piEA]*acc[Npoles*idAcc+piEA] + rM;  
+            for(int piEA = 0; piEA < NLRRealPoles; piEA++){
+              rhsacc[NLRpoles*idAcc+piEA] = -LRLambda[piEA]*acc[NLRpoles*idAcc+piEA] + rM;  
             }
             // [EA] Can't be in the above loop for some OCCA reason? Causes crashes if there.
-            for(int piEA = 0; piEA < NRealPoles; piEA++){
-              vn = vn + LRA[piEA]*acc[Npoles*idAcc+piEA];
+            for(int piEA = 0; piEA < NLRRealPoles; piEA++){
+              vn = vn + LRA[piEA]*acc[NLRpoles*idAcc+piEA];
             }
 
             // Imag poles
             int pIdx;
-            for(int piEA = NRealPoles; piEA < Npoles; piEA+=2){
-              pIdx = (piEA - NRealPoles) / 2;
-              rhsacc[Npoles*idAcc+piEA] = -LRAlpha[pIdx]*acc[Npoles*idAcc+piEA] - LRBeta[pIdx]*acc[Npoles*idAcc+piEA+1] + rM;
-              rhsacc[Npoles*idAcc+piEA+1] = -LRAlpha[pIdx]*acc[Npoles*idAcc+piEA+1] + LRBeta[pIdx]*acc[Npoles*idAcc+piEA];
-              vn += 2.0 * (LRB[pIdx]*acc[Npoles*idAcc+piEA]+LRC[pIdx]*acc[Npoles*idAcc+piEA+1]);
+            for(int piEA = NLRRealPoles; piEA < NLRpoles; piEA+=2){
+              pIdx = (piEA - NLRRealPoles) / 2;
+              rhsacc[NLRpoles*idAcc+piEA] = -LRAlpha[pIdx]*acc[NLRpoles*idAcc+piEA] - LRBeta[pIdx]*acc[NLRpoles*idAcc+piEA+1] + rM;
+              rhsacc[NLRpoles*idAcc+piEA+1] = -LRAlpha[pIdx]*acc[NLRpoles*idAcc+piEA+1] + LRBeta[pIdx]*acc[NLRpoles*idAcc+piEA];
+              vn += 2.0 * (LRB[pIdx]*acc[NLRpoles*idAcc+piEA]+LRC[pIdx]*acc[NLRpoles*idAcc+piEA+1]);
             }
           }
 
           // Extended Reaction
           if(bc == 4){
-            // Hej;
-          }
+            dlong idAcc = mapAcc[id];
+            dlong angIdx = anglei[idAcc];
+           
+            dlong accIdx = NLRpoles*NLRPoints + NERpoles*idAcc;
 
+            vn = ERYinf[angIdx] * rM;
+            // Real poles
+            for(int piEA = 0; piEA < NERRealPoles; piEA++){
+              rhsacc[accIdx + piEA] = -ERLambda[piEA]*acc[accIdx + piEA] + rM;  
+            }
+            // [EA] Can't be in the above loop for some OCCA reason? Causes crashes if there.
+            for(int piEA = 0; piEA < NERRealPoles; piEA++){
+              vn = vn + ERA[angIdx*NERRealPoles + piEA]*acc[accIdx+piEA];
+            }
+
+            // Imag poles
+            int pIdx;
+            for(int piEA = NERRealPoles; piEA < NERpoles; piEA+=2){
+              pIdx = (piEA - NERRealPoles) / 2;
+              rhsacc[accIdx+piEA] = -ERAlpha[pIdx]*acc[accIdx+piEA] - ERBeta[pIdx]*acc[accIdx+piEA+1] + rM;
+              rhsacc[accIdx+piEA+1] = -ERAlpha[pIdx]*acc[accIdx+piEA+1] + ERBeta[pIdx]*acc[accIdx+piEA];
+              vn += 2.0 * (ERB[angIdx*NERImagPoles+pIdx]*acc[accIdx+piEA]+ERC[angIdx*NERImagPoles+pIdx]*acc[accIdx+piEA+1]);
+            }
+          }
+            
             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
             const dfloat sc = invJ*sJ;
 

@@ -82,6 +82,35 @@ SOFTWARE.
     }
   }
 }
+//[EA] Update kernel for explicit ER
+@kernel void acousticsUpdateERAcc(const dlong NboundaryPoints,
+          const dlong Npoles,
+		      const dfloat dt,  
+		      const dfloat rka,
+		      const dfloat rkb,
+		      @restrict const  dfloat *  rhsacc,
+		      @restrict dfloat *  resacc,
+		      @restrict dfloat *  acc,
+          const dlong offset){
+  // [EA] Should look into performance of this function!
+  for(dlong n=0;n<NboundaryPoints;++n;@outer(0)){
+    for(dlong e=0;e<Npoles;++e;@inner(0)){
+      const dlong id = offset + (n*Npoles)+e;
+      dfloat r_resacc = resacc[id];
+      dfloat r_rhsacc = rhsacc[id]; 
+      dfloat r_acc    = acc[id];
+
+      r_resacc = rka*r_resacc + dt*r_rhsacc;
+      r_acc   += rkb*r_resacc;
+      
+      resacc[id] = r_resacc;
+      acc[id]    = r_acc;
+      
+    }
+  }
+}
+
+
 //[EA] - EIRK4 update kernel
 @kernel void acousticsUpdateEIRK4(const dlong Nelements,
 		      const dfloat dt,  
@@ -125,8 +154,8 @@ SOFTWARE.
 }
 
 
-//[EA] - EIRK4 accumulator update kernel
-@kernel void acousticsUpdateEIRK4Acc(const dlong NLRPoints,
+//[EA] - EIRK4 LR accumulator update kernel
+@kernel void acousticsUpdateEIRK4AccLR(const dlong NLRPoints,
 		      const dfloat dt,  
 		      @restrict const dfloat *esdirka,
 		      @restrict const dfloat *esdirkb,
@@ -201,6 +230,87 @@ SOFTWARE.
     }
   }
 }
+
+//[EA] - EIRK4 ER accumulator update kernel
+@kernel void acousticsUpdateEIRK4AccER(const dlong NERPoints,
+					const dlong NLRPoints,
+					const dlong NLRPoles,
+		      const dfloat dt,  
+		      @restrict const dfloat *esdirka,
+		      @restrict const dfloat *esdirkb,
+          const dlong Npoles,
+          const dlong NRealPoles,
+          @restrict const dlong * mapAccToQ,
+          @restrict const dfloat * ERAlpha,
+          @restrict const dfloat * ERBeta,
+          @restrict const dfloat * ERLambda,
+		      @restrict const  dfloat *  k1acc,
+          @restrict const  dfloat *  k2acc,
+          @restrict const  dfloat *  k3acc,
+          @restrict const  dfloat *  k4acc,
+          @restrict const  dfloat *  k5acc,
+          @restrict const  dfloat *  k6acc,
+		      @restrict const  dfloat *  resq,
+          @restrict dfloat * acc,
+          @restrict dfloat * Xacc,
+          const dlong Stage){
+  
+  // Implicit time-stepping of accumulators
+  // [EA] Should look into performance of this function!
+  
+  for(dlong n1=0; n1<(NERPoints+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
+    for(dlong n2=0; n2 < p_blockSize; ++n2;@inner(0)){    
+      dlong n = n1*p_blockSize+n2;
+      if(n < NERPoints){
+        dfloat dt2 = dt*dt;  
+        dlong presIdx = mapAccToQ[n+NLRPoints];
+        // Real poles
+        for(dlong e=0;e<NRealPoles;++e){
+          const dlong id = NLRPoints*NLRPoles+(n*Npoles)+e;
+          if(Stage == 1){
+            Xacc[id] = (acc[id] + dt*esdirka[6]*k1acc[id] + dt*esdirka[7]*resq[presIdx]) / (1-dt*esdirka[7]*(-ERLambda[e]));
+          } else if(Stage == 2){
+            Xacc[id] = (acc[id] + dt*esdirka[12]*k1acc[id] + dt*esdirka[13]*k2acc[id] + dt*esdirka[14]*resq[presIdx]) / (1-dt*esdirka[14]*(-ERLambda[e]));
+          } else if(Stage == 3){
+            Xacc[id] = (acc[id] + dt*esdirka[18]*k1acc[id]+dt*esdirka[19]*k2acc[id]+dt*esdirka[20]*k3acc[id]+dt*esdirka[21]*resq[presIdx]) / (1-dt*esdirka[21]*(-ERLambda[e]));
+          } else if(Stage == 4){
+            Xacc[id] = (acc[id] + dt*esdirka[24]*k1acc[id]+dt*esdirka[25]*k2acc[id]+dt*esdirka[26]*k3acc[id]+dt*esdirka[27]*k4acc[id]+dt*esdirka[28]*resq[presIdx]) / (1-dt*esdirka[28]*(-ERLambda[e]));
+          } else if(Stage == 5){
+            Xacc[id] = (acc[id] + dt*esdirka[30]*k1acc[id]+dt*esdirka[31]*k2acc[id]+dt*esdirka[32]*k3acc[id]+dt*esdirka[33]*k4acc[id]+dt*esdirka[34]*k5acc[id]+dt*esdirka[35]*resq[presIdx]) / (1-dt*esdirka[35]*(-ERLambda[e]));
+          } else if(Stage == 6){
+            acc[id] = acc[id] + dt*(esdirkb[0]*k1acc[id]+esdirkb[1]*k2acc[id]+esdirkb[2]*k3acc[id]+esdirkb[3]*k4acc[id]+esdirkb[4]*k5acc[id]+esdirkb[5]*k6acc[id]);
+          }
+        }
+        // Imag poles
+        for(dlong e=NRealPoles;e<Npoles;e+=2){
+          const dlong id = (n*Npoles)+e;
+          const dlong pIdx = (e-NRealPoles) / 2;
+          if(Stage == 1){
+            Xacc[id] = (esdirka[7]*(resq[presIdx]*ERAlpha[pIdx]*esdirka[7] - esdirka[6]*(-ERAlpha[pIdx]*k1acc[id] + ERBeta[pIdx]*k1acc[id+1]))*dt2 + ((ERAlpha[pIdx]*acc[id] - acc[id+1]*ERBeta[pIdx] + resq[presIdx])*esdirka[7] + esdirka[6]*k1acc[id])*dt + acc[id])/(1 + esdirka[7]*esdirka[7]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[7]*dt);
+            Xacc[id+1] = ((resq[presIdx]*ERBeta[pIdx]*esdirka[7] + esdirka[6]*(ERAlpha[pIdx]*k1acc[id+1] + ERBeta[pIdx]*k1acc[id]))*esdirka[7]*dt2 + ((ERAlpha[pIdx]*acc[id+1] + acc[id]*ERBeta[pIdx])*esdirka[7] + esdirka[6]*k1acc[id+1])*dt + acc[id+1])/(1 + esdirka[7]*esdirka[7]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[7]*dt);
+          } else if(Stage == 2){
+            Xacc[id] = ((resq[presIdx]*ERAlpha[pIdx]*esdirka[14] + (esdirka[12]*k1acc[id] + esdirka[13]*k2acc[id])*ERAlpha[pIdx] - ERBeta[pIdx]*(esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1]))*esdirka[14]*dt2 + ((ERAlpha[pIdx]*acc[id] - acc[id+1]*ERBeta[pIdx] + resq[presIdx])*esdirka[14] + k1acc[id]*esdirka[12] + k2acc[id]*esdirka[13])*dt + acc[id])/(1 + esdirka[14]*esdirka[14]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[14]*dt);
+            Xacc[id+1] = (esdirka[14]*(resq[presIdx]*ERBeta[pIdx]*esdirka[14] + (esdirka[12]*k1acc[id] + esdirka[13]*k2acc[id])*ERBeta[pIdx] + ERAlpha[pIdx]*(esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1]))*dt2 + ((ERAlpha[pIdx]*acc[id+1] + acc[id]*ERBeta[pIdx])*esdirka[14] + esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1])*dt + acc[id+1])/(1 + esdirka[14]*esdirka[14]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[14]*dt);
+          } else if(Stage == 3){
+            Xacc[id] = (esdirka[21]*(esdirka[21]*resq[presIdx]*ERAlpha[pIdx] + (esdirka[18]*k1acc[id] + esdirka[19]*k2acc[id] + esdirka[20]*k3acc[id])*ERAlpha[pIdx] - ERBeta[pIdx]*(esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1]))*dt2 + ((ERAlpha[pIdx]*acc[id] - acc[id+1]*ERBeta[pIdx] + resq[presIdx])*esdirka[21] + k1acc[id]*esdirka[18] + k2acc[id]*esdirka[19] + k3acc[id]*esdirka[20])*dt + acc[id])/(1 + esdirka[21]*esdirka[21]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[21]*dt);
+            Xacc[id+1] = (esdirka[21]*(esdirka[21]*resq[presIdx]*ERBeta[pIdx] + (esdirka[18]*k1acc[id] + esdirka[19]*k2acc[id] + esdirka[20]*k3acc[id])*ERBeta[pIdx] + ERAlpha[pIdx]*(esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1]))*dt2 + ((ERAlpha[pIdx]*acc[id+1] + acc[id]*ERBeta[pIdx])*esdirka[21] + esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[21]*esdirka[21]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[21]*dt);
+          } else if(Stage == 4){
+            Xacc[id] = ((resq[presIdx]*ERAlpha[pIdx]*esdirka[28] + (esdirka[24]*k1acc[id] + esdirka[25]*k2acc[id] + esdirka[26]*k3acc[id] + esdirka[27]*k4acc[id])*ERAlpha[pIdx] - ERBeta[pIdx]*(esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1] + esdirka[27]*k4acc[id+1]))*esdirka[28]*dt2 + ((ERAlpha[pIdx]*acc[id] - acc[id+1]*ERBeta[pIdx] + resq[presIdx])*esdirka[28] + esdirka[27]*k4acc[id] + k1acc[id]*esdirka[24] + k2acc[id]*esdirka[25] + k3acc[id]*esdirka[26])*dt + acc[id])/(1 + esdirka[28]*esdirka[28]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[28]*dt);
+            Xacc[id+1] = ((resq[presIdx]*ERBeta[pIdx]*esdirka[28] + (esdirka[24]*k1acc[id] + esdirka[25]*k2acc[id] + esdirka[26]*k3acc[id] + esdirka[27]*k4acc[id])*ERBeta[pIdx] + ERAlpha[pIdx]*(esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1] + esdirka[27]*k4acc[id+1]))*esdirka[28]*dt2 + ((ERAlpha[pIdx]*acc[id+1] + acc[id]*ERBeta[pIdx])*esdirka[28] + esdirka[27]*k4acc[id+1] + esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[28]*esdirka[28]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[28]*dt);
+          } else if(Stage == 5){
+            Xacc[id] = (esdirka[35]*(resq[presIdx]*ERAlpha[pIdx]*esdirka[35] + (esdirka[30]*k1acc[id] + esdirka[31]*k2acc[id] + esdirka[32]*k3acc[id] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id])*ERAlpha[pIdx] - ERBeta[pIdx]*(esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1]))*dt2 + ((ERAlpha[pIdx]*acc[id] - acc[id+1]*ERBeta[pIdx] + resq[presIdx])*esdirka[35] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id] + k1acc[id]*esdirka[30] + k2acc[id]*esdirka[31] + k3acc[id]*esdirka[32])*dt + acc[id])/(1 + esdirka[35]*esdirka[35]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[35]*dt);
+            Xacc[id+1] = ((resq[presIdx]*ERBeta[pIdx]*esdirka[35] + (esdirka[30]*k1acc[id] + esdirka[31]*k2acc[id] + esdirka[32]*k3acc[id] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id])*ERBeta[pIdx] + ERAlpha[pIdx]*(esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1]))*esdirka[35]*dt2 + ((ERAlpha[pIdx]*acc[id+1] + acc[id]*ERBeta[pIdx])*esdirka[35] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1] + esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[35]*esdirka[35]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[35]*dt);
+          } else if(Stage == 6){
+            acc[id] = acc[id] + dt*(esdirkb[0]*k1acc[id]+esdirkb[1]*k2acc[id]+esdirkb[2]*k3acc[id]+esdirkb[3]*k4acc[id]+esdirkb[4]*k5acc[id]+esdirkb[5]*k6acc[id]);
+            acc[id+1] = acc[id+1] + dt*(esdirkb[0]*k1acc[id+1]+esdirkb[1]*k2acc[id+1]+esdirkb[2]*k3acc[id+1]+esdirkb[3]*k4acc[id+1]+esdirkb[4]*k5acc[id+1]+esdirkb[5]*k6acc[id+1]);
+          }
+        }
+      }
+    }
+  }
+}
+
+
 
 
 

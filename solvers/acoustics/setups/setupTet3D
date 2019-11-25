@@ -8,9 +8,11 @@
 #../../meshes/CubeTet_libP_EA_17.msh
 #../../meshes/cubeTet_01_PerfRefl.msh
 #../../meshes/cubeTet_01_FreqIndep.msh
-../../meshes/cubeTet_01_LocalReac.msh
+#../../meshes/cubeTet_01_LocalReac.msh
 #../../meshes/cubeTet_01_1LR5FI.msh
 #../../meshes/cubeTet_01_ExtendReac.msh
+#../../meshes/cubeTet_01_1ER5FI.msh
+cubeTet_01_1ER5FIVERYFINE.msh
 #boxUnstruct5Opt.msh
 
 [MESH DIMENSION]
@@ -25,7 +27,6 @@
 [THREAD MODEL]
 CUDA
 
-
 [PLATFORM NUMBER]
 0
 
@@ -33,7 +34,7 @@ CUDA
 0
 
 [TIME INTEGRATOR]
-#DOPRI5
+#DOPRI5 # Currently broken
 #LSERK4
 EIRK4
 
@@ -75,7 +76,6 @@ NODAL
 
 [FINAL TIME]
 .01
-#0.00001
 
 [RECEIVER]
 setups/setupdata/ReceiverLocations.dat
@@ -87,7 +87,7 @@ setups/setupdata/ReceiverLocations.dat
 1
 
 [CFL]
-0.5
+0.2
 
 [RESTART FROM FILE]
 0
@@ -106,7 +106,10 @@ vtkOut/tshape
 #2399.628 		# 5.83*rho*c   - ~50% absorption
 4116000.0    # 10000*rho*c  - ~rigid boundary
 
-[VECTFIT] # Vectorfit filename from vectorfitDriver.m
-setups/setupdata/LRDATA6.dat
+[LRVECTFIT] # Vectorfit filename from vectorfitDriverLR.m
+setups/setupdata/LRDATA14.dat
 
+[ERVECTFIT] # Vectorfit filename from vectorfitDriverER.m
+#setups/setupdata/ERDATA14.dat
+setups/setupdata/ERDATA14_d0.dat
 

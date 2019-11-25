@@ -112,6 +112,25 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
 
   mesh_t *mesh = acoustics->mesh;
   
+  // [EA] Angle detection using wave-splitting
+  if(mesh->NERPoints){
+    acoustics->ERangleDetection(mesh->NERPoints,
+														 mesh->NLRPoints,
+														 acoustics->o_vt,
+														 acoustics->o_vi,
+														 acoustics->o_ERintpolElements,
+														 acoustics->o_q,
+														 mesh->o_sgeo,
+														 acoustics->o_ERintpol,
+														 acoustics->o_anglei,
+														 mesh->o_mapAccToQ,
+														 mesh->o_mapAccToN,
+														 mesh->dt);
+
+
+    // Move vt time steps
+    acoustics->ERMoveVT(mesh->NERPoints, acoustics->o_vt);    
+  }
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(int rk=0;rk<mesh->Nrk;++rk){
     dfloat currentTime = time + mesh->rkc[rk]*mesh->dt;
@@ -141,6 +160,20 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
       size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
       acoustics->o_q.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
     }
+
+    #if 0
+    dfloat ttt[91];
+    for(int itt = 0; itt < 91; itt++){
+      ttt[itt] = -1;
+      printf("ttt = %g\n",ttt[itt]);
+    }    
+    acoustics->o_ERYinf.copyTo(ttt);
+    for(int itt = 0; itt < 91; itt++){
+      printf("yinf = %g\n",ttt[itt]);
+    }
+    #endif
+
+
     acoustics->surfaceKernel(mesh->Nelements, 
 		       mesh->o_sgeo, 
 		       mesh->o_LIFTT, 
@@ -163,9 +196,22 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
            acoustics->o_LRAlpha,
            acoustics->o_LRBeta,
            acoustics->LRYinf,
-           acoustics->Npoles,
-           acoustics->NRealPoles,
-           acoustics->NImagPoles);
+           acoustics->LRNpoles,
+           acoustics->LRNRealPoles,
+           acoustics->LRNImagPoles,
+           mesh->NLRPoints,
+           acoustics->o_anglei,
+           acoustics->o_ERYinf,
+           acoustics->ERNRealPoles,
+           acoustics->ERNImagPoles,
+           acoustics->ERNpoles,
+           acoustics->o_ERLambda,
+           acoustics->o_ERA,
+           acoustics->o_ERAlpha,
+           acoustics->o_ERBeta,
+           acoustics->o_ERB,
+           acoustics->o_ERC);
+
     // update solution using Runge-Kutta
     acoustics->updateKernel(mesh->Nelements, 
 		      mesh->dt, 
@@ -176,13 +222,24 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
 		      acoustics->o_q);
     if(mesh->NLRPoints){
       acoustics->updateKernelLR(mesh->NLRPoints,
-            acoustics->Npoles,
+            acoustics->LRNpoles,
             mesh->dt,  
             mesh->rka[rk],
             mesh->rkb[rk],
             acoustics->o_rhsacc,
             acoustics->o_resacc,
             acoustics->o_acc);
+    }
+    if(mesh->NERPoints){
+      acoustics->updateKernelER(mesh->NERPoints,
+            acoustics->ERNpoles,
+            mesh->dt,  
+            mesh->rka[rk],
+            mesh->rkb[rk],
+            acoustics->o_rhsacc,
+            acoustics->o_resacc,
+            acoustics->o_acc,
+            acoustics->LRNpoles*mesh->NLRPoints);
     }
   }
 
@@ -218,7 +275,27 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
 
   mesh_t *mesh = acoustics->mesh;
   
-  
+  // [EA] Angle detection using wave-splitting
+  if(mesh->NERPoints){
+    acoustics->ERangleDetection(mesh->NERPoints,
+														 mesh->NLRPoints,
+														 acoustics->o_vt,
+														 acoustics->o_vi,
+														 acoustics->o_ERintpolElements,
+														 acoustics->o_q,
+														 mesh->o_sgeo,
+														 acoustics->o_ERintpol,
+														 acoustics->o_anglei,
+														 mesh->o_mapAccToQ,
+														 mesh->o_mapAccToN,
+														 mesh->dt);
+
+
+    // Move vt time steps
+    acoustics->ERMoveVT(mesh->NERPoints, acoustics->o_vt);    
+  }
+
+
   //----------------------------------------- STAGE 1 -----------------------------------------
   dfloat currentTime = time + mesh->erkc[0]*mesh->dt;
   // extract q halo on DEVICE
@@ -238,7 +315,6 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
 	     mesh->o_Dmatrices,
 	     acoustics->o_q, 
 	     acoustics->o_k1rhsq);
-
   if(mesh->totalHaloPairs>0){
     meshHaloExchangeFinish(mesh);
       
@@ -246,7 +322,6 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
     size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
     acoustics->o_q.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
   }
-  
   acoustics->surfaceKernel(mesh->Nelements, 
 		       mesh->o_sgeo, 
 		       mesh->o_LIFTT, 
@@ -269,10 +344,23 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
            acoustics->o_LRAlpha,
            acoustics->o_LRBeta,
            acoustics->LRYinf,
-           acoustics->Npoles,
-           acoustics->NRealPoles,
-           acoustics->NImagPoles);
+           acoustics->LRNpoles,
+           acoustics->LRNRealPoles,
+           acoustics->LRNImagPoles,
+           mesh->NLRPoints,
+           acoustics->o_anglei,
+           acoustics->o_ERYinf,
+           acoustics->ERNRealPoles,
+           acoustics->ERNImagPoles,
+           acoustics->ERNpoles,
+           acoustics->o_ERLambda,
+           acoustics->o_ERA,
+           acoustics->o_ERAlpha,
+           acoustics->o_ERBeta,
+           acoustics->o_ERB,
+           acoustics->o_ERC);
   
+ 
   acoustics->acousticsUpdateEIRK4(mesh->Nelements,
 		      mesh->dt,  
 		      mesh->o_erka,
@@ -287,12 +375,12 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
 		      acoustics->o_q,
           1);
   if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4Acc(mesh->NLRPoints,
+  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
 		      mesh->dt,  
 		      mesh->o_esdirka,
 		      mesh->o_esdirkb,
-          acoustics->Npoles,
-          acoustics->NRealPoles,
+          acoustics->LRNpoles,
+          acoustics->LRNRealPoles,
           mesh->o_mapAccToQ,
           acoustics->o_LRAlpha,
           acoustics->o_LRBeta,
@@ -308,11 +396,34 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
           acoustics->o_Xacc,
           1);
   }
+  if(mesh->NERPoints){
+    acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
+					mesh->NLRPoints,
+					acoustics->LRNpoles,
+		      mesh->dt,  
+		      mesh->o_esdirka,
+		      mesh->o_esdirkb,
+          acoustics->ERNpoles,
+          acoustics->ERNRealPoles,
+          mesh->o_mapAccToQ,
+          acoustics->o_ERAlpha,
+          acoustics->o_ERBeta,
+          acoustics->o_ERLambda,
+		      acoustics->o_k1acc,
+          acoustics->o_k2acc,
+          acoustics->o_k3acc,
+          acoustics->o_k4acc,
+          acoustics->o_k5acc,
+          acoustics->o_k6acc,
+		      acoustics->o_resq,
+          acoustics->o_acc,
+          acoustics->o_Xacc,
+          1);
+  }
           
   //----------------------------------------- STAGE 2 -----------------------------------------
   
   currentTime = time + mesh->erkc[1]*mesh->dt;
-
   // extract q halo on DEVICE
   if(mesh->totalHaloPairs>0){
     int Nentries = mesh->Np*acoustics->Nfields;
@@ -330,7 +441,6 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
 	     mesh->o_Dmatrices,
 	     acoustics->o_resq, 
 	     acoustics->o_k2rhsq);
-
   if(mesh->totalHaloPairs>0){
     meshHaloExchangeFinish(mesh);
       
@@ -360,10 +470,21 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
            acoustics->o_LRAlpha,
            acoustics->o_LRBeta,
            acoustics->LRYinf,
-           acoustics->Npoles,
-           acoustics->NRealPoles,
-           acoustics->NImagPoles);
-
+           acoustics->LRNpoles,
+           acoustics->LRNRealPoles,
+           acoustics->LRNImagPoles,
+           mesh->NLRPoints,
+           acoustics->o_anglei,
+           acoustics->o_ERYinf,
+           acoustics->ERNRealPoles,
+           acoustics->ERNImagPoles,
+           acoustics->ERNpoles,
+           acoustics->o_ERLambda,
+           acoustics->o_ERA,
+           acoustics->o_ERAlpha,
+           acoustics->o_ERBeta,
+           acoustics->o_ERB,
+           acoustics->o_ERC);
   acoustics->acousticsUpdateEIRK4(mesh->Nelements,
 		      mesh->dt,  
 		      mesh->o_erka,
@@ -378,16 +499,40 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
 		      acoustics->o_q,
           2);
   if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4Acc(mesh->NLRPoints,
+  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
 		      mesh->dt,  
 		      mesh->o_esdirka,
 		      mesh->o_esdirkb,
-          acoustics->Npoles,
-          acoustics->NRealPoles,
+          acoustics->LRNpoles,
+          acoustics->LRNRealPoles,
           mesh->o_mapAccToQ,
           acoustics->o_LRAlpha,
           acoustics->o_LRBeta,
           acoustics->o_LRLambda,
+		      acoustics->o_k1acc,
+          acoustics->o_k2acc,
+          acoustics->o_k3acc,
+          acoustics->o_k4acc,
+          acoustics->o_k5acc,
+          acoustics->o_k6acc,
+		      acoustics->o_resq,
+          acoustics->o_acc,
+          acoustics->o_Xacc,
+          2);
+  }
+    if(mesh->NERPoints){
+    acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
+					mesh->NLRPoints,
+					acoustics->LRNpoles,
+		      mesh->dt,  
+		      mesh->o_esdirka,
+		      mesh->o_esdirkb,
+          acoustics->ERNpoles,
+          acoustics->ERNRealPoles,
+          mesh->o_mapAccToQ,
+          acoustics->o_ERAlpha,
+          acoustics->o_ERBeta,
+          acoustics->o_ERLambda,
 		      acoustics->o_k1acc,
           acoustics->o_k2acc,
           acoustics->o_k3acc,
@@ -450,9 +595,21 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
            acoustics->o_LRAlpha,
            acoustics->o_LRBeta,
            acoustics->LRYinf,
-           acoustics->Npoles,
-           acoustics->NRealPoles,
-           acoustics->NImagPoles);
+           acoustics->LRNpoles,
+           acoustics->LRNRealPoles,
+           acoustics->LRNImagPoles,
+           mesh->NLRPoints,
+           acoustics->o_anglei,
+           acoustics->o_ERYinf,
+           acoustics->ERNRealPoles,
+           acoustics->ERNImagPoles,
+           acoustics->ERNpoles,
+           acoustics->o_ERLambda,
+           acoustics->o_ERA,
+           acoustics->o_ERAlpha,
+           acoustics->o_ERBeta,
+           acoustics->o_ERB,
+           acoustics->o_ERC);
 
   acoustics->acousticsUpdateEIRK4(mesh->Nelements,
 		      mesh->dt,  
@@ -468,12 +625,12 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
 		      acoustics->o_q,
           3);
   if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4Acc(mesh->NLRPoints,
+  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
 		      mesh->dt,  
 		      mesh->o_esdirka,
 		      mesh->o_esdirkb,
-          acoustics->Npoles,
-          acoustics->NRealPoles,
+          acoustics->LRNpoles,
+          acoustics->LRNRealPoles,
           mesh->o_mapAccToQ,
           acoustics->o_LRAlpha,
           acoustics->o_LRBeta,
@@ -488,6 +645,30 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
           acoustics->o_acc,
           acoustics->o_Xacc,
           3);
+  }
+  if(mesh->NERPoints){
+  acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
+        mesh->NLRPoints,
+        acoustics->LRNpoles,
+        mesh->dt,  
+        mesh->o_esdirka,
+        mesh->o_esdirkb,
+        acoustics->ERNpoles,
+        acoustics->ERNRealPoles,
+        mesh->o_mapAccToQ,
+        acoustics->o_ERAlpha,
+        acoustics->o_ERBeta,
+        acoustics->o_ERLambda,
+        acoustics->o_k1acc,
+        acoustics->o_k2acc,
+        acoustics->o_k3acc,
+        acoustics->o_k4acc,
+        acoustics->o_k5acc,
+        acoustics->o_k6acc,
+        acoustics->o_resq,
+        acoustics->o_acc,
+        acoustics->o_Xacc,
+        3);
   }
   //----------------------------------------- STAGE 4 -----------------------------------------
   
@@ -540,9 +721,21 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
            acoustics->o_LRAlpha,
            acoustics->o_LRBeta,
            acoustics->LRYinf,
-           acoustics->Npoles,
-           acoustics->NRealPoles,
-           acoustics->NImagPoles);
+           acoustics->LRNpoles,
+           acoustics->LRNRealPoles,
+           acoustics->LRNImagPoles,
+           mesh->NLRPoints,
+           acoustics->o_anglei,
+           acoustics->o_ERYinf,
+           acoustics->ERNRealPoles,
+           acoustics->ERNImagPoles,
+           acoustics->ERNpoles,
+           acoustics->o_ERLambda,
+           acoustics->o_ERA,
+           acoustics->o_ERAlpha,
+           acoustics->o_ERBeta,
+           acoustics->o_ERB,
+           acoustics->o_ERC);
 
   acoustics->acousticsUpdateEIRK4(mesh->Nelements,
 		      mesh->dt,  
@@ -558,12 +751,12 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
 		      acoustics->o_q,
           4);
   if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4Acc(mesh->NLRPoints,
+  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
 		      mesh->dt,  
 		      mesh->o_esdirka,
 		      mesh->o_esdirkb,
-          acoustics->Npoles,
-          acoustics->NRealPoles,
+          acoustics->LRNpoles,
+          acoustics->LRNRealPoles,
           mesh->o_mapAccToQ,
           acoustics->o_LRAlpha,
           acoustics->o_LRBeta,
@@ -578,6 +771,30 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
           acoustics->o_acc,
           acoustics->o_Xacc,
           4);
+  }
+  if(mesh->NERPoints){
+  acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
+        mesh->NLRPoints,
+        acoustics->LRNpoles,
+        mesh->dt,  
+        mesh->o_esdirka,
+        mesh->o_esdirkb,
+        acoustics->ERNpoles,
+        acoustics->ERNRealPoles,
+        mesh->o_mapAccToQ,
+        acoustics->o_ERAlpha,
+        acoustics->o_ERBeta,
+        acoustics->o_ERLambda,
+        acoustics->o_k1acc,
+        acoustics->o_k2acc,
+        acoustics->o_k3acc,
+        acoustics->o_k4acc,
+        acoustics->o_k5acc,
+        acoustics->o_k6acc,
+        acoustics->o_resq,
+        acoustics->o_acc,
+        acoustics->o_Xacc,
+        4);
   }
   //----------------------------------------- STAGE 5 -----------------------------------------
   
@@ -630,9 +847,21 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
            acoustics->o_LRAlpha,
            acoustics->o_LRBeta,
            acoustics->LRYinf,
-           acoustics->Npoles,
-           acoustics->NRealPoles,
-           acoustics->NImagPoles);
+           acoustics->LRNpoles,
+           acoustics->LRNRealPoles,
+           acoustics->LRNImagPoles,
+           mesh->NLRPoints,
+           acoustics->o_anglei,
+           acoustics->o_ERYinf,
+           acoustics->ERNRealPoles,
+           acoustics->ERNImagPoles,
+           acoustics->ERNpoles,
+           acoustics->o_ERLambda,
+           acoustics->o_ERA,
+           acoustics->o_ERAlpha,
+           acoustics->o_ERBeta,
+           acoustics->o_ERB,
+           acoustics->o_ERC);
 
   acoustics->acousticsUpdateEIRK4(mesh->Nelements,
 		      mesh->dt,  
@@ -648,12 +877,12 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
 		      acoustics->o_q,
           5);
   if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4Acc(mesh->NLRPoints,
+  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
 		      mesh->dt,  
 		      mesh->o_esdirka,
 		      mesh->o_esdirkb,
-          acoustics->Npoles,
-          acoustics->NRealPoles,
+          acoustics->LRNpoles,
+          acoustics->LRNRealPoles,
           mesh->o_mapAccToQ,
           acoustics->o_LRAlpha,
           acoustics->o_LRBeta,
@@ -668,6 +897,30 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
           acoustics->o_acc,
           acoustics->o_Xacc,
           5);
+  }
+  if(mesh->NERPoints){
+  acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
+        mesh->NLRPoints,
+        acoustics->LRNpoles,
+        mesh->dt,  
+        mesh->o_esdirka,
+        mesh->o_esdirkb,
+        acoustics->ERNpoles,
+        acoustics->ERNRealPoles,
+        mesh->o_mapAccToQ,
+        acoustics->o_ERAlpha,
+        acoustics->o_ERBeta,
+        acoustics->o_ERLambda,
+        acoustics->o_k1acc,
+        acoustics->o_k2acc,
+        acoustics->o_k3acc,
+        acoustics->o_k4acc,
+        acoustics->o_k5acc,
+        acoustics->o_k6acc,
+        acoustics->o_resq,
+        acoustics->o_acc,
+        acoustics->o_Xacc,
+        5);
   }
   //----------------------------------------- STAGE 6 -----------------------------------------
   
@@ -720,9 +973,21 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
            acoustics->o_LRAlpha,
            acoustics->o_LRBeta,
            acoustics->LRYinf,
-           acoustics->Npoles,
-           acoustics->NRealPoles,
-           acoustics->NImagPoles);
+           acoustics->LRNpoles,
+           acoustics->LRNRealPoles,
+           acoustics->LRNImagPoles,
+           mesh->NLRPoints,
+           acoustics->o_anglei,
+           acoustics->o_ERYinf,
+           acoustics->ERNRealPoles,
+           acoustics->ERNImagPoles,
+           acoustics->ERNpoles,
+           acoustics->o_ERLambda,
+           acoustics->o_ERA,
+           acoustics->o_ERAlpha,
+           acoustics->o_ERBeta,
+           acoustics->o_ERB,
+           acoustics->o_ERC);
 
   acoustics->acousticsUpdateEIRK4(mesh->Nelements,
 		      mesh->dt,  
@@ -738,12 +1003,12 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
 		      acoustics->o_q,
           6);
   if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4Acc(mesh->NLRPoints,
+    acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
 		      mesh->dt,  
 		      mesh->o_esdirka,
 		      mesh->o_esdirkb,
-          acoustics->Npoles,
-          acoustics->NRealPoles,
+          acoustics->LRNpoles,
+          acoustics->LRNRealPoles,
           mesh->o_mapAccToQ,
           acoustics->o_LRAlpha,
           acoustics->o_LRBeta,
@@ -759,7 +1024,30 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
           acoustics->o_Xacc,
           6);
     }
-
+    if(mesh->NERPoints){
+      acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
+					mesh->NLRPoints,
+					acoustics->LRNpoles,
+		      mesh->dt,  
+		      mesh->o_esdirka,
+		      mesh->o_esdirkb,
+          acoustics->ERNpoles,
+          acoustics->ERNRealPoles,
+          mesh->o_mapAccToQ,
+          acoustics->o_ERAlpha,
+          acoustics->o_ERBeta,
+          acoustics->o_ERLambda,
+		      acoustics->o_k1acc,
+          acoustics->o_k2acc,
+          acoustics->o_k3acc,
+          acoustics->o_k4acc,
+          acoustics->o_k5acc,
+          acoustics->o_k6acc,
+		      acoustics->o_resq,
+          acoustics->o_acc,
+          acoustics->o_Xacc,
+          6);
+  }
   //---------RECEIVER---------
 
 

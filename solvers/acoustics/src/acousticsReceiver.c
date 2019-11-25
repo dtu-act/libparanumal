@@ -68,8 +68,9 @@ void acousticsReceiverInterpolation(acoustics_t *acoustics){
     }
     #if 0
     for(int i = 0; i < mesh->Np; i++){
-      printf("%.15lf\n",intpol[i]);
+      printf("%.15lf ",intpol[i]);
     }
+    printf("\n");
     #endif
 
     // Interpolated receiver
@@ -156,19 +157,24 @@ void acousticsFindReceiverElement(acoustics_t *acoustics){
         // Check if the two points are on the same side of the plane
         dlong recvSide = planeEqRecv > 0 ? 1 : -1;
         dlong otherSide = planeEqOther > 0 ? 1 : -1;
-        if(recvSide != otherSide){
+        planeEqRecv = planeEqRecv >= 0 ? planeEqRecv:-1.0*planeEqRecv;
+        if(recvSide != otherSide && planeEqRecv > 1.0e-15){
           // Recv is not inside element i
           isInside = 0;
           break;
         }
       }
       //Check if found recv point inside element i
-      if(isInside == 1){
+      if(isInside == 1 ){
         acoustics->recvElements[k] = i;
         acoustics->recvElementsIdx[acoustics->NReceiversLocal] = k;
         acoustics->NReceiversLocal++;
         break;
+      } else if(i == mesh->Nelements-1){
+        printf("RECEIVER LOCATION NOT FOUND!!,(x,y,z) = (%f,%f,%f)\n", recvLoc[0],recvLoc[1],recvLoc[2]);
       }
+        
+      
     }
   }
 }

@@ -149,7 +149,7 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 
       acousticsLserkStep(acoustics, newOptions, time);
 
-      if(tstep % 500 == 0){
+      if(tstep % 500 == 0 && !mesh->rank){
         printf("LSERK4 - Step: %d, out of: %d\n",tstep, mesh->NtimeSteps);
       }
     
@@ -168,7 +168,7 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 
       acousticsEirkStep(acoustics, newOptions, time);
 
-      if(tstep % 500 == 0){
+      if(tstep % 500 == 0 && !mesh->rank){
         printf("EIRK4 - Step: %d, out of: %d\n",tstep, mesh->NtimeSteps);
       }
     }

@@ -1,0 +1,335 @@
+dlong factorial(dlong x){
+  dlong res = 1;
+  for(int i = 2; i <= x; i++){
+    res *= i;
+  }
+  return res;
+}
+
+void makeInterpolationOperator(const dfloat x,
+															 const dfloat y, 
+															 const dfloat z, 
+															 const dlong Pele, 
+															 @restrict const dfloat *EX, 
+															 @restrict const dfloat *EY, 
+															 @restrict const dfloat *EZ,
+															 dfloat *intpol,
+															 const dlong offset,
+															 @restrict const dfloat *invVB){
+	
+//printf("offset=%d\n",offset);
+	dlong Nverts = 4;
+	// Receriver element
+	dlong recvElement = Pele;
+	dfloat xRecvElement[4];
+	dfloat yRecvElement[4];
+	dfloat zRecvElement[4];
+
+	xRecvElement[0] = EX[recvElement*Nverts+0];
+	xRecvElement[1] = EX[recvElement*Nverts+1];
+	xRecvElement[2] = EX[recvElement*Nverts+2];
+	xRecvElement[3] = EX[recvElement*Nverts+3];
+	
+	yRecvElement[0] = EY[recvElement*Nverts+0];
+	yRecvElement[1] = EY[recvElement*Nverts+1];
+	yRecvElement[2] = EY[recvElement*Nverts+2];
+	yRecvElement[3] = EY[recvElement*Nverts+3];
+
+	zRecvElement[0] = EZ[recvElement*Nverts+0];
+	zRecvElement[1] = EZ[recvElement*Nverts+1];
+	zRecvElement[2] = EZ[recvElement*Nverts+2];
+	zRecvElement[3] = EZ[recvElement*Nverts+3];
+
+	dfloat L1_rec = -(xRecvElement[1]*yRecvElement[2]*zRecvElement[3] - xRecvElement[1]*yRecvElement[2]*z - xRecvElement[1]*yRecvElement[3]*zRecvElement[2] + xRecvElement[1]*yRecvElement[3]*z + xRecvElement[1]*y*zRecvElement[2] - xRecvElement[1]*y*zRecvElement[3] - xRecvElement[2]*yRecvElement[1]*zRecvElement[3] + xRecvElement[2]*yRecvElement[1]*z + xRecvElement[2]*yRecvElement[3]*zRecvElement[1] - xRecvElement[2]*yRecvElement[3]*z - xRecvElement[2]*y*zRecvElement[1] + xRecvElement[2]*y*zRecvElement[3] + xRecvElement[3]*yRecvElement[1]*zRecvElement[2] - xRecvElement[3]*yRecvElement[1]*z - xRecvElement[3]*yRecvElement[2]*zRecvElement[1] + xRecvElement[3]*yRecvElement[2]*z + xRecvElement[3]*y*zRecvElement[1] - xRecvElement[3]*y*zRecvElement[2] - x*yRecvElement[1]*zRecvElement[2] + x*yRecvElement[1]*zRecvElement[3] + x*yRecvElement[2]*zRecvElement[1] - x*yRecvElement[2]*zRecvElement[3] - x*yRecvElement[3]*zRecvElement[1] + x*yRecvElement[3]*zRecvElement[2])/(xRecvElement[0]*yRecvElement[1]*zRecvElement[2] - xRecvElement[0]*yRecvElement[1]*zRecvElement[3] - xRecvElement[0]*yRecvElement[2]*zRecvElement[1] + xRecvElement[0]*yRecvElement[2]*zRecvElement[3] + xRecvElement[0]*yRecvElement[3]*zRecvElement[1] - xRecvElement[0]*yRecvElement[3]*zRecvElement[2] - xRecvElement[1]*yRecvElement[0]*zRecvElement[2] + xRecvElement[1]*yRecvElement[0]*zRecvElement[3] + xRecvElement[1]*yRecvElement[2]*zRecvElement[0] - xRecvElement[1]*yRecvElement[2]*zRecvElement[3] - xRecvElement[1]*yRecvElement[3]*zRecvElement[0] + xRecvElement[1]*yRecvElement[3]*zRecvElement[2] + xRecvElement[2]*yRecvElement[0]*zRecvElement[1] - xRecvElement[2]*yRecvElement[0]*zRecvElement[3] - xRecvElement[2]*yRecvElement[1]*zRecvElement[0] + xRecvElement[2]*yRecvElement[1]*zRecvElement[3] + xRecvElement[2]*yRecvElement[3]*zRecvElement[0] - xRecvElement[2]*yRecvElement[3]*zRecvElement[1] - xRecvElement[3]*yRecvElement[0]*zRecvElement[1] + xRecvElement[3]*yRecvElement[0]*zRecvElement[2] + xRecvElement[3]*yRecvElement[1]*zRecvElement[0] - xRecvElement[3]*yRecvElement[1]*zRecvElement[2] - xRecvElement[3]*yRecvElement[2]*zRecvElement[0] + xRecvElement[3]*yRecvElement[2]*zRecvElement[1]);
+	dfloat L2_rec = (xRecvElement[0]*yRecvElement[2]*zRecvElement[3] - xRecvElement[0]*yRecvElement[2]*z - xRecvElement[0]*yRecvElement[3]*zRecvElement[2] + xRecvElement[0]*yRecvElement[3]*z + xRecvElement[0]*y*zRecvElement[2] - xRecvElement[0]*y*zRecvElement[3] - xRecvElement[2]*yRecvElement[0]*zRecvElement[3] + xRecvElement[2]*yRecvElement[0]*z + xRecvElement[2]*yRecvElement[3]*zRecvElement[0] - xRecvElement[2]*yRecvElement[3]*z - xRecvElement[2]*y*zRecvElement[0] + xRecvElement[2]*y*zRecvElement[3] + xRecvElement[3]*yRecvElement[0]*zRecvElement[2] - xRecvElement[3]*yRecvElement[0]*z - xRecvElement[3]*yRecvElement[2]*zRecvElement[0] + xRecvElement[3]*yRecvElement[2]*z + xRecvElement[3]*y*zRecvElement[0] - xRecvElement[3]*y*zRecvElement[2] - x*yRecvElement[0]*zRecvElement[2] + x*yRecvElement[0]*zRecvElement[3] + x*yRecvElement[2]*zRecvElement[0] - x*yRecvElement[2]*zRecvElement[3] - x*yRecvElement[3]*zRecvElement[0] + x*yRecvElement[3]*zRecvElement[2])/(xRecvElement[0]*yRecvElement[1]*zRecvElement[2] - xRecvElement[0]*yRecvElement[1]*zRecvElement[3] - xRecvElement[0]*yRecvElement[2]*zRecvElement[1] + xRecvElement[0]*yRecvElement[2]*zRecvElement[3] + xRecvElement[0]*yRecvElement[3]*zRecvElement[1] - xRecvElement[0]*yRecvElement[3]*zRecvElement[2] - xRecvElement[1]*yRecvElement[0]*zRecvElement[2] + xRecvElement[1]*yRecvElement[0]*zRecvElement[3] + xRecvElement[1]*yRecvElement[2]*zRecvElement[0] - xRecvElement[1]*yRecvElement[2]*zRecvElement[3] - xRecvElement[1]*yRecvElement[3]*zRecvElement[0] + xRecvElement[1]*yRecvElement[3]*zRecvElement[2] + xRecvElement[2]*yRecvElement[0]*zRecvElement[1] - xRecvElement[2]*yRecvElement[0]*zRecvElement[3] - xRecvElement[2]*yRecvElement[1]*zRecvElement[0] + xRecvElement[2]*yRecvElement[1]*zRecvElement[3] + xRecvElement[2]*yRecvElement[3]*zRecvElement[0] - xRecvElement[2]*yRecvElement[3]*zRecvElement[1] - xRecvElement[3]*yRecvElement[0]*zRecvElement[1] + xRecvElement[3]*yRecvElement[0]*zRecvElement[2] + xRecvElement[3]*yRecvElement[1]*zRecvElement[0] - xRecvElement[3]*yRecvElement[1]*zRecvElement[2] - xRecvElement[3]*yRecvElement[2]*zRecvElement[0] + xRecvElement[3]*yRecvElement[2]*zRecvElement[1]);
+	dfloat L3_rec = -(xRecvElement[0]*yRecvElement[1]*zRecvElement[3] - xRecvElement[0]*yRecvElement[1]*z - xRecvElement[0]*yRecvElement[3]*zRecvElement[1] + xRecvElement[0]*yRecvElement[3]*z + xRecvElement[0]*y*zRecvElement[1] - xRecvElement[0]*y*zRecvElement[3] - xRecvElement[1]*yRecvElement[0]*zRecvElement[3] + xRecvElement[1]*yRecvElement[0]*z + xRecvElement[1]*yRecvElement[3]*zRecvElement[0] - xRecvElement[1]*yRecvElement[3]*z - xRecvElement[1]*y*zRecvElement[0] + xRecvElement[1]*y*zRecvElement[3] + xRecvElement[3]*yRecvElement[0]*zRecvElement[1] - xRecvElement[3]*yRecvElement[0]*z - xRecvElement[3]*yRecvElement[1]*zRecvElement[0] + xRecvElement[3]*yRecvElement[1]*z + xRecvElement[3]*y*zRecvElement[0] - xRecvElement[3]*y*zRecvElement[1] - x*yRecvElement[0]*zRecvElement[1] + x*yRecvElement[0]*zRecvElement[3] + x*yRecvElement[1]*zRecvElement[0] - x*yRecvElement[1]*zRecvElement[3] - x*yRecvElement[3]*zRecvElement[0] + x*yRecvElement[3]*zRecvElement[1])/(xRecvElement[0]*yRecvElement[1]*zRecvElement[2] - xRecvElement[0]*yRecvElement[1]*zRecvElement[3] - xRecvElement[0]*yRecvElement[2]*zRecvElement[1] + xRecvElement[0]*yRecvElement[2]*zRecvElement[3] + xRecvElement[0]*yRecvElement[3]*zRecvElement[1] - xRecvElement[0]*yRecvElement[3]*zRecvElement[2] - xRecvElement[1]*yRecvElement[0]*zRecvElement[2] + xRecvElement[1]*yRecvElement[0]*zRecvElement[3] + xRecvElement[1]*yRecvElement[2]*zRecvElement[0] - xRecvElement[1]*yRecvElement[2]*zRecvElement[3] - xRecvElement[1]*yRecvElement[3]*zRecvElement[0] + xRecvElement[1]*yRecvElement[3]*zRecvElement[2] + xRecvElement[2]*yRecvElement[0]*zRecvElement[1] - xRecvElement[2]*yRecvElement[0]*zRecvElement[3] - xRecvElement[2]*yRecvElement[1]*zRecvElement[0] + xRecvElement[2]*yRecvElement[1]*zRecvElement[3] + xRecvElement[2]*yRecvElement[3]*zRecvElement[0] - xRecvElement[2]*yRecvElement[3]*zRecvElement[1] - xRecvElement[3]*yRecvElement[0]*zRecvElement[1] + xRecvElement[3]*yRecvElement[0]*zRecvElement[2] + xRecvElement[3]*yRecvElement[1]*zRecvElement[0] - xRecvElement[3]*yRecvElement[1]*zRecvElement[2] - xRecvElement[3]*yRecvElement[2]*zRecvElement[0] + xRecvElement[3]*yRecvElement[2]*zRecvElement[1]);
+	dfloat L4_rec = (xRecvElement[0]*yRecvElement[1]*zRecvElement[2] - xRecvElement[0]*yRecvElement[1]*z - xRecvElement[0]*yRecvElement[2]*zRecvElement[1] + xRecvElement[0]*yRecvElement[2]*z + xRecvElement[0]*y*zRecvElement[1] - xRecvElement[0]*y*zRecvElement[2] - xRecvElement[1]*yRecvElement[0]*zRecvElement[2] + xRecvElement[1]*yRecvElement[0]*z + xRecvElement[1]*yRecvElement[2]*zRecvElement[0] - xRecvElement[1]*yRecvElement[2]*z - xRecvElement[1]*y*zRecvElement[0] + xRecvElement[1]*y*zRecvElement[2] + xRecvElement[2]*yRecvElement[0]*zRecvElement[1] - xRecvElement[2]*yRecvElement[0]*z - xRecvElement[2]*yRecvElement[1]*zRecvElement[0] + xRecvElement[2]*yRecvElement[1]*z + xRecvElement[2]*y*zRecvElement[0] - xRecvElement[2]*y*zRecvElement[1] - x*yRecvElement[0]*zRecvElement[1] + x*yRecvElement[0]*zRecvElement[2] + x*yRecvElement[1]*zRecvElement[0] - x*yRecvElement[1]*zRecvElement[2] - x*yRecvElement[2]*zRecvElement[0] + x*yRecvElement[2]*zRecvElement[1])/(xRecvElement[0]*yRecvElement[1]*zRecvElement[2] - xRecvElement[0]*yRecvElement[1]*zRecvElement[3] - xRecvElement[0]*yRecvElement[2]*zRecvElement[1] + xRecvElement[0]*yRecvElement[2]*zRecvElement[3] + xRecvElement[0]*yRecvElement[3]*zRecvElement[1] - xRecvElement[0]*yRecvElement[3]*zRecvElement[2] - xRecvElement[1]*yRecvElement[0]*zRecvElement[2] + xRecvElement[1]*yRecvElement[0]*zRecvElement[3] + xRecvElement[1]*yRecvElement[2]*zRecvElement[0] - xRecvElement[1]*yRecvElement[2]*zRecvElement[3] - xRecvElement[1]*yRecvElement[3]*zRecvElement[0] + xRecvElement[1]*yRecvElement[3]*zRecvElement[2] + xRecvElement[2]*yRecvElement[0]*zRecvElement[1] - xRecvElement[2]*yRecvElement[0]*zRecvElement[3] - xRecvElement[2]*yRecvElement[1]*zRecvElement[0] + xRecvElement[2]*yRecvElement[1]*zRecvElement[3] + xRecvElement[2]*yRecvElement[3]*zRecvElement[0] - xRecvElement[2]*yRecvElement[3]*zRecvElement[1] - xRecvElement[3]*yRecvElement[0]*zRecvElement[1] + xRecvElement[3]*yRecvElement[0]*zRecvElement[2] + xRecvElement[3]*yRecvElement[1]*zRecvElement[0] - xRecvElement[3]*yRecvElement[1]*zRecvElement[2] - xRecvElement[3]*yRecvElement[2]*zRecvElement[0] + xRecvElement[3]*yRecvElement[2]*zRecvElement[1]);
+
+	//Vandermonde Berstein matrix in receiver point
+	dfloat VB_rec[p_Np];
+
+	int sk = 0;
+	for(int l = 0; l <= p_N; l++){
+		for(int k = 0; k <= p_N - l; k++){
+			for(int j = 0; j <= p_N - k - l; j++){
+				int i = p_N - j - k - l;
+				dfloat temp = factorial(p_N)/(factorial(i)*factorial(j)*factorial(k)*factorial(l));
+				VB_rec[sk] = temp*pow(L1_rec,i)*pow(L2_rec,j)*pow(L3_rec,k)*pow(L4_rec,l);
+				sk++;
+			}
+		}
+	}
+	// interpolation
+	for(int j = 0; j < p_Np; j++){
+		for(int i = 0; i < p_Np; i++){
+			intpol[i+offset] += VB_rec[j]*invVB[i+j*p_Np];
+		}
+	}
+	//for(int j = 0; j < p_Np; j++){
+	//	printf("%f ",intpol[j+offset]);
+	//}
+	//printf("\n");
+	
+}
+
+
+void findElement(const dfloat x, 
+								 const dfloat y,
+								 const dfloat z,
+								 dlong *Pele,
+								 @restrict const dfloat *EX,
+								 @restrict const dfloat *EY, 
+								 @restrict const dfloat *EZ, 
+								 const dlong Nelements){
+
+  // Only works for tets!
+
+	dlong Nverts = 4;
+	dfloat recvLoc[3];
+	recvLoc[0] = x;
+	recvLoc[1] = y;
+	recvLoc[2] = z;
+
+	dlong faceVertices[4][4] = {{0,1,2,3},{0,1,3,2},{1,2,3,0},{2,0,3,1}};
+
+	for(dlong i = 0; i < Nelements; i++){
+		
+		// Assume receiver is in element
+		dlong isInside = 1;
+		for(int j = 0; j < p_Nfaces; j++){
+			dlong fv1 = faceVertices[j][0];
+			dlong fv2 = faceVertices[j][1];
+			dlong fv3 = faceVertices[j][2];
+			dlong fv4 = faceVertices[j][3];
+
+			// b r s defines the plane
+			dfloat b[3] = {EX[i*Nverts + fv1],
+										EY[i*Nverts + fv1],
+										EZ[i*Nverts + fv1]};
+			dfloat r[3] = {EX[i*Nverts + fv2],
+										EY[i*Nverts + fv2],
+										EZ[i*Nverts + fv2]};
+			dfloat s[3] = {EX[i*Nverts + fv3],
+										EY[i*Nverts + fv3],
+										EZ[i*Nverts + fv3]};
+			
+			// d is the control point (the last point in the tet)
+			dfloat d[3] = {EX[i*Nverts + fv4],
+										EY[i*Nverts + fv4],
+										EZ[i*Nverts + fv4]};
+
+
+			// Cross product to get normal vector of plane brs
+			dfloat n[3] = {(r[1]-b[1])*(s[2]-b[2]) - (r[2]-b[2])*(s[1]-b[1]),
+			(r[2]-b[2])*(s[0]-b[0]) - (r[0]-b[0])*(s[2]-b[2]),
+			(r[0]-b[0])*(s[1]-b[1]) - (r[1]-b[1])*(s[0]-b[0])};
+
+
+			// Calculate the plane equation for both receiver and leftover tet point.
+			dfloat planeEqRecv = n[0]*(recvLoc[0]-b[0]) + n[1]*(recvLoc[1]-b[1]) + n[2]*(recvLoc[2]-b[2]);
+			dfloat planeEqOther = n[0]*(d[0]-b[0]) + n[1]*(d[1]-b[1]) + n[2]*(d[2]-b[2]);
+
+			// Check if the two points are on the same side of the plane
+			dlong recvSide = planeEqRecv > 0 ? 1 : -1;
+			dlong otherSide = planeEqOther > 0 ? 1 : -1;
+
+			planeEqRecv = planeEqRecv >= 0 ? planeEqRecv:-1.0*planeEqRecv;
+			if(recvSide != otherSide && planeEqRecv > 1.0e-15){
+				// Recv is not inside element i
+				//printf("planeEqRecv = %.15f\n",planeEqRecv);
+				isInside = 0;
+				break;
+			}
+		}
+		//Check if found recv point inside element i
+		if(isInside == 1){
+			*Pele = i;
+			return;
+		} else if(i == Nelements-1){
+        printf("WAVE-SPLITTING LOCATION NOT FOUND!!,(x,y,z) = (%f,%f,%f)\n", recvLoc[0],recvLoc[1],recvLoc[2]);
+      }
+	}
+}
+
+
+@kernel void ERInterpolationOperators(const dlong NERPoints,
+																			const dlong Nelements,
+																	 		@restrict const dfloat *EX,
+																			@restrict const dfloat *EY,
+																			@restrict const dfloat *EZ,
+																			dfloat *intpol,
+																			@restrict const dfloat *x,
+																			@restrict const dfloat *y,
+																			@restrict const dfloat *z,
+																			@restrict const dfloat *sgeo,
+																			@restrict const dlong *mapAccToXYZ,
+																			@restrict const dlong *mapAccToN,
+																			const dfloat dx,
+																			@restrict const dfloat *invVB,
+																			dlong *ERintpolElements){
+  
+
+	for(dlong n1=0; n1<(NERPoints+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
+		for(dlong n2=0; n2 < p_blockSize; ++n2;@inner(0)){    
+			dlong i = n1*p_blockSize+n2;
+			if(i < NERPoints){
+
+				dlong idx = mapAccToXYZ[i];
+				dlong sid = mapAccToN[i];
+
+				const dfloat nxi = sgeo[sid+p_NXID];
+        const dfloat nyi = sgeo[sid+p_NYID];
+	      const dfloat nzi = sgeo[sid+p_NZID];
+
+				dfloat xi1 = x[idx];
+				dfloat yi1 = y[idx];
+				dfloat zi1 = z[idx];
+
+				dfloat xi2 = xi1 - dx*nxi;
+				dfloat yi2 = yi1 - dx*nyi;
+				dfloat zi2 = zi1 - dx*nzi;
+
+				dfloat xi3 = xi1 - 2.0*dx*nxi;
+				dfloat yi3 = yi1 - 2.0*dx*nyi;
+				dfloat zi3 = zi1 - 2.0*dx*nzi;
+
+				dlong ele2, ele3;
+				findElement(xi2,yi2,zi2,&ele2,EX,EY,EZ,Nelements);
+				findElement(xi3,yi3,zi3,&ele3,EX,EY,EZ,Nelements);
+				ERintpolElements[i*2] = ele2;
+				ERintpolElements[i*2+1] = ele3;
+
+				makeInterpolationOperator(xi2,yi2,zi2,ele2,EX,EY,EZ,intpol,p_Np*i*2,invVB);
+				makeInterpolationOperator(xi3,yi3,zi3,ele3,EX,EY,EZ,intpol,p_Np*i*2+p_Np,invVB);
+			}
+		}
+	}
+}
+
+dfloat interpolate(const dfloat *IP,
+							 const dfloat *q,
+							 const dlong IPoffset,
+							 const dlong qoffset){
+	dfloat res = 0.0;
+	for(dlong i = 0; i < p_Np; i++){
+		res += IP[IPoffset+i]*q[qoffset+i];
+	}
+	return res;
+}
+
+
+dfloat eB1(const dfloat v1,const dfloat v2, const dfloat v3, const dfloat v4, dfloat dt){
+	return (v1 - v2)/(2.0*dt) + p_c*(v3 - v4)/(2.0*p_ERdx);
+}
+
+dfloat eB2(const dfloat v1,const dfloat v2, const dfloat v3, const dfloat v4, dfloat dt){
+	return (v1 - v2)/(2.0*dt) - p_c*(v3 - v4)/(2.0*p_ERdx);
+}
+
+@kernel void ERangleDetection(const dlong NERPoints,
+														 const dlong NLRPoints,
+														 dfloat *vt,
+														 dfloat *vi,
+														 @restrict const dlong * ERintpolElements,
+														 @restrict const dfloat * q,
+														 @restrict const dfloat * sgeo,
+														 @restrict const dfloat * intpol,
+														 dlong * anglei,
+														 @restrict const dlong * mapAccToQ,
+														 @restrict const dlong * mapAccToN,
+														 const dfloat dt){
+  
+
+	for(dlong n1=0; n1<(NERPoints+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
+		for(dlong n2=0; n2 < p_blockSize; ++n2;@inner(0)){    
+			dlong i = n1*p_blockSize+n2;
+			if(i < NERPoints){
+				// Interpolate
+				// vt is saved as [bc11_t1,bc12_t1,bc13_t1,bc21_t1,bc22_t1,bc23_t1,...,bc11_t2,bc12_t2,...,bcNER3_t4]
+				// bcxy_tz: x=boundary point, y = wave-splitting point, z = timestep backwards
+				
+				// Second wave-splitting point 
+				dlong qoffset = ERintpolElements[2*i+1]*p_Np*p_Nfields;
+				dlong IPoffset = p_Np*i*2+p_Np;
+				vt[i*9+0] = interpolate(intpol,q,IPoffset,qoffset+1*p_Np);
+				vt[i*9+1] = interpolate(intpol,q,IPoffset,qoffset+2*p_Np);
+				vt[i*9+2] = interpolate(intpol,q,IPoffset,qoffset+3*p_Np);
+
+				// First wave-splitting point
+				qoffset = ERintpolElements[2*i]*p_Np*p_Nfields;
+				IPoffset = p_Np*i*2;
+				vt[i*9+3] = interpolate(intpol,q,IPoffset,qoffset+1*p_Np);
+				vt[i*9+4] = interpolate(intpol,q,IPoffset,qoffset+2*p_Np);
+				vt[i*9+5] = interpolate(intpol,q,IPoffset,qoffset+3*p_Np);
+
+				// Boundary point, no need for interpolation, read from q
+				qoffset = mapAccToQ[i+NLRPoints];
+				vt[i*9+6] = q[qoffset+1*p_Np];
+				vt[i*9+7] = q[qoffset+2*p_Np];
+				vt[i*9+8] = q[qoffset+3*p_Np];
+
+				
+				// Perform wave-splitting
+				//p_ERdx, p_c
+				dlong offsetT2 = NERPoints*1*3*3;
+				dlong offsetT3 = NERPoints*2*3*3;
+				dlong offsetT4 = NERPoints*3*3*3;
+				dfloat vxt12 = vt[i*9+3], vxt32 = vt[offsetT3+i*9+3], vxt21 = vt[offsetT2+i*9+0];
+				dfloat vxt23 = vt[offsetT2+i*9+6], vxt22 = vt[offsetT2+i*9+3], vxt42 = vt[offsetT4+i*9+3];
+				dfloat vxt31 = vt[offsetT3+i*9+0], vxt33 = vt[offsetT3+i*9+6];
+				
+				dfloat vyt12 = vt[i*9+4], vyt32 = vt[offsetT3+i*9+4], vyt21 = vt[offsetT2+i*9+1];
+				dfloat vyt23 = vt[offsetT2+i*9+7], vyt22 = vt[offsetT2+i*9+4], vyt42 = vt[offsetT4+i*9+4];
+				dfloat vyt31 = vt[offsetT3+i*9+1], vyt33 = vt[offsetT3+i*9+7];
+
+				dfloat vzt12 = vt[i*9+5], vzt32 = vt[offsetT3+i*9+5], vzt21 = vt[offsetT2+i*9+2];
+				dfloat vzt23 = vt[offsetT2+i*9+8], vzt22 = vt[offsetT2+i*9+5], vzt42 = vt[offsetT4+i*9+5];
+				dfloat vzt31 = vt[offsetT3+i*9+2], vzt33 = vt[offsetT3+i*9+8];
+
+
+				vi[i*3+0] += dt / 4.0*(eB1(vxt12,vxt32,vxt21,vxt23,dt) + eB1(vxt22,vxt42,vxt31,vxt33,dt));
+				vi[i*3+1] += dt / 4.0*(eB1(vyt12,vyt32,vyt21,vyt23,dt) + eB1(vyt22,vyt42,vyt31,vyt33,dt));
+				vi[i*3+2] += dt / 4.0*(eB1(vzt12,vzt32,vzt21,vzt23,dt) + eB1(vzt22,vzt42,vzt31,vzt33,dt));
+
+				// Calculate angle for the boundary node
+				dfloat vxt = vi[i*3+0];
+				dfloat vyt = vi[i*3+1];
+				dfloat vzt = vi[i*3+2];
+				dfloat magv = sqrt(vxt*vxt + vyt*vyt + vzt*vzt);
+				
+				// To avoid NaN
+				if(magv == 0.0){
+					anglei[i] = 0;
+				} else {
+
+					dlong sid = mapAccToN[i];
+					const dfloat nxi = sgeo[sid+p_NXID];
+					const dfloat nyi = sgeo[sid+p_NYID];
+					const dfloat nzi = sgeo[sid+p_NZID];
+
+					dfloat dotvn = -(vxt*nxi + vyt*nyi + vzt*nzi);
+					dfloat magn = sqrt(nxi*nxi + nyi*nyi + nzi*nzi);
+					
+					dfloat PI = 3.1415926536;
+					dfloat angleTemp = round(acos(fabs(dotvn/(magv*magn)))*180.0/PI);
+					dlong angleTemp2 = (dlong) angleTemp;
+					anglei[i] = angleTemp2;
+				}
+			}
+		}
+	}
+}
+
+
+
+// [EA] Move vt time steps
+@kernel void ERMoveVT(const dlong NERPoints, dfloat *vt){
+	for(dlong n=0;n<NERPoints;++n;@outer(0)){
+    for(dlong e=0;e<9;++e;@inner(0)){
+			const dlong id = n;
+			vt[9*id+e+3*NERPoints*9] = vt[9*id+e+2*NERPoints*9];
+			vt[9*id+e+2*NERPoints*9] = vt[9*id+e+NERPoints*9];
+      vt[9*id+e+NERPoints*9] = vt[9*id+e];
+    }
+  }
+}

@@ -62,10 +62,14 @@ typedef struct{
   dfloat *acc;
   dfloat *rhsacc;
   dfloat *resacc;
-  dlong Npoles;
-  dlong NRealPoles;
-  dlong NImagPoles; // Number of complex conjugate pairs
+  dlong LRNpoles;
+  dlong LRNRealPoles;
+  dlong LRNImagPoles; // Number of complex conjugate pairs
   dlong NBoundaryPoints;
+  dlong ERNpoles;
+  dlong ERNRealPoles;
+  dlong ERNImagPoles;
+
 
 
   dfloat *LRA;
@@ -75,6 +79,13 @@ typedef struct{
   dfloat *LRAlpha;
   dfloat *LRBeta;
   dfloat LRYinf;
+  dfloat *ERA;
+  dfloat *ERB;
+  dfloat *ERC;
+  dfloat *ERLambda;
+  dfloat *ERAlpha;
+  dfloat *ERBeta;
+  dfloat *ERYinf;
   
 
   occa::memory o_LRA;
@@ -83,9 +94,21 @@ typedef struct{
   occa::memory o_LRLambda;
   occa::memory o_LRAlpha;
   occa::memory o_LRBeta;
+  occa::memory o_ERA;
+  occa::memory o_ERB;
+  occa::memory o_ERC;
+  occa::memory o_ERLambda;
+  occa::memory o_ERAlpha;
+  occa::memory o_ERBeta;
+  occa::memory o_ERYinf;
   occa::memory o_acc;
   occa::memory o_rhsacc;
   occa::memory o_resacc;
+  occa::memory o_ERintpol;
+  occa::memory o_ERintpolElements;
+  occa::memory o_vt;
+  occa::memory o_vi;
+  occa::memory o_anglei;
 
 
 
@@ -140,8 +163,12 @@ typedef struct{
   occa::kernel rkErrorEstimateKernel;
   occa::kernel receiverKernel;
   occa::kernel updateKernelLR;
+  occa::kernel updateKernelER;
   occa::kernel acousticsUpdateEIRK4;
-  occa::kernel acousticsUpdateEIRK4Acc;
+  occa::kernel acousticsUpdateEIRK4AccLR;
+  occa::kernel acousticsUpdateEIRK4AccER;
+  occa::kernel ERangleDetection;
+  occa::kernel ERMoveVT;
 
   occa::memory o_q;
   occa::memory o_rhsq;
