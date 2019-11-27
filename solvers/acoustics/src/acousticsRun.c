@@ -173,9 +173,16 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
       }
     }
   }
-  // [EA] Copy qRecv from device to host
+  // [EA] Copy remaining o_qRecv from device to host
   if(acoustics->NReceiversLocal > 0){
-    acoustics->o_qRecv.copyTo(acoustics->qRecv);
+    for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
+      dlong offset = recvCopyRate*acoustics->qRecvCopyCounter + mesh->NtimeSteps*iRecv;
+      
+      acoustics->o_qRecv.copyTo(acoustics->qRecv+offset,
+            acoustics->qRecvCounter*sizeof(dfloat), 
+            recvCopyRate*iRecv*sizeof(dfloat));  
+    }
+
   }
   acousticsReport(acoustics, mesh->finalTime, newOptions);
 }

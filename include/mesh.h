@@ -46,6 +46,10 @@ SOFTWARE.
 #define TETRAHEDRA 6
 #define HEXAHEDRA 12
 
+
+// Copy o_qRecv to host every recvCopyRate
+#define recvCopyRate 5000
+
 typedef struct {
 
   MPI_Comm comm;

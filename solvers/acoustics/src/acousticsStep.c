@@ -244,30 +244,25 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
   }
 
   //---------RECEIVER---------
-
-
-  for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
-    dlong qRecvOffset = acoustics->qRecvCounter*mesh->Np + iRecv*mesh->Np*mesh->NtimeSteps; // Offset writing location by # time steps taken*Np
-    dlong qOffset = acoustics->recvElements[acoustics->recvElementsIdx[iRecv]]*mesh->Np*acoustics->Nfields; // Offset in q to get the correct element pres
-    acoustics->o_q.copyTo(acoustics->o_qRecv,
-          mesh->Np*sizeof(dfloat), 
-          qRecvOffset*sizeof(dfloat),
-          qOffset*sizeof(dfloat));
-  }
+  acoustics->acousticsReceiverInterpolation(acoustics->NReceiversLocal,
+																		acoustics->o_qRecv,
+																		acoustics->o_recvElements,
+                                    acoustics->o_recvElementsIdx,
+																		acoustics->o_recvintpol,
+																		acoustics->o_q,
+																		acoustics->qRecvCounter);
   acoustics->qRecvCounter++;
-  #if 0 
-  // Old code that copied from device to host every time step.
-  // copy data back to host 
-  acoustics->o_q.copyTo(acoustics->q);
-  // Offset in qRecv by Np*counter
-  size_t qRecvOffset = acoustics->qRecvCounter*mesh->Np; // Offset writing location by # time steps taken*Np
-  size_t qOffset = acoustics->recvElement*mesh->Np*acoustics->Nfields; // Offset in q to get the correct element pres
+  if(acoustics->qRecvCounter == recvCopyRate){
+    for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
+      dlong offset = recvCopyRate*acoustics->qRecvCopyCounter + mesh->NtimeSteps*iRecv;
 
-  for(int n=0;n<mesh->Np;++n){
-    acoustics->qRecv[qRecvOffset+n] = acoustics->q[qOffset+n]; // See in acousticsReport where we print how to find a specific element. Currently just saves the 0th element.
-  }
-  acoustics->qRecvCounter++;
-  #endif
+      acoustics->o_qRecv.copyTo(acoustics->qRecv+offset,
+            acoustics->qRecvCounter*sizeof(dfloat), 
+            recvCopyRate*iRecv*sizeof(dfloat));  
+    }
+    acoustics->qRecvCounter = 0;
+    acoustics->qRecvCopyCounter++;  
+  } 
   //---------RECEIVER---------
 }
 
@@ -1049,18 +1044,25 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
           6);
   }
   //---------RECEIVER---------
-
-
-  for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
-    dlong qRecvOffset = acoustics->qRecvCounter*mesh->Np + iRecv*mesh->Np*mesh->NtimeSteps; // Offset writing location by # time steps taken*Np
-    dlong qOffset = acoustics->recvElements[acoustics->recvElementsIdx[iRecv]]*mesh->Np*acoustics->Nfields; // Offset in q to get the correct element pres
-    acoustics->o_q.copyTo(acoustics->o_qRecv,
-          mesh->Np*sizeof(dfloat), 
-          qRecvOffset*sizeof(dfloat),
-          qOffset*sizeof(dfloat));
-  }
+acoustics->acousticsReceiverInterpolation(acoustics->NReceiversLocal,
+																		acoustics->o_qRecv,
+																		acoustics->o_recvElements,
+                                    acoustics->o_recvElementsIdx,
+																		acoustics->o_recvintpol,
+																		acoustics->o_q,
+																		acoustics->qRecvCounter);
   acoustics->qRecvCounter++;
+  if(acoustics->qRecvCounter == recvCopyRate){
+    for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
+      dlong offset = recvCopyRate*acoustics->qRecvCopyCounter + mesh->NtimeSteps*iRecv;
 
+      acoustics->o_qRecv.copyTo(acoustics->qRecv+offset,
+            acoustics->qRecvCounter*sizeof(dfloat), 
+            recvCopyRate*iRecv*sizeof(dfloat));  
+    }
+    acoustics->qRecvCounter = 0;
+    acoustics->qRecvCopyCounter++;  
+  } 
   //---------RECEIVER---------
   
 }

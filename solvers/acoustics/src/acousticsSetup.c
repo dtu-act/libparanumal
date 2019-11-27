@@ -178,6 +178,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   //---------RECEIVER---------
   acoustics->qRecvCounter = 0; // Counter needed for later
+  acoustics->qRecvCopyCounter = 0;
 
   
 
@@ -488,6 +489,171 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
                               o_invVB,
                               acoustics->o_ERintpolElements);
 
+    #if 0
+    // [EA] Find wave-splitting points belonging to other cores
+    
+    // Copy ERintpolElements to host and find the number of wave-splitting points belonging to other cores
+    dlong *ERintpolElements;
+    ERintpolElements = (dlong*) calloc(2*mesh->NERPoints, sizeof(dlong));    
+    acoustics->o_ERintpolElements.copyTo(ERintpolElements);
+    acoustics->ERNComPoints = 0;
+    for(dlong itt = 0; itt < 2*mesh->NERPoints; itt++){
+      if(ERintpolElements[itt] < 0){
+        acoustics->ERNComPoints++;
+      }
+    }
+    acoustics->ERComPointsIdx = (dlong*) calloc(acoustics->ERNComPoints, sizeof(dlong));
+    acoustics->ERComPoints = (dfloat*) calloc(acoustics->ERNComPoints*3, sizeof(dfloat));
+
+    // Save xyz of the missing wave-splitting points
+    dlong comPointsCounter = 0;
+    for(dlong itt = 0; itt < 2*mesh->NERPoints; itt++){
+      if(ERintpolElements[itt] < 0){
+        acoustics->ERComPointsIdx[comPointsCounter] = itt;
+        
+        dlong CPXYZidx = mesh->mapAccToXYZ[itt/2];
+				dlong CPNidx = mesh->mapAccToN[itt/2];
+
+				const dfloat nxi = mesh->sgeo[CPNidx+NXID];
+        const dfloat nyi = mesh->sgeo[CPNidx+NYID];
+	      const dfloat nzi = mesh->sgeo[CPNidx+NZID];
+
+				dfloat xi = mesh->x[CPXYZidx];
+				dfloat yi = mesh->y[CPXYZidx];
+				dfloat zi = mesh->z[CPXYZidx];
+
+				xi += ERintpolElements[itt]*dx*nxi;
+				yi += ERintpolElements[itt]*dx*nyi;
+				zi += ERintpolElements[itt]*dx*nzi;
+
+        acoustics->ERComPoints[comPointsCounter*3+0] = xi;
+        acoustics->ERComPoints[comPointsCounter*3+1] = yi;
+        acoustics->ERComPoints[comPointsCounter*3+2] = zi;
+
+        comPointsCounter++;
+      }
+    }
+    
+    // Find total amount of communication points
+    dlong totalERNComPoints = 0;
+    dlong * recvCounts, *recvCountsCum;
+    recvCounts = (dlong*) calloc(mesh->size, sizeof(dlong));
+    recvCountsCum = (dlong*) calloc(mesh->size, sizeof(dlong));
+    MPI_Allgather(&acoustics->ERNComPoints, 1, MPI_DLONG, recvCounts, 1, MPI_DLONG, mesh->comm);
+    for(dlong itt = 0; itt < mesh->size; itt++){
+      totalERNComPoints += recvCounts[itt];
+      recvCounts[itt] *= 3;
+      if(itt > 0){
+        recvCountsCum[itt] = recvCountsCum[itt-1] + recvCounts[itt-1];
+      }
+    }
+
+
+    // Send unfound wave-splitting points to all ranks
+    dfloat *totalERComPoints;
+    totalERComPoints = (dfloat*) calloc(totalERNComPoints*3, sizeof(dfloat));
+    MPI_Allgatherv(acoustics->ERComPoints, acoustics->ERNComPoints*3, MPI_DFLOAT,
+     totalERComPoints, recvCounts, recvCountsCum, MPI_DFLOAT, mesh->comm);
+    
+    
+    // Find element of previosly unfound WS points.
+    acoustics->ERintpolElementsCom = (dlong*) calloc(totalERNComPoints, sizeof(dlong));
+    acoustics->o_ERintpolElementsCom = 
+          mesh->device.malloc(totalERNComPoints*sizeof(dlong),acoustics->ERintpolElementsCom);
+    occa::memory o_recvCountsCum, o_recvCounts, o_totalERComPoints;
+    o_recvCountsCum = 
+          mesh->device.malloc(mesh->size*sizeof(dlong),recvCountsCum);
+    o_recvCounts = 
+          mesh->device.malloc(mesh->size*sizeof(dlong),recvCounts);    
+    o_totalERComPoints = 
+          mesh->device.malloc(totalERNComPoints*3*sizeof(dfloat),totalERComPoints);  
+    occa::kernel ERFindElementsCom = 
+          mesh->device.buildKernel(DACOUSTICS "/okl/acousticsERKernel.okl",
+          "ERFindElementsCom",
+          kernelInfo);
+    ERFindElementsCom(totalERNComPoints,o_recvCountsCum,o_recvCounts,mesh->rank,o_totalERComPoints,
+                      o_EX,o_EY,o_EZ,mesh->Nelements,acoustics->o_ERintpolElementsCom);
+
+
+    // Count how many points current rank has to send to each other rank
+    comPointsCounter = 0;
+    dlong * NComPointsPerRank;
+    NComPointsPerRank = (dlong*) calloc(mesh->size, sizeof(dlong));
+    acoustics->o_ERintpolElementsCom.copyTo(acoustics->ERintpolElementsCom);
+    dlong currRank = 0;
+    dlong currRankCum = recvCounts[currRank]/3;
+    for(dlong itt = 0; itt < totalERNComPoints; itt++){
+      if(itt >= currRankCum){
+          currRankCum += recvCounts[currRank+1]/3;
+          currRank++;
+      }
+      if(acoustics->ERintpolElementsCom[itt] != -1){
+        NComPointsPerRank[currRank]++;
+        comPointsCounter++;
+      }
+    }
+
+    // Find idx of WS points to send to each rank
+    dlong * comPointsIdx;
+    comPointsIdx = (dlong*) calloc(comPointsCounter, sizeof(dlong));
+    currRank = 0;
+    currRankCum = recvCounts[currRank]/3;;
+    dlong currRankCounter = 0;
+    dlong counterk = 0;
+    for(dlong itt = 0; itt < totalERNComPoints; itt++){
+      if(itt >= currRankCum){
+          currRankCum += recvCounts[currRank+1]/3;
+          currRank++;
+          currRankCounter = 0;
+      }
+      if(acoustics->ERintpolElementsCom[itt] != -1){
+        comPointsIdx[counterk] = currRankCounter;
+        counterk++;
+        
+      }
+      currRankCounter++;
+    }
+
+    
+    // 
+    dlong *recvCountsArray;
+    recvCountsArray = (dlong*) calloc(mesh->size*mesh->size, sizeof(dlong));
+    MPI_Allgather(NComPointsPerRank, mesh->size, MPI_DLONG, recvCountsArray, mesh->size, MPI_DLONG, mesh->comm);
+    
+    dlong NComPointsIdx = 0;
+    dlong *NComPointsIdxPerRank;
+    dlong *NComPointsIdxPerRankCum;
+    NComPointsIdxPerRank = (dlong*) calloc(mesh->size, sizeof(dlong));
+    NComPointsIdxPerRankCum = (dlong*) calloc(mesh->size, sizeof(dlong));
+    for(int itt = 0; itt < mesh->size; itt++){
+      NComPointsIdx += recvCountsArray[mesh->rank + mesh->size*itt];
+      NComPointsIdxPerRank[itt] = recvCountsArray[mesh->rank + mesh->size*itt];
+      if(itt > 0){
+        NComPointsIdxPerRankCum[itt] = NComPointsIdxPerRankCum[itt-1] + recvCountsArray[mesh->rank + mesh->size*(itt-1)];
+      }
+    }
+
+    dlong *NComPointsPerRankCum;
+    NComPointsPerRankCum = (dlong*) calloc(mesh->size, sizeof(dlong));
+    for(int itt = 1; itt < mesh->size; itt++){
+      NComPointsPerRankCum[itt] = NComPointsPerRankCum[itt-1] + NComPointsPerRank[itt-1];
+    }
+    dlong *comPointsIdxAll;
+    comPointsIdxAll = (dlong*) calloc(NComPointsIdx, sizeof(dlong));
+    MPI_Alltoallv(comPointsIdx, NComPointsPerRank, NComPointsPerRankCum, MPI_DLONG, 
+                  comPointsIdxAll, NComPointsIdxPerRank, NComPointsIdxPerRankCum, MPI_DLONG, mesh->comm);
+
+    /*
+    for(dlong jtt = 0; jtt < mesh->size;jtt++){
+      if(mesh->rank == jtt){
+        for(dlong itt = 0; itt <NComPointsIdx; itt++){
+          printf("r = %d,  %d\n",mesh->rank, comPointsIdxAll[itt]);
+        }
+      }
+      MPI_Barrier(mesh->comm);
+    }
+    */
+   #endif
 
     dfloat *tempvt, *tempvi; 
     dlong *tempanglei;
@@ -540,9 +706,6 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     mesh->device.malloc(36*sizeof(dfloat), mesh->esdirka);
   mesh->o_esdirkb = 
     mesh->device.malloc(6*sizeof(dfloat), mesh->esdirkb);
-
-
-
 
 
   acoustics->acc = 
@@ -742,11 +905,16 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     mesh->device.buildKernel(DACOUSTICS "/okl/acousticsUpdate.okl",
 				       "acousticsUpdateEIRK4AccLR",
 				       kernelInfo);
-acoustics->acousticsUpdateEIRK4AccER = 
+  acoustics->acousticsUpdateEIRK4AccER = 
     mesh->device.buildKernel(DACOUSTICS "/okl/acousticsUpdate.okl",
 				       "acousticsUpdateEIRK4AccER",
 				       kernelInfo);
-               
+
+  acoustics->acousticsReceiverInterpolation = 
+    mesh->device.buildKernel(DACOUSTICS "/okl/acousticsReceiverKernel.okl",
+				       "acousticsReceiverInterpolation",
+				       kernelInfo);
+
   acoustics->rkUpdateKernel =
     mesh->device.buildKernel(DACOUSTICS "/okl/acousticsUpdate.okl",
 				       "acousticsRkUpdate",

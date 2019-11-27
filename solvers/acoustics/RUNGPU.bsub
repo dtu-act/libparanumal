@@ -22,7 +22,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 #cd ../solvers/acoustics/
 
 # Build project
-#make clean
+make clean
 make -j
 
 # Run solver

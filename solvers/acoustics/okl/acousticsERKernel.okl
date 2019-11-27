@@ -6,6 +6,26 @@ dlong factorial(dlong x){
   return res;
 }
 
+dfloat interpolate(const dfloat *IP,
+							 const dfloat *q,
+							 const dlong IPoffset,
+							 const dlong qoffset){
+	dfloat res = 0.0;
+	for(dlong i = 0; i < p_Np; i++){
+		res += IP[IPoffset+i]*q[qoffset+i];
+	}
+	return res;
+}
+
+
+dfloat eB1(const dfloat v1,const dfloat v2, const dfloat v3, const dfloat v4, dfloat dt){
+	return (v1 - v2)/(2.0*dt) + p_c*(v3 - v4)/(2.0*p_ERdx);
+}
+
+dfloat eB2(const dfloat v1,const dfloat v2, const dfloat v3, const dfloat v4, dfloat dt){
+	return (v1 - v2)/(2.0*dt) - p_c*(v3 - v4)/(2.0*p_ERdx);
+}
+
 void makeInterpolationOperator(const dfloat x,
 															 const dfloat y, 
 															 const dfloat z, 
@@ -17,7 +37,7 @@ void makeInterpolationOperator(const dfloat x,
 															 const dlong offset,
 															 @restrict const dfloat *invVB){
 	
-//printf("offset=%d\n",offset);
+
 	dlong Nverts = 4;
 	// Receriver element
 	dlong recvElement = Pele;
@@ -65,10 +85,6 @@ void makeInterpolationOperator(const dfloat x,
 			intpol[i+offset] += VB_rec[j]*invVB[i+j*p_Np];
 		}
 	}
-	//for(int j = 0; j < p_Np; j++){
-	//	printf("%f ",intpol[j+offset]);
-	//}
-	//printf("\n");
 	
 }
 
@@ -136,7 +152,6 @@ void findElement(const dfloat x,
 			planeEqRecv = planeEqRecv >= 0 ? planeEqRecv:-1.0*planeEqRecv;
 			if(recvSide != otherSide && planeEqRecv > 1.0e-15){
 				// Recv is not inside element i
-				//printf("planeEqRecv = %.15f\n",planeEqRecv);
 				isInside = 0;
 				break;
 			}
@@ -146,7 +161,7 @@ void findElement(const dfloat x,
 			*Pele = i;
 			return;
 		} else if(i == Nelements-1){
-        printf("WAVE-SPLITTING LOCATION NOT FOUND!!,(x,y,z) = (%f,%f,%f)\n", recvLoc[0],recvLoc[1],recvLoc[2]);
+        //printf("WAVE-SPLITTING LOCATION NOT FOUND!!,(x,y,z) = (%f,%f,%f)\n", recvLoc[0],recvLoc[1],recvLoc[2]);
       }
 	}
 }
@@ -193,38 +208,79 @@ void findElement(const dfloat x,
 				dfloat yi3 = yi1 - 2.0*dx*nyi;
 				dfloat zi3 = zi1 - 2.0*dx*nzi;
 
-				dlong ele2, ele3;
+				dlong ele2 = -1, ele3 = -2;
 				findElement(xi2,yi2,zi2,&ele2,EX,EY,EZ,Nelements);
 				findElement(xi3,yi3,zi3,&ele3,EX,EY,EZ,Nelements);
 				ERintpolElements[i*2] = ele2;
 				ERintpolElements[i*2+1] = ele3;
 
-				makeInterpolationOperator(xi2,yi2,zi2,ele2,EX,EY,EZ,intpol,p_Np*i*2,invVB);
-				makeInterpolationOperator(xi3,yi3,zi3,ele3,EX,EY,EZ,intpol,p_Np*i*2+p_Np,invVB);
+				if(ele2 != -1){
+					makeInterpolationOperator(xi2,yi2,zi2,ele2,EX,EY,EZ,intpol,p_Np*i*2,invVB);	
+				}
+				if(ele3 != -2){
+					makeInterpolationOperator(xi3,yi3,zi3,ele3,EX,EY,EZ,intpol,p_Np*i*2+p_Np,invVB);
+				}
 			}
 		}
 	}
 }
 
-dfloat interpolate(const dfloat *IP,
-							 const dfloat *q,
-							 const dlong IPoffset,
-							 const dlong qoffset){
-	dfloat res = 0.0;
-	for(dlong i = 0; i < p_Np; i++){
-		res += IP[IPoffset+i]*q[qoffset+i];
+@kernel void ERFindElementsCom(const dlong totalERNComPoints,
+															 @restrict const dlong *recvCountsCum,
+															 @restrict const dlong *recvCounts,
+															 const dlong rank,
+															 @restrict const dfloat *totalERComPoints,
+															 @restrict const dfloat *EX,
+															 @restrict const dfloat *EY,
+															 @restrict const dfloat *EZ,
+															 const dlong Nelements,
+															 dlong *ERintpolElements){
+  
+
+	for(dlong n1=0; n1<(totalERNComPoints+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
+		for(dlong n2=0; n2 < p_blockSize; ++n2;@inner(0)){    
+			dlong i = n1*p_blockSize+n2;
+			if(i < totalERNComPoints){
+				dlong ele;
+				if(i >= recvCountsCum[rank]/3 && i < recvCountsCum[rank]/3 + recvCounts[rank] / 3){
+					ele = -1;
+				}else{
+					dfloat xi = totalERComPoints[3*i+0];
+					dfloat yi = totalERComPoints[3*i+1];
+					dfloat zi = totalERComPoints[3*i+2];
+
+					ele = -1;
+					findElement(xi,yi,zi,&ele,EX,EY,EZ,Nelements);
+				}
+				ERintpolElements[i] = ele;
+			}
+		}
 	}
-	return res;
 }
 
+@kernel void ERmakeInterpolatorCom(const dlong totalERNComPoints,
+															 @restrict const dlong *recvCountsCum,
+															 @restrict const dlong *recvCounts,
+															 const dlong rank,
+															 @restrict const dfloat *totalERComPoints,
+															 @restrict const dfloat *EX,
+															 @restrict const dfloat *EY,
+															 @restrict const dfloat *EZ,
+															 const dlong Nelements,
+															 dlong *ERintpolElements){
+  
 
-dfloat eB1(const dfloat v1,const dfloat v2, const dfloat v3, const dfloat v4, dfloat dt){
-	return (v1 - v2)/(2.0*dt) + p_c*(v3 - v4)/(2.0*p_ERdx);
+	for(dlong n1=0; n1<(totalERNComPoints+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
+		for(dlong n2=0; n2 < p_blockSize; ++n2;@inner(0)){    
+			dlong i = n1*p_blockSize+n2;
+			if(i < totalERNComPoints){
+
+				//makeInterpolationOperator(xi,yi,zi,ele,EX,EY,EZ,intpol,p_Np*i,invVB);	
+			}
+		}
+	}
 }
 
-dfloat eB2(const dfloat v1,const dfloat v2, const dfloat v3, const dfloat v4, dfloat dt){
-	return (v1 - v2)/(2.0*dt) - p_c*(v3 - v4)/(2.0*p_ERdx);
-}
 
 @kernel void ERangleDetection(const dlong NERPoints,
 														 const dlong NLRPoints,
@@ -251,6 +307,7 @@ dfloat eB2(const dfloat v1,const dfloat v2, const dfloat v3, const dfloat v4, df
 				// Second wave-splitting point 
 				dlong qoffset = ERintpolElements[2*i+1]*p_Np*p_Nfields;
 				dlong IPoffset = p_Np*i*2+p_Np;
+				
 				vt[i*9+0] = interpolate(intpol,q,IPoffset,qoffset+1*p_Np);
 				vt[i*9+1] = interpolate(intpol,q,IPoffset,qoffset+2*p_Np);
 				vt[i*9+2] = interpolate(intpol,q,IPoffset,qoffset+3*p_Np);

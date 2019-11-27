@@ -163,7 +163,7 @@ void meshHaloSetup(mesh_t *mesh){
   if(mesh->dim==3)
     meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->z, sendBuffer, mesh->z + localNodes);   
 
-  // grab EX,EY,EZ from halo // [AE] - EX,EY,EZ are coordinates of vertices for each element
+  // grab EX,EY,EZ from halo // [EA] - EX,EY,EZ are coordinates of vertices for each element
   mesh->EX = (dfloat*) realloc(mesh->EX, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts*sizeof(dfloat));
   mesh->EY = (dfloat*) realloc(mesh->EY, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts*sizeof(dfloat));
   if(mesh->dim==3)

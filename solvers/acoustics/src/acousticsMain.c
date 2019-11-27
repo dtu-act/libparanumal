@@ -71,9 +71,14 @@ int main(int argc, char **argv){
   acousticsFindReceiverElement(acoustics);
   // If receiver is on this core, allocate array for storage
   if(acoustics->NReceiversLocal > 0){
-    acoustics->qRecv = (dfloat*) calloc(acoustics->NReceiversLocal*mesh->Np*mesh->NtimeSteps, sizeof(dfloat));
-  acoustics->o_qRecv =
-    mesh->device.malloc(acoustics->NReceiversLocal*mesh->Np*mesh->NtimeSteps*sizeof(dfloat), acoustics->qRecv);
+    acoustics->o_recvElements = 
+      mesh->device.malloc(acoustics->NReceivers*sizeof(dlong), acoustics->recvElements);
+    acoustics->o_recvElementsIdx = 
+      mesh->device.malloc(acoustics->NReceivers*sizeof(dlong), acoustics->recvElementsIdx);
+    acoustics->qRecv = (dfloat*) calloc(acoustics->NReceiversLocal*mesh->NtimeSteps, sizeof(dfloat));
+    acoustics->o_qRecv =
+    mesh->device.malloc(acoustics->NReceiversLocal*recvCopyRate*sizeof(dfloat));
+    acousticsRecvIntpolOperators(acoustics);
   }
   // run
   double startTime, endTime;
@@ -84,7 +89,7 @@ int main(int argc, char **argv){
 
 
   //---------RECEIVER---------
-  acousticsReceiverInterpolation(acoustics);
+  acousticsPrintReceiversToFile(acoustics);
   
   // close down MPI
   MPI_Finalize();

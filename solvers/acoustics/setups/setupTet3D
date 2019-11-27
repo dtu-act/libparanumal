@@ -11,8 +11,8 @@
 #../../meshes/cubeTet_01_LocalReac.msh
 #../../meshes/cubeTet_01_1LR5FI.msh
 #../../meshes/cubeTet_01_ExtendReac.msh
-#../../meshes/cubeTet_01_1ER5FI.msh
-cubeTet_01_1ER5FIVERYFINE.msh
+../../meshes/cubeTet_01_1ER5FI.msh
+#cubeTet_01_1ER5FIVERYFINE.msh
 #boxUnstruct5Opt.msh
 
 [MESH DIMENSION]
@@ -87,7 +87,7 @@ setups/setupdata/ReceiverLocations.dat
 1
 
 [CFL]
-0.2
+0.5
 
 [RESTART FROM FILE]
 0

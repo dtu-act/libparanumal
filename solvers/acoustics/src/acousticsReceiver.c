@@ -66,13 +66,16 @@ void acousticsReceiverInterpolation(acoustics_t *acoustics){
         intpol[i] += VB_rec[j]*mesh->invVB[i+j*mesh->Np];
       }
     }
-    #if 0
+    #if 1
+    printf("Original, irecv = %d, ele = %d\n",iRecv,recvElement);
     for(int i = 0; i < mesh->Np; i++){
-      printf("%.15lf ",intpol[i]);
+      printf("%.15lf \n",intpol[i]);
     }
     printf("\n");
     #endif
 
+
+    #if 0
     // Interpolated receiver
     dfloat *intRecv;
     intRecv = (dfloat*) calloc(mesh->NtimeSteps, sizeof(dfloat)); // DOES NOT HAVE INITIAL CONDITION! Add to qRecv also!
@@ -96,12 +99,88 @@ void acousticsReceiverInterpolation(acoustics_t *acoustics){
       fprintf(iFP, "%.15lf\n", intRecv[i]);
     }
     fclose(iFP);
-
+    #endif
     free(VB_rec);
     free(intpol);
-    free(intRecv);
+    //free(intRecv);
   }
 }
+
+void acousticsRecvIntpolOperators(acoustics_t *acoustics){
+	
+  mesh_t *mesh = acoustics->mesh;
+  dfloat *intpol;
+  intpol = (dfloat*) calloc(acoustics->NReceiversLocal*mesh->Np, sizeof(dfloat));
+  
+  for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
+
+    // Receriver element
+    dlong rIdx = acoustics->recvElementsIdx[iRecv];
+    dlong recvElement = acoustics->recvElements[rIdx];
+    dfloat xRecvElement[4];
+    dfloat yRecvElement[4];
+    dfloat zRecvElement[4];
+
+    xRecvElement[0] = mesh->EX[recvElement*mesh->Nverts+0];
+    xRecvElement[1] = mesh->EX[recvElement*mesh->Nverts+1];
+    xRecvElement[2] = mesh->EX[recvElement*mesh->Nverts+2];
+    xRecvElement[3] = mesh->EX[recvElement*mesh->Nverts+3];
+    
+    yRecvElement[0] = mesh->EY[recvElement*mesh->Nverts+0];
+    yRecvElement[1] = mesh->EY[recvElement*mesh->Nverts+1];
+    yRecvElement[2] = mesh->EY[recvElement*mesh->Nverts+2];
+    yRecvElement[3] = mesh->EY[recvElement*mesh->Nverts+3];
+
+    zRecvElement[0] = mesh->EZ[recvElement*mesh->Nverts+0];
+    zRecvElement[1] = mesh->EZ[recvElement*mesh->Nverts+1];
+    zRecvElement[2] = mesh->EZ[recvElement*mesh->Nverts+2];
+    zRecvElement[3] = mesh->EZ[recvElement*mesh->Nverts+3];
+
+    dfloat L1_rec = -(xRecvElement[1]*yRecvElement[2]*zRecvElement[3] - xRecvElement[1]*yRecvElement[2]*acoustics->recvXYZ[2+rIdx*3] - xRecvElement[1]*yRecvElement[3]*zRecvElement[2] + xRecvElement[1]*yRecvElement[3]*acoustics->recvXYZ[2+rIdx*3] + xRecvElement[1]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[2] - xRecvElement[1]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[3] - xRecvElement[2]*yRecvElement[1]*zRecvElement[3] + xRecvElement[2]*yRecvElement[1]*acoustics->recvXYZ[2+rIdx*3] + xRecvElement[2]*yRecvElement[3]*zRecvElement[1] - xRecvElement[2]*yRecvElement[3]*acoustics->recvXYZ[2+rIdx*3] - xRecvElement[2]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[1] + xRecvElement[2]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[3] + xRecvElement[3]*yRecvElement[1]*zRecvElement[2] - xRecvElement[3]*yRecvElement[1]*acoustics->recvXYZ[2+rIdx*3] - xRecvElement[3]*yRecvElement[2]*zRecvElement[1] + xRecvElement[3]*yRecvElement[2]*acoustics->recvXYZ[2+rIdx*3] + xRecvElement[3]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[1] - xRecvElement[3]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[2] - acoustics->recvXYZ[0+rIdx*3]*yRecvElement[1]*zRecvElement[2] + acoustics->recvXYZ[0+rIdx*3]*yRecvElement[1]*zRecvElement[3] + acoustics->recvXYZ[0+rIdx*3]*yRecvElement[2]*zRecvElement[1] - acoustics->recvXYZ[0+rIdx*3]*yRecvElement[2]*zRecvElement[3] - acoustics->recvXYZ[0+rIdx*3]*yRecvElement[3]*zRecvElement[1] + acoustics->recvXYZ[0+rIdx*3]*yRecvElement[3]*zRecvElement[2])/(xRecvElement[0]*yRecvElement[1]*zRecvElement[2] - xRecvElement[0]*yRecvElement[1]*zRecvElement[3] - xRecvElement[0]*yRecvElement[2]*zRecvElement[1] + xRecvElement[0]*yRecvElement[2]*zRecvElement[3] + xRecvElement[0]*yRecvElement[3]*zRecvElement[1] - xRecvElement[0]*yRecvElement[3]*zRecvElement[2] - xRecvElement[1]*yRecvElement[0]*zRecvElement[2] + xRecvElement[1]*yRecvElement[0]*zRecvElement[3] + xRecvElement[1]*yRecvElement[2]*zRecvElement[0] - xRecvElement[1]*yRecvElement[2]*zRecvElement[3] - xRecvElement[1]*yRecvElement[3]*zRecvElement[0] + xRecvElement[1]*yRecvElement[3]*zRecvElement[2] + xRecvElement[2]*yRecvElement[0]*zRecvElement[1] - xRecvElement[2]*yRecvElement[0]*zRecvElement[3] - xRecvElement[2]*yRecvElement[1]*zRecvElement[0] + xRecvElement[2]*yRecvElement[1]*zRecvElement[3] + xRecvElement[2]*yRecvElement[3]*zRecvElement[0] - xRecvElement[2]*yRecvElement[3]*zRecvElement[1] - xRecvElement[3]*yRecvElement[0]*zRecvElement[1] + xRecvElement[3]*yRecvElement[0]*zRecvElement[2] + xRecvElement[3]*yRecvElement[1]*zRecvElement[0] - xRecvElement[3]*yRecvElement[1]*zRecvElement[2] - xRecvElement[3]*yRecvElement[2]*zRecvElement[0] + xRecvElement[3]*yRecvElement[2]*zRecvElement[1]);
+    dfloat L2_rec = (xRecvElement[0]*yRecvElement[2]*zRecvElement[3] - xRecvElement[0]*yRecvElement[2]*acoustics->recvXYZ[2+rIdx*3] - xRecvElement[0]*yRecvElement[3]*zRecvElement[2] + xRecvElement[0]*yRecvElement[3]*acoustics->recvXYZ[2+rIdx*3] + xRecvElement[0]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[2] - xRecvElement[0]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[3] - xRecvElement[2]*yRecvElement[0]*zRecvElement[3] + xRecvElement[2]*yRecvElement[0]*acoustics->recvXYZ[2+rIdx*3] + xRecvElement[2]*yRecvElement[3]*zRecvElement[0] - xRecvElement[2]*yRecvElement[3]*acoustics->recvXYZ[2+rIdx*3] - xRecvElement[2]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[0] + xRecvElement[2]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[3] + xRecvElement[3]*yRecvElement[0]*zRecvElement[2] - xRecvElement[3]*yRecvElement[0]*acoustics->recvXYZ[2+rIdx*3] - xRecvElement[3]*yRecvElement[2]*zRecvElement[0] + xRecvElement[3]*yRecvElement[2]*acoustics->recvXYZ[2+rIdx*3] + xRecvElement[3]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[0] - xRecvElement[3]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[2] - acoustics->recvXYZ[0+rIdx*3]*yRecvElement[0]*zRecvElement[2] + acoustics->recvXYZ[0+rIdx*3]*yRecvElement[0]*zRecvElement[3] + acoustics->recvXYZ[0+rIdx*3]*yRecvElement[2]*zRecvElement[0] - acoustics->recvXYZ[0+rIdx*3]*yRecvElement[2]*zRecvElement[3] - acoustics->recvXYZ[0+rIdx*3]*yRecvElement[3]*zRecvElement[0] + acoustics->recvXYZ[0+rIdx*3]*yRecvElement[3]*zRecvElement[2])/(xRecvElement[0]*yRecvElement[1]*zRecvElement[2] - xRecvElement[0]*yRecvElement[1]*zRecvElement[3] - xRecvElement[0]*yRecvElement[2]*zRecvElement[1] + xRecvElement[0]*yRecvElement[2]*zRecvElement[3] + xRecvElement[0]*yRecvElement[3]*zRecvElement[1] - xRecvElement[0]*yRecvElement[3]*zRecvElement[2] - xRecvElement[1]*yRecvElement[0]*zRecvElement[2] + xRecvElement[1]*yRecvElement[0]*zRecvElement[3] + xRecvElement[1]*yRecvElement[2]*zRecvElement[0] - xRecvElement[1]*yRecvElement[2]*zRecvElement[3] - xRecvElement[1]*yRecvElement[3]*zRecvElement[0] + xRecvElement[1]*yRecvElement[3]*zRecvElement[2] + xRecvElement[2]*yRecvElement[0]*zRecvElement[1] - xRecvElement[2]*yRecvElement[0]*zRecvElement[3] - xRecvElement[2]*yRecvElement[1]*zRecvElement[0] + xRecvElement[2]*yRecvElement[1]*zRecvElement[3] + xRecvElement[2]*yRecvElement[3]*zRecvElement[0] - xRecvElement[2]*yRecvElement[3]*zRecvElement[1] - xRecvElement[3]*yRecvElement[0]*zRecvElement[1] + xRecvElement[3]*yRecvElement[0]*zRecvElement[2] + xRecvElement[3]*yRecvElement[1]*zRecvElement[0] - xRecvElement[3]*yRecvElement[1]*zRecvElement[2] - xRecvElement[3]*yRecvElement[2]*zRecvElement[0] + xRecvElement[3]*yRecvElement[2]*zRecvElement[1]);
+    dfloat L3_rec = -(xRecvElement[0]*yRecvElement[1]*zRecvElement[3] - xRecvElement[0]*yRecvElement[1]*acoustics->recvXYZ[2+rIdx*3] - xRecvElement[0]*yRecvElement[3]*zRecvElement[1] + xRecvElement[0]*yRecvElement[3]*acoustics->recvXYZ[2+rIdx*3] + xRecvElement[0]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[1] - xRecvElement[0]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[3] - xRecvElement[1]*yRecvElement[0]*zRecvElement[3] + xRecvElement[1]*yRecvElement[0]*acoustics->recvXYZ[2+rIdx*3] + xRecvElement[1]*yRecvElement[3]*zRecvElement[0] - xRecvElement[1]*yRecvElement[3]*acoustics->recvXYZ[2+rIdx*3] - xRecvElement[1]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[0] + xRecvElement[1]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[3] + xRecvElement[3]*yRecvElement[0]*zRecvElement[1] - xRecvElement[3]*yRecvElement[0]*acoustics->recvXYZ[2+rIdx*3] - xRecvElement[3]*yRecvElement[1]*zRecvElement[0] + xRecvElement[3]*yRecvElement[1]*acoustics->recvXYZ[2+rIdx*3] + xRecvElement[3]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[0] - xRecvElement[3]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[1] - acoustics->recvXYZ[0+rIdx*3]*yRecvElement[0]*zRecvElement[1] + acoustics->recvXYZ[0+rIdx*3]*yRecvElement[0]*zRecvElement[3] + acoustics->recvXYZ[0+rIdx*3]*yRecvElement[1]*zRecvElement[0] - acoustics->recvXYZ[0+rIdx*3]*yRecvElement[1]*zRecvElement[3] - acoustics->recvXYZ[0+rIdx*3]*yRecvElement[3]*zRecvElement[0] + acoustics->recvXYZ[0+rIdx*3]*yRecvElement[3]*zRecvElement[1])/(xRecvElement[0]*yRecvElement[1]*zRecvElement[2] - xRecvElement[0]*yRecvElement[1]*zRecvElement[3] - xRecvElement[0]*yRecvElement[2]*zRecvElement[1] + xRecvElement[0]*yRecvElement[2]*zRecvElement[3] + xRecvElement[0]*yRecvElement[3]*zRecvElement[1] - xRecvElement[0]*yRecvElement[3]*zRecvElement[2] - xRecvElement[1]*yRecvElement[0]*zRecvElement[2] + xRecvElement[1]*yRecvElement[0]*zRecvElement[3] + xRecvElement[1]*yRecvElement[2]*zRecvElement[0] - xRecvElement[1]*yRecvElement[2]*zRecvElement[3] - xRecvElement[1]*yRecvElement[3]*zRecvElement[0] + xRecvElement[1]*yRecvElement[3]*zRecvElement[2] + xRecvElement[2]*yRecvElement[0]*zRecvElement[1] - xRecvElement[2]*yRecvElement[0]*zRecvElement[3] - xRecvElement[2]*yRecvElement[1]*zRecvElement[0] + xRecvElement[2]*yRecvElement[1]*zRecvElement[3] + xRecvElement[2]*yRecvElement[3]*zRecvElement[0] - xRecvElement[2]*yRecvElement[3]*zRecvElement[1] - xRecvElement[3]*yRecvElement[0]*zRecvElement[1] + xRecvElement[3]*yRecvElement[0]*zRecvElement[2] + xRecvElement[3]*yRecvElement[1]*zRecvElement[0] - xRecvElement[3]*yRecvElement[1]*zRecvElement[2] - xRecvElement[3]*yRecvElement[2]*zRecvElement[0] + xRecvElement[3]*yRecvElement[2]*zRecvElement[1]);
+    dfloat L4_rec = (xRecvElement[0]*yRecvElement[1]*zRecvElement[2] - xRecvElement[0]*yRecvElement[1]*acoustics->recvXYZ[2+rIdx*3] - xRecvElement[0]*yRecvElement[2]*zRecvElement[1] + xRecvElement[0]*yRecvElement[2]*acoustics->recvXYZ[2+rIdx*3] + xRecvElement[0]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[1] - xRecvElement[0]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[2] - xRecvElement[1]*yRecvElement[0]*zRecvElement[2] + xRecvElement[1]*yRecvElement[0]*acoustics->recvXYZ[2+rIdx*3] + xRecvElement[1]*yRecvElement[2]*zRecvElement[0] - xRecvElement[1]*yRecvElement[2]*acoustics->recvXYZ[2+rIdx*3] - xRecvElement[1]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[0] + xRecvElement[1]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[2] + xRecvElement[2]*yRecvElement[0]*zRecvElement[1] - xRecvElement[2]*yRecvElement[0]*acoustics->recvXYZ[2+rIdx*3] - xRecvElement[2]*yRecvElement[1]*zRecvElement[0] + xRecvElement[2]*yRecvElement[1]*acoustics->recvXYZ[2+rIdx*3] + xRecvElement[2]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[0] - xRecvElement[2]*acoustics->recvXYZ[1+rIdx*3]*zRecvElement[1] - acoustics->recvXYZ[0+rIdx*3]*yRecvElement[0]*zRecvElement[1] + acoustics->recvXYZ[0+rIdx*3]*yRecvElement[0]*zRecvElement[2] + acoustics->recvXYZ[0+rIdx*3]*yRecvElement[1]*zRecvElement[0] - acoustics->recvXYZ[0+rIdx*3]*yRecvElement[1]*zRecvElement[2] - acoustics->recvXYZ[0+rIdx*3]*yRecvElement[2]*zRecvElement[0] + acoustics->recvXYZ[0+rIdx*3]*yRecvElement[2]*zRecvElement[1])/(xRecvElement[0]*yRecvElement[1]*zRecvElement[2] - xRecvElement[0]*yRecvElement[1]*zRecvElement[3] - xRecvElement[0]*yRecvElement[2]*zRecvElement[1] + xRecvElement[0]*yRecvElement[2]*zRecvElement[3] + xRecvElement[0]*yRecvElement[3]*zRecvElement[1] - xRecvElement[0]*yRecvElement[3]*zRecvElement[2] - xRecvElement[1]*yRecvElement[0]*zRecvElement[2] + xRecvElement[1]*yRecvElement[0]*zRecvElement[3] + xRecvElement[1]*yRecvElement[2]*zRecvElement[0] - xRecvElement[1]*yRecvElement[2]*zRecvElement[3] - xRecvElement[1]*yRecvElement[3]*zRecvElement[0] + xRecvElement[1]*yRecvElement[3]*zRecvElement[2] + xRecvElement[2]*yRecvElement[0]*zRecvElement[1] - xRecvElement[2]*yRecvElement[0]*zRecvElement[3] - xRecvElement[2]*yRecvElement[1]*zRecvElement[0] + xRecvElement[2]*yRecvElement[1]*zRecvElement[3] + xRecvElement[2]*yRecvElement[3]*zRecvElement[0] - xRecvElement[2]*yRecvElement[3]*zRecvElement[1] - xRecvElement[3]*yRecvElement[0]*zRecvElement[1] + xRecvElement[3]*yRecvElement[0]*zRecvElement[2] + xRecvElement[3]*yRecvElement[1]*zRecvElement[0] - xRecvElement[3]*yRecvElement[1]*zRecvElement[2] - xRecvElement[3]*yRecvElement[2]*zRecvElement[0] + xRecvElement[3]*yRecvElement[2]*zRecvElement[1]);
+
+    //Vandermonde Berstein matrix in receiver point
+    dfloat *VB_rec;
+    VB_rec = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+
+    int sk = 0;
+    for(int l = 0; l <= mesh->N; l++){
+      for(int k = 0; k <= mesh->N - l; k++){
+        for(int j = 0; j <= mesh->N - k - l; j++){
+          int i = mesh->N - j - k - l;
+          dfloat temp = factorial(mesh->N)/(factorial(i)*factorial(j)*factorial(k)*factorial(l));
+          VB_rec[sk] = temp*pow(L1_rec,i)*pow(L2_rec,j)*pow(L3_rec,k)*pow(L4_rec,l);
+          sk++;
+        }
+      }
+    }
+    // interpolation
+
+    
+    for(int j = 0; j < mesh->Np; j++){
+      for(int i = 0; i < mesh->Np; i++){
+        intpol[iRecv*mesh->Np+i] += VB_rec[j]*mesh->invVB[i+j*mesh->Np];
+      }
+    }
+    #if 0
+    printf("new, irecv = %d, ele = %d\n",iRecv,recvElement);
+    for(int i = 0; i < mesh->Np; i++){
+      printf("%.15lf \n",intpol[iRecv*mesh->Np+i]);
+    }
+    printf("\n");
+    #endif
+    free(VB_rec);
+  }
+
+  acoustics->o_recvintpol = 
+        mesh->device.malloc(acoustics->NReceiversLocal*mesh->Np*sizeof(dfloat),intpol);
+
+  free(intpol);
+}
+
+
 
 void acousticsFindReceiverElement(acoustics_t *acoustics){
   // Only works for tets!
@@ -171,7 +250,8 @@ void acousticsFindReceiverElement(acoustics_t *acoustics){
         acoustics->NReceiversLocal++;
         break;
       } else if(i == mesh->Nelements-1){
-        printf("RECEIVER LOCATION NOT FOUND!!,(x,y,z) = (%f,%f,%f)\n", recvLoc[0],recvLoc[1],recvLoc[2]);
+          // [EA] Currently prints if the receiver is not on this core!!!! Even if found by other core!
+          //printf("RECEIVER LOCATION NOT FOUND!!,(x,y,z) = (%f,%f,%f)\n", recvLoc[0],recvLoc[1],recvLoc[2]);
       }
         
       
@@ -180,5 +260,20 @@ void acousticsFindReceiverElement(acoustics_t *acoustics){
 }
 
 
+void acousticsPrintReceiversToFile(acoustics_t *acoustics){
+  mesh_t *mesh = acoustics->mesh;
+  for(dlong iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
+    // Print interpolated receiver to file
+    FILE *iFP;
+    char fname[BUFSIZ];
+
+    sprintf(fname, "data/interpolatedRecvPoint_%02d.txt", acoustics->recvElementsIdx[iRecv]);
+    iFP = fopen(fname,"w");
+    for(int i = 0; i < mesh->NtimeSteps; i++){
+      fprintf(iFP, "%.15lf\n", acoustics->qRecv[i+iRecv*mesh->NtimeSteps]);
+    }
+    fclose(iFP);
+  }
+}
 
 

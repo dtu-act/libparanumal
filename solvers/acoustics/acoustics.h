@@ -37,6 +37,8 @@ SOFTWARE.
 // block size for reduction (hard coded)
 #define blockSize 256
 
+
+
 typedef struct{
 
   int dim;
@@ -51,11 +53,15 @@ typedef struct{
   //---------RECEIVER---------
   dfloat *qRecv; // Saves pres in receiver element in each timestep
   dlong qRecvCounter; // To keep track of which timestep we are on
+  dlong qRecvCopyCounter;
   dlong *recvElements; // Index to elements where the receivers are located
   dlong *recvElementsIdx; // Index into recvElements
   dfloat *recvXYZ; // XYZ coordinates of receiver
   dlong NReceivers; // Total number of receivers
   dlong NReceiversLocal; // Total number of receivers
+
+  occa::memory o_recvElements;
+  occa::memory o_recvElementsIdx;
   //---------RECEIVER---------
 
   //---------Local reaction accumulators---------
@@ -86,6 +92,10 @@ typedef struct{
   dfloat *ERAlpha;
   dfloat *ERBeta;
   dfloat *ERYinf;
+  dlong ERNComPoints;
+  dfloat *ERComPoints;
+  dlong *ERComPointsIdx;
+  dlong *ERintpolElementsCom;
   
 
   occa::memory o_LRA;
@@ -105,7 +115,10 @@ typedef struct{
   occa::memory o_rhsacc;
   occa::memory o_resacc;
   occa::memory o_ERintpol;
+  occa::memory o_recvintpol;
   occa::memory o_ERintpolElements;
+  occa::memory o_ERintpolElementsCom;
+  occa::memory o_ERintpolCom;
   occa::memory o_vt;
   occa::memory o_vi;
   occa::memory o_anglei;
@@ -169,6 +182,7 @@ typedef struct{
   occa::kernel acousticsUpdateEIRK4AccER;
   occa::kernel ERangleDetection;
   occa::kernel ERMoveVT;
+  occa::kernel acousticsReceiverInterpolation;
 
   occa::memory o_q;
   occa::memory o_rhsq;
@@ -229,6 +243,10 @@ dfloat acousticsDopriEstimate(acoustics_t *acoustics);
 void acousticsReceiverInterpolation(acoustics_t *acoustics);
 
 void acousticsFindReceiverElement(acoustics_t *acoustics);
+
+void acousticsRecvIntpolOperators(acoustics_t *acoustics);
+
+void acousticsPrintReceiversToFile(acoustics_t *acoustics);
 
 void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dfloat time);
 
