@@ -86,7 +86,7 @@ int main(int argc, char **argv){
   acousticsRun(acoustics, newOptions);
   endTime = MPI_Wtime();
   if(!mesh->rank){printf("Execution time: %lf\n",endTime-startTime);}
-
+  acousticsReport(acoustics, mesh->finalTime, newOptions);
 
   //---------RECEIVER---------
   acousticsPrintReceiversToFile(acoustics);

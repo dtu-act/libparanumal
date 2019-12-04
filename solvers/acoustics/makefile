@@ -42,6 +42,7 @@ $(HDRDIR)/mesh3D.h
 OBJS    = \
 ./src/acousticsEstimate.o \
 ./src/acousticsReceiver.o \
+./src/acousticsWaveSplitting.o \
 ./src/acousticsStep.o \
 ./src/acousticsMain.o \
 ./src/acousticsError.o \

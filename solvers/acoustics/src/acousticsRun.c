@@ -184,5 +184,4 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
     }
 
   }
-  acousticsReport(acoustics, mesh->finalTime, newOptions);
 }

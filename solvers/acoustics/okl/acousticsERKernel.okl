@@ -258,24 +258,56 @@ void findElement(const dfloat x,
 	}
 }
 
-@kernel void ERmakeInterpolatorCom(const dlong totalERNComPoints,
-															 @restrict const dlong *recvCountsCum,
-															 @restrict const dlong *recvCounts,
-															 const dlong rank,
-															 @restrict const dfloat *totalERComPoints,
-															 @restrict const dfloat *EX,
-															 @restrict const dfloat *EY,
-															 @restrict const dfloat *EZ,
-															 const dlong Nelements,
-															 dlong *ERintpolElements){
+@kernel void ERmakeInterpolatorCom(const dlong comPoints,
+																	@restrict const dlong *comPointsToSend,
+																	@restrict const dfloat *totalERComPoints,
+																	@restrict const dlong *ERintpolElementsCom,
+																	@restrict const dfloat *EX,
+																	@restrict const dfloat *EY,
+																	@restrict const dfloat *EZ,
+																	dfloat *intpol,
+																	@restrict const dfloat *invVB){
   
 
-	for(dlong n1=0; n1<(totalERNComPoints+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
+	for(dlong n1=0; n1<(comPoints+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
 		for(dlong n2=0; n2 < p_blockSize; ++n2;@inner(0)){    
 			dlong i = n1*p_blockSize+n2;
-			if(i < totalERNComPoints){
+			if(i < comPoints){
+				dlong idx = comPointsToSend[i];
 
-				//makeInterpolationOperator(xi,yi,zi,ele,EX,EY,EZ,intpol,p_Np*i,invVB);	
+				dfloat xi = totalERComPoints[3*idx+0];
+				dfloat yi = totalERComPoints[3*idx+1];
+				dfloat zi = totalERComPoints[3*idx+2];
+				dlong ele = ERintpolElementsCom[idx];
+
+				makeInterpolationOperator(xi,yi,zi,ele,EX,EY,EZ,intpol,p_Np*i,invVB);	
+			}
+		}
+	}
+}
+
+@kernel void acousticsWSComInterpolation(const dlong NComPointsToSendAllRanks,
+																		@restrict const dlong *comPointsToSend,
+																		@restrict const dlong *ERintpolElementsCom,
+																		@restrict const dfloat *intpol,
+																		@restrict const dfloat *q,
+																		dfloat *vtSend){
+
+
+	for(dlong n1=0; n1<(NComPointsToSendAllRanks+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
+    for(dlong n2=0; n2 < p_blockSize; ++n2;@inner(0)){    
+      dlong i = n1*p_blockSize+n2;
+      if(i < NComPointsToSendAllRanks){
+
+				dlong idx = comPointsToSend[i];
+				dlong ele = ERintpolElementsCom[idx];
+				
+				dlong IPoffset = p_Np*i;
+				dlong qoffset = ele*p_Np*p_Nfields;
+
+				vtSend[3*i+0] = interpolate(intpol,q,IPoffset,qoffset+1*p_Np);
+				vtSend[3*i+1] = interpolate(intpol,q,IPoffset,qoffset+2*p_Np);
+				vtSend[3*i+2] = interpolate(intpol,q,IPoffset,qoffset+3*p_Np);
 			}
 		}
 	}
@@ -293,7 +325,8 @@ void findElement(const dfloat x,
 														 dlong * anglei,
 														 @restrict const dlong * mapAccToQ,
 														 @restrict const dlong * mapAccToN,
-														 const dfloat dt){
+														 const dfloat dt,
+														 const dlong rank){
   
 
 	for(dlong n1=0; n1<(NERPoints+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
@@ -304,20 +337,26 @@ void findElement(const dfloat x,
 				// vt is saved as [bc11_t1,bc12_t1,bc13_t1,bc21_t1,bc22_t1,bc23_t1,...,bc11_t2,bc12_t2,...,bcNER3_t4]
 				// bcxy_tz: x=boundary point, y = wave-splitting point, z = timestep backwards
 				
+
 				// Second wave-splitting point 
 				dlong qoffset = ERintpolElements[2*i+1]*p_Np*p_Nfields;
 				dlong IPoffset = p_Np*i*2+p_Np;
 				
-				vt[i*9+0] = interpolate(intpol,q,IPoffset,qoffset+1*p_Np);
-				vt[i*9+1] = interpolate(intpol,q,IPoffset,qoffset+2*p_Np);
-				vt[i*9+2] = interpolate(intpol,q,IPoffset,qoffset+3*p_Np);
+				if(ERintpolElements[2*i+1] >= 0){
+					vt[i*9+0] = interpolate(intpol,q,IPoffset,qoffset+1*p_Np);
+					vt[i*9+1] = interpolate(intpol,q,IPoffset,qoffset+2*p_Np);
+					vt[i*9+2] = interpolate(intpol,q,IPoffset,qoffset+3*p_Np);
+				}
+
 
 				// First wave-splitting point
 				qoffset = ERintpolElements[2*i]*p_Np*p_Nfields;
 				IPoffset = p_Np*i*2;
-				vt[i*9+3] = interpolate(intpol,q,IPoffset,qoffset+1*p_Np);
-				vt[i*9+4] = interpolate(intpol,q,IPoffset,qoffset+2*p_Np);
-				vt[i*9+5] = interpolate(intpol,q,IPoffset,qoffset+3*p_Np);
+				if(ERintpolElements[2*i] >= 0){
+					vt[i*9+3] = interpolate(intpol,q,IPoffset,qoffset+1*p_Np);
+					vt[i*9+4] = interpolate(intpol,q,IPoffset,qoffset+2*p_Np);
+					vt[i*9+5] = interpolate(intpol,q,IPoffset,qoffset+3*p_Np);
+				}
 
 				// Boundary point, no need for interpolation, read from q
 				qoffset = mapAccToQ[i+NLRPoints];
@@ -377,6 +416,31 @@ void findElement(const dfloat x,
 	}
 }
 
+
+@kernel void ERInsertComVT(const dlong NERComPoints,
+													@restrict const dlong *comPointsIdxAll,
+													@restrict const dlong *ERComPointsIdx,
+													@restrict const dfloat *vtRecv,
+													dfloat *vt,
+													dlong rank){
+	for(dlong n1=0; n1<(NERComPoints+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
+		for(dlong n2=0; n2 < p_blockSize; ++n2;@inner(0)){    
+			dlong i = n1*p_blockSize+n2;
+			if(i < NERComPoints){
+
+				dlong idx = comPointsIdxAll[i];
+
+				dlong idx2 = ERComPointsIdx[idx];
+
+				dlong vtIdx = (idx2/2)*9 + ((idx2+1) % 2)*3;
+
+				vt[vtIdx+0] = vtRecv[3*i+0];
+				vt[vtIdx+1] = vtRecv[3*i+1];
+				vt[vtIdx+2] = vtRecv[3*i+2];
+			}
+		}
+	}
+}
 
 
 // [EA] Move vt time steps

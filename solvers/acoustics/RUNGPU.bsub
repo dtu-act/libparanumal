@@ -2,8 +2,8 @@
 #BSUB -q gpuv100
 #BSUB -n 1
 #BSUB -R "span[ptile=1]"
-#BSUB -W 0:30
-#BSUB -R "rusage[mem=30GB]"
+#BSUB -W 0:20
+#BSUB -R "rusage[mem=15GB]"
 #BSUB -J libP_GPU_1ER5FI
 #BSUB -gpu "num=1:mode=exclusive_process"
 
@@ -12,7 +12,7 @@ module purge
 module load mpi/3.1.3-gcc-7.4.0
 module load cuda/10.0
 
-export OCCA_DIR=/zhome/b1/2/97982/libparanumal/occa
+export OCCA_DIR=~/libparanumal/occa
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 
 # Make occa for GPU - Only needed if already compiled for CPU or not compiled yet
@@ -22,7 +22,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 #cd ../solvers/acoustics/
 
 # Build project
-make clean
+#make clean
 make -j
 
 # Run solver

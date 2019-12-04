@@ -2,18 +2,12 @@
 1.0
 
 [MESH FILE]
-#../../meshes/cubeTetH05.msh
-#../../meshes/CubeTet_libP_EA_10.msh
-#../../meshes/CubeTet_libP_EA_24.msh
-#../../meshes/CubeTet_libP_EA_17.msh
-#../../meshes/cubeTet_01_PerfRefl.msh
-#../../meshes/cubeTet_01_FreqIndep.msh
-#../../meshes/cubeTet_01_LocalReac.msh
-#../../meshes/cubeTet_01_1LR5FI.msh
-#../../meshes/cubeTet_01_ExtendReac.msh
-../../meshes/cubeTet_01_1ER5FI.msh
-#cubeTet_01_1ER5FIVERYFINE.msh
-#boxUnstruct5Opt.msh
+#../../meshes/cubeTet_02_PerfRefl_res01.msh
+#../../meshes/cubeTet_02_FreqIndep_res01.msh
+#../../meshes/cubeTet_02_1ER5FI_res01.msh
+../../meshes/cubeTet_02_1ER5FI_res02.msh
+#../../meshes/cubeTet_02_1ER5FI_res016.msh
+#../../meshes/cubeTet_02_1ER5FI_res017.msh
 
 [MESH DIMENSION]
 3
@@ -75,7 +69,8 @@ NODAL
 0
 
 [FINAL TIME]
-.01
+#.01
+1.0
 
 [RECEIVER]
 setups/setupdata/ReceiverLocations.dat
@@ -87,7 +82,8 @@ setups/setupdata/ReceiverLocations.dat
 1
 
 [CFL]
-0.5
+#0.2
+5
 
 [RESTART FROM FILE]
 0
@@ -113,3 +109,14 @@ setups/setupdata/LRDATA14.dat
 #setups/setupdata/ERDATA14.dat
 setups/setupdata/ERDATA14_d0.dat
 
+[SXYZ] # Width of initial pulse
+0.3
+
+[SX] # x coordinate of initial pulse
+0.8
+
+[SY] # y coordinate of initial pulse
+0.8
+
+[SZ] # z coordinate of initial pulse
+0.8

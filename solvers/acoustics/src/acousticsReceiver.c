@@ -267,7 +267,7 @@ void acousticsPrintReceiversToFile(acoustics_t *acoustics){
     FILE *iFP;
     char fname[BUFSIZ];
 
-    sprintf(fname, "data/interpolatedRecvPoint_%02d.txt", acoustics->recvElementsIdx[iRecv]);
+    sprintf(fname, "data/RecvPoint_%02d.txt", acoustics->recvElementsIdx[iRecv]);
     iFP = fopen(fname,"w");
     for(int i = 0; i < mesh->NtimeSteps; i++){
       fprintf(iFP, "%.15lf\n", acoustics->qRecv[i+iRecv*mesh->NtimeSteps]);

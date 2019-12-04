@@ -92,10 +92,15 @@ typedef struct{
   dfloat *ERAlpha;
   dfloat *ERBeta;
   dfloat *ERYinf;
-  dlong ERNComPoints;
+  dlong NERComPoints;
   dfloat *ERComPoints;
   dlong *ERComPointsIdx;
   dlong *ERintpolElementsCom;
+  dlong comPointsCounter; // Unused?
+  dlong NComPointsToSendAllRanks;
+  dfloat *vtSend;
+  dfloat *vtRecv;
+  dlong *recvCountsArray;
   
 
   occa::memory o_LRA;
@@ -119,6 +124,12 @@ typedef struct{
   occa::memory o_ERintpolElements;
   occa::memory o_ERintpolElementsCom;
   occa::memory o_ERintpolCom;
+  occa::memory o_vtSend;
+  occa::memory o_vtRecv;
+  occa::memory o_ERComPointsIdx;
+  occa::memory o_recvCountsArray;
+  occa::memory o_comPointsIdxAll;
+  occa::memory o_comPointsToSend;
   occa::memory o_vt;
   occa::memory o_vi;
   occa::memory o_anglei;
@@ -182,6 +193,8 @@ typedef struct{
   occa::kernel acousticsUpdateEIRK4AccER;
   occa::kernel ERangleDetection;
   occa::kernel ERMoveVT;
+  occa::kernel ERInsertComVT;
+  occa::kernel acousticsWSComInterpolation;
   occa::kernel acousticsReceiverInterpolation;
 
   occa::memory o_q;
@@ -226,9 +239,8 @@ void acousticsError(acoustics_t *acoustics, dfloat time);
 void acousticsCavitySolution(dfloat x, dfloat y, dfloat z, dfloat t,
 		       dfloat *u, dfloat *v, dfloat *w, dfloat *p);
 
-
 void acousticsGaussianPulse(dfloat x, dfloat y, dfloat z, dfloat t,
-		      dfloat *u, dfloat *v, dfloat *w, dfloat *p);
+		      dfloat *r, dfloat *u, dfloat *v, dfloat *w, dfloat *sloc, dfloat sxyz);
 
 void acousticsReport(acoustics_t *acoustics, dfloat time, setupAide &newOptions);
 
@@ -249,6 +261,8 @@ void acousticsRecvIntpolOperators(acoustics_t *acoustics);
 void acousticsPrintReceiversToFile(acoustics_t *acoustics);
 
 void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dfloat time);
+
+void acousticsWSExchange(acoustics_t *acoustics);
 
 #define TRIANGLES 3
 #define QUADRILATERALS 4

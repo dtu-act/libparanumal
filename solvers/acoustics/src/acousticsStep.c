@@ -114,6 +114,28 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
   
   // [EA] Angle detection using wave-splitting
   if(mesh->NERPoints){
+    // Do interpolation and send/receive wave-splitting points from other ranks 
+    if(acoustics->NERComPoints || acoustics->NComPointsToSendAllRanks){
+      
+      acoustics->acousticsWSComInterpolation(acoustics->NComPointsToSendAllRanks,
+																		acoustics->o_comPointsToSend,
+																		acoustics->o_ERintpolElementsCom,
+																		acoustics->o_ERintpolCom,
+																		acoustics->o_q,
+																		acoustics->o_vtSend);
+
+      
+      // Communicate wave-splitting points between ranks
+      acousticsWSExchange(acoustics); 
+      acoustics->ERInsertComVT(acoustics->NERComPoints,
+													acoustics->o_comPointsIdxAll,
+													acoustics->o_ERComPointsIdx,
+													acoustics->o_vtRecv,
+													acoustics->o_vt,
+                          mesh->rank);
+    }
+
+    //printf("r = %d, nerpoints = %d\n",mesh->rank,mesh->NERPoints);
     acoustics->ERangleDetection(mesh->NERPoints,
 														 mesh->NLRPoints,
 														 acoustics->o_vt,
@@ -125,12 +147,14 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
 														 acoustics->o_anglei,
 														 mesh->o_mapAccToQ,
 														 mesh->o_mapAccToN,
-														 mesh->dt);
+														 mesh->dt,
+                             mesh->rank);
 
 
     // Move vt time steps
     acoustics->ERMoveVT(mesh->NERPoints, acoustics->o_vt);    
   }
+
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(int rk=0;rk<mesh->Nrk;++rk){
     dfloat currentTime = time + mesh->rkc[rk]*mesh->dt;

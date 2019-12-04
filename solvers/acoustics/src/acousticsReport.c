@@ -33,7 +33,7 @@ void acousticsReport(acoustics_t *acoustics, dfloat time, setupAide &newOptions)
   // copy data back to host
   acoustics->o_q.copyTo(acoustics->q);
 // Print output to txt files
-#if 1
+#if 0
   int nprocs, procid;
   MPI_Comm_rank(MPI_COMM_WORLD,&procid);
   MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
@@ -99,5 +99,5 @@ void acousticsReport(acoustics_t *acoustics, dfloat time, setupAide &newOptions)
 
   sprintf(fname, "foo_%04d_%04d.vtu", mesh->rank, acoustics->frame++);
 
-  acousticsPlotVTU(acoustics, fname);
+  //acousticsPlotVTU(acoustics, fname);
 }
