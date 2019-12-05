@@ -50,5 +50,7 @@ void acousticsWSExchange(acoustics_t *acoustics){
   
 	MPI_Waitall(MPIRequestCounter, MPIRequests, status);
 	free(status);
-	acoustics->o_vtRecv.copyFrom(acoustics->vtRecv);
+	if(mesh->NERPoints){
+		acoustics->o_vtRecv.copyFrom(acoustics->vtRecv);
+	}
 }

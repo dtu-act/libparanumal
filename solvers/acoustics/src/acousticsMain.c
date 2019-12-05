@@ -89,7 +89,7 @@ int main(int argc, char **argv){
   acousticsReport(acoustics, mesh->finalTime, newOptions);
 
   //---------RECEIVER---------
-  acousticsPrintReceiversToFile(acoustics);
+  acousticsPrintReceiversToFile(acoustics, newOptions);
   
   // close down MPI
   MPI_Finalize();

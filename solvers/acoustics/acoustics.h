@@ -94,6 +94,7 @@ typedef struct{
   dfloat *ERYinf;
   dlong NERComPoints;
   dfloat *ERComPoints;
+  dlong NERPointsTotal;
   dlong *ERComPointsIdx;
   dlong *ERintpolElementsCom;
   dlong comPointsCounter; // Unused?
@@ -258,7 +259,7 @@ void acousticsFindReceiverElement(acoustics_t *acoustics);
 
 void acousticsRecvIntpolOperators(acoustics_t *acoustics);
 
-void acousticsPrintReceiversToFile(acoustics_t *acoustics);
+void acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions);
 
 void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dfloat time);
 

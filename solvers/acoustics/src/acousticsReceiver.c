@@ -260,14 +260,17 @@ void acousticsFindReceiverElement(acoustics_t *acoustics){
 }
 
 
-void acousticsPrintReceiversToFile(acoustics_t *acoustics){
+void acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions){
   mesh_t *mesh = acoustics->mesh;
+
+  string PREFIX;
+  newOptions.getArgs("RECEIVERPREFIX", PREFIX);
   for(dlong iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
     // Print interpolated receiver to file
     FILE *iFP;
     char fname[BUFSIZ];
 
-    sprintf(fname, "data/RecvPoint_%02d.txt", acoustics->recvElementsIdx[iRecv]);
+    sprintf(fname, "data/%s_RecvPoint_%02d.txt", (char*)PREFIX.c_str(), acoustics->recvElementsIdx[iRecv]);
     iFP = fopen(fname,"w");
     for(int i = 0; i < mesh->NtimeSteps; i++){
       fprintf(iFP, "%.15lf\n", acoustics->qRecv[i+iRecv*mesh->NtimeSteps]);

@@ -460,7 +460,10 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   dfloat dx = 0.01; // [EA] Distance to move wave-splitting points
   kernelInfo["defines/" "p_ERdx"]= dx; 
 
-  if(mesh->NERPoints){
+  acoustics->NERPointsTotal = 0;
+  MPI_Allreduce(&mesh->NERPoints, &acoustics->NERPointsTotal, 1, MPI_DLONG, MPI_SUM, mesh->comm);
+  printf("r = %d, hejsa1\n",mesh->rank);
+  if(acoustics->NERPointsTotal){
     occa::kernel ERInterpolationOperators = 
               mesh->device.buildKernel(DACOUSTICS "/okl/acousticsERKernel.okl",
 				      "ERInterpolationOperators",
@@ -477,23 +480,23 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
     acoustics->o_ERintpol = mesh->device.malloc(mesh->Np*2*mesh->NERPoints*sizeof(dfloat));
     acoustics->o_ERintpolElements = mesh->device.malloc(2*mesh->NERPoints*sizeof(dlong));
-    
-    ERInterpolationOperators(mesh->NERPoints,
-                              mesh->Nelements,
-                              o_EX,
-                              o_EY,
-                              o_EZ,
-                              acoustics->o_ERintpol,
-                              mesh->o_x,
-                              mesh->o_y,
-                              mesh->o_z,
-                              mesh->o_sgeo,
-                              mesh->o_mapAccToXYZ,
-                              mesh->o_mapAccToN,
-                              dx,
-                              o_invVB,
-                              acoustics->o_ERintpolElements);
-
+    if(mesh->NERPoints){
+      ERInterpolationOperators(mesh->NERPoints,
+                                mesh->Nelements,
+                                o_EX,
+                                o_EY,
+                                o_EZ,
+                                acoustics->o_ERintpol,
+                                mesh->o_x,
+                                mesh->o_y,
+                                mesh->o_z,
+                                mesh->o_sgeo,
+                                mesh->o_mapAccToXYZ,
+                                mesh->o_mapAccToN,
+                                dx,
+                                o_invVB,
+                                acoustics->o_ERintpolElements);
+    }
 
     #if 1
     // [EA] Assume no communication needed, check in next if statement.
@@ -501,12 +504,14 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     acoustics->NComPointsToSendAllRanks = 0;
     if(mesh->size > 1){
       // [EA] Find wave-splitting points belonging to other cores
-      
+      //printf("r = %d, helt i starten!\n",mesh->rank);
       // Copy ERintpolElements to host and find the number of wave-splitting points belonging to other cores
       dlong *ERintpolElements;
       ERintpolElements = (dlong*) calloc(2*mesh->NERPoints, sizeof(dlong));    
-      acoustics->o_ERintpolElements.copyTo(ERintpolElements);
-      acoustics->NERComPoints = 0; // Total amount WS points in elements on other ranks
+      if(mesh->NERPoints){
+        acoustics->o_ERintpolElements.copyTo(ERintpolElements);
+      }
+
       for(dlong itt = 0; itt < 2*mesh->NERPoints; itt++){
         if(ERintpolElements[itt] < 0){
           acoustics->NERComPoints++;
@@ -560,174 +565,160 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
         }
       }
 
+      if(NERComPointsAllRanks){
+        // Send unfound wave-splitting points to all ranks
+        dfloat *ERComPointsAllRanks; // Contains missing xyz for missing ws points for all ranks. In order of ranks.
+        ERComPointsAllRanks = (dfloat*) calloc(NERComPointsAllRanks*3, sizeof(dfloat));
+        MPI_Allgatherv(acoustics->ERComPoints, acoustics->NERComPoints*3, MPI_DFLOAT,
+        ERComPointsAllRanks, recvCounts, recvCountsCum, MPI_DFLOAT, mesh->comm);
+        
+        
+        // Find element of previosly unfound WS points.
+        acoustics->ERintpolElementsCom = (dlong*) calloc(NERComPointsAllRanks, sizeof(dlong));
+        acoustics->o_ERintpolElementsCom = 
+              mesh->device.malloc(NERComPointsAllRanks*sizeof(dlong),acoustics->ERintpolElementsCom);
+        occa::memory o_recvCountsCum, o_recvCounts, o_ERComPointsAllRanks;
+        o_recvCountsCum = 
+              mesh->device.malloc(mesh->size*sizeof(dlong),recvCountsCum);
+        o_recvCounts = 
+              mesh->device.malloc(mesh->size*sizeof(dlong),recvCounts);    
+        o_ERComPointsAllRanks = 
+              mesh->device.malloc(NERComPointsAllRanks*3*sizeof(dfloat),ERComPointsAllRanks);  
+        occa::kernel ERFindElementsCom = 
+              mesh->device.buildKernel(DACOUSTICS "/okl/acousticsERKernel.okl",
+              "ERFindElementsCom",
+              kernelInfo);
+        ERFindElementsCom(NERComPointsAllRanks,o_recvCountsCum,o_recvCounts,mesh->rank,o_ERComPointsAllRanks,
+                          o_EX,o_EY,o_EZ,mesh->Nelements,acoustics->o_ERintpolElementsCom);
 
-      // Send unfound wave-splitting points to all ranks
-      dfloat *ERComPointsAllRanks; // Contains missing xyz for missing ws points for all ranks. In order of ranks.
-      ERComPointsAllRanks = (dfloat*) calloc(NERComPointsAllRanks*3, sizeof(dfloat));
-      MPI_Allgatherv(acoustics->ERComPoints, acoustics->NERComPoints*3, MPI_DFLOAT,
-      ERComPointsAllRanks, recvCounts, recvCountsCum, MPI_DFLOAT, mesh->comm);
-      
-      
-      // Find element of previosly unfound WS points.
-      acoustics->ERintpolElementsCom = (dlong*) calloc(NERComPointsAllRanks, sizeof(dlong));
-      acoustics->o_ERintpolElementsCom = 
-            mesh->device.malloc(NERComPointsAllRanks*sizeof(dlong),acoustics->ERintpolElementsCom);
-      occa::memory o_recvCountsCum, o_recvCounts, o_ERComPointsAllRanks;
-      o_recvCountsCum = 
-            mesh->device.malloc(mesh->size*sizeof(dlong),recvCountsCum);
-      o_recvCounts = 
-            mesh->device.malloc(mesh->size*sizeof(dlong),recvCounts);    
-      o_ERComPointsAllRanks = 
-            mesh->device.malloc(NERComPointsAllRanks*3*sizeof(dfloat),ERComPointsAllRanks);  
-      occa::kernel ERFindElementsCom = 
+
+        // Count how many points current rank has to send to each other rank
+        dlong NComPointsToSendAllRanks = 0;
+        dlong *NComPointsToSendToRanks;
+        NComPointsToSendToRanks = (dlong*) calloc(mesh->size, sizeof(dlong));
+        acoustics->o_ERintpolElementsCom.copyTo(acoustics->ERintpolElementsCom);
+        dlong currRank = 0;
+        dlong currRankCum = recvCounts[currRank]/3;
+        for(dlong itt = 0; itt < NERComPointsAllRanks; itt++){
+          while(itt >= currRankCum){
+              currRankCum += recvCounts[currRank+1]/3;
+              currRank++;
+              if(currRank > mesh->size){
+                printf("Infinite while-loop\n");
+                exit(-1);
+              }
+          }
+          if(acoustics->ERintpolElementsCom[itt] != -1){
+            NComPointsToSendToRanks[currRank]++;
+            NComPointsToSendAllRanks++;
+          }
+        }
+        dlong *NComPointsToSendToRanksCum;
+        NComPointsToSendToRanksCum = (dlong*) calloc(mesh->size, sizeof(dlong));
+        for(int itt = 1; itt < mesh->size; itt++){
+          NComPointsToSendToRanksCum[itt] = NComPointsToSendToRanksCum[itt-1] + NComPointsToSendToRanks[itt-1];
+        }
+
+        // Find idx of WS points to send to each rank
+        dlong *comPointsIdx, *comPointsToSend;
+        comPointsIdx = (dlong*) calloc(NComPointsToSendAllRanks, sizeof(dlong));
+        comPointsToSend = (dlong*) calloc(NComPointsToSendAllRanks, sizeof(dlong));
+
+        currRank = 0;
+        currRankCum = recvCounts[currRank]/3;;
+        dlong currRankCounter = 0;
+        dlong counterk = 0;
+        for(dlong itt = 0; itt < NERComPointsAllRanks; itt++){
+          while(itt >= currRankCum){
+              currRankCum += recvCounts[currRank+1]/3;
+              currRank++;
+              currRankCounter = 0;
+              if(currRank > mesh->size){
+                printf("Infinite while-loop\n");
+                exit(-1);
+              }
+          }
+          if(acoustics->ERintpolElementsCom[itt] != -1){
+            comPointsIdx[counterk] = currRankCounter;
+            comPointsToSend[counterk] = itt;
+            counterk++;
+            
+          }
+          currRankCounter++;
+        }
+
+        
+        
+        
+        acoustics->recvCountsArray = (dlong*) calloc(mesh->size*mesh->size, sizeof(dlong));
+        MPI_Allgather(NComPointsToSendToRanks, mesh->size, MPI_DLONG, acoustics->recvCountsArray, mesh->size, MPI_DLONG, mesh->comm);
+        
+        dlong NComPointsIdx = 0;
+        dlong *NComPointsIdxPerRank;
+        dlong *NComPointsIdxPerRankCum;
+        NComPointsIdxPerRank = (dlong*) calloc(mesh->size, sizeof(dlong));
+        NComPointsIdxPerRankCum = (dlong*) calloc(mesh->size, sizeof(dlong));
+        for(int itt = 0; itt < mesh->size; itt++){
+          NComPointsIdx += acoustics->recvCountsArray[mesh->rank + mesh->size*itt]; // Total amount of WS points to recv from all other ranks
+          NComPointsIdxPerRank[itt] = acoustics->recvCountsArray[mesh->rank + mesh->size*itt]; // Array of number of WS points to recveive from rank itt
+          if(itt > 0){
+            NComPointsIdxPerRankCum[itt] = NComPointsIdxPerRankCum[itt-1] + acoustics->recvCountsArray[mesh->rank + mesh->size*(itt-1)];
+          }
+        }
+
+        if(acoustics->NERComPoints != NComPointsIdx){
+          printf("Unable to find all Extended Reaction Wave-splitting points. Check if mesh is correct.\n");
+          exit(-1);
+        }
+
+
+        dlong *comPointsIdxAll;
+        comPointsIdxAll = (dlong*) calloc(acoustics->NERComPoints, sizeof(dlong));
+        MPI_Alltoallv(comPointsIdx, NComPointsToSendToRanks, NComPointsToSendToRanksCum, MPI_DLONG, 
+                      comPointsIdxAll, NComPointsIdxPerRank, NComPointsIdxPerRankCum, MPI_DLONG, mesh->comm);
+
+        
+        acoustics->o_ERComPointsIdx = 
+              mesh->device.malloc(acoustics->NERComPoints*sizeof(dlong),acoustics->ERComPointsIdx);
+        
+        acoustics->o_ERintpolCom =
+              mesh->device.malloc(mesh->Np*NComPointsToSendAllRanks*sizeof(dfloat));
+
+        acoustics->o_recvCountsArray = 
+              mesh->device.malloc(mesh->size*mesh->size*sizeof(dlong),acoustics->recvCountsArray);
+
+
+        acoustics->o_comPointsIdxAll = 
+              mesh->device.malloc(acoustics->NERComPoints*sizeof(dlong),comPointsIdxAll);
+
+        acoustics->o_comPointsToSend = 
+              mesh->device.malloc(NComPointsToSendAllRanks*sizeof(dlong),comPointsToSend);
+        
+        acoustics->NComPointsToSendAllRanks = NComPointsToSendAllRanks;
+
+        occa::kernel ERmakeInterpolatorCom;
+        ERmakeInterpolatorCom = 
             mesh->device.buildKernel(DACOUSTICS "/okl/acousticsERKernel.okl",
-            "ERFindElementsCom",
-            kernelInfo);
-      ERFindElementsCom(NERComPointsAllRanks,o_recvCountsCum,o_recvCounts,mesh->rank,o_ERComPointsAllRanks,
-                        o_EX,o_EY,o_EZ,mesh->Nelements,acoustics->o_ERintpolElementsCom);
-
-
-      // Count how many points current rank has to send to each other rank
-      dlong NComPointsToSendAllRanks = 0;
-      dlong *NComPointsToSendToRanks;
-      NComPointsToSendToRanks = (dlong*) calloc(mesh->size, sizeof(dlong));
-      acoustics->o_ERintpolElementsCom.copyTo(acoustics->ERintpolElementsCom);
-      dlong currRank = 0;
-      dlong currRankCum = recvCounts[currRank]/3;
-      for(dlong itt = 0; itt < NERComPointsAllRanks; itt++){
-        if(itt >= currRankCum){
-            currRankCum += recvCounts[currRank+1]/3;
-            currRank++;
+                  "ERmakeInterpolatorCom",
+                  kernelInfo);
+        if(NComPointsToSendAllRanks){
+          ERmakeInterpolatorCom(NComPointsToSendAllRanks,
+                                acoustics->o_comPointsToSend,
+                                o_ERComPointsAllRanks,
+                                acoustics->o_ERintpolElementsCom,
+                                o_EX,
+                                o_EY,
+                                o_EZ,
+                                acoustics->o_ERintpolCom,
+                                o_invVB);
         }
-        if(acoustics->ERintpolElementsCom[itt] != -1){
-          NComPointsToSendToRanks[currRank]++;
-          NComPointsToSendAllRanks++;
-        }
+        acoustics->vtSend = (dfloat*) calloc(NComPointsToSendAllRanks*3, sizeof(dfloat));;
+        acoustics->vtRecv = (dfloat*) calloc(acoustics->NERComPoints*3, sizeof(dfloat));;
+        acoustics->o_vtSend = 
+              mesh->device.malloc(NComPointsToSendAllRanks*3*sizeof(dfloat),acoustics->vtSend);
+        acoustics->o_vtRecv = 
+              mesh->device.malloc(acoustics->NERComPoints*3*sizeof(dfloat),acoustics->vtRecv);
       }
-      dlong *NComPointsToSendToRanksCum;
-      NComPointsToSendToRanksCum = (dlong*) calloc(mesh->size, sizeof(dlong));
-      for(int itt = 1; itt < mesh->size; itt++){
-        NComPointsToSendToRanksCum[itt] = NComPointsToSendToRanksCum[itt-1] + NComPointsToSendToRanks[itt-1];
-      }
-
-      // Find idx of WS points to send to each rank
-      dlong *comPointsIdx, *comPointsToSend;
-      comPointsIdx = (dlong*) calloc(NComPointsToSendAllRanks, sizeof(dlong));
-      comPointsToSend = (dlong*) calloc(NComPointsToSendAllRanks, sizeof(dlong));
-
-      printf("r = %d, NComPointsToSendToRanks = %d %d %d %d\n",mesh->rank,NComPointsToSendToRanks[0],NComPointsToSendToRanks[1],NComPointsToSendToRanks[2],NComPointsToSendToRanks[3]);
-      printf("r = %d, NComPointsToSendAllRanks = %d\n",mesh->rank,NComPointsToSendAllRanks);
-      currRank = 0;
-      currRankCum = recvCounts[currRank]/3;;
-      dlong currRankCounter = 0;
-      dlong counterk = 0;
-      for(dlong itt = 0; itt < NERComPointsAllRanks; itt++){
-        if(itt >= currRankCum){
-            currRankCum += recvCounts[currRank+1]/3;
-            currRank++;
-            currRankCounter = 0;
-        }
-        if(acoustics->ERintpolElementsCom[itt] != -1){
-          comPointsIdx[counterk] = currRankCounter;
-          comPointsToSend[counterk] = itt;
-          counterk++;
-          
-        }
-        currRankCounter++;
-      }
-
-      
-      
-      
-      acoustics->recvCountsArray = (dlong*) calloc(mesh->size*mesh->size, sizeof(dlong));
-      MPI_Allgather(NComPointsToSendToRanks, mesh->size, MPI_DLONG, acoustics->recvCountsArray, mesh->size, MPI_DLONG, mesh->comm);
-      
-      dlong NComPointsIdx = 0;
-      dlong *NComPointsIdxPerRank;
-      dlong *NComPointsIdxPerRankCum;
-      NComPointsIdxPerRank = (dlong*) calloc(mesh->size, sizeof(dlong));
-      NComPointsIdxPerRankCum = (dlong*) calloc(mesh->size, sizeof(dlong));
-      for(int itt = 0; itt < mesh->size; itt++){
-        NComPointsIdx += acoustics->recvCountsArray[mesh->rank + mesh->size*itt]; // Total amount of WS points to recv from all other ranks
-        NComPointsIdxPerRank[itt] = acoustics->recvCountsArray[mesh->rank + mesh->size*itt]; // Array of number of WS points to recveive from rank itt
-        if(itt > 0){
-          NComPointsIdxPerRankCum[itt] = NComPointsIdxPerRankCum[itt-1] + acoustics->recvCountsArray[mesh->rank + mesh->size*(itt-1)];
-        }
-      }
-
-      if(acoustics->NERComPoints != NComPointsIdx){
-        printf("Unable to find all Extended Reaction Wave-splitting points. Check if mesh is correct.\n");
-        exit(-1);
-      }
-
-
-      dlong *comPointsIdxAll;
-      comPointsIdxAll = (dlong*) calloc(acoustics->NERComPoints, sizeof(dlong));
-      MPI_Alltoallv(comPointsIdx, NComPointsToSendToRanks, NComPointsToSendToRanksCum, MPI_DLONG, 
-                    comPointsIdxAll, NComPointsIdxPerRank, NComPointsIdxPerRankCum, MPI_DLONG, mesh->comm);
-
-
-      #if 0
-      for(int itt = 0; itt < mesh->size; itt++){
-        if(itt == mesh->rank){
-          for(int jtt = 0; jtt < acoustics->NERComPoints; jtt++){
-            printf("r = %d, %d\n",mesh->rank, acoustics->ERComPointsIdx[jtt]);
-          }
-        }
-        MPI_Barrier(mesh->comm);
-      }
-      #endif
-      
-      acoustics->o_ERComPointsIdx = 
-            mesh->device.malloc(acoustics->NERComPoints*sizeof(dlong),acoustics->ERComPointsIdx);
-      
-      acoustics->o_ERintpolCom =
-            mesh->device.malloc(mesh->Np*NComPointsToSendAllRanks*sizeof(dfloat));
-
-      acoustics->o_recvCountsArray = 
-            mesh->device.malloc(mesh->size*mesh->size*sizeof(dlong),acoustics->recvCountsArray);
-
-
-      acoustics->o_comPointsIdxAll = 
-            mesh->device.malloc(acoustics->NERComPoints*sizeof(dlong),comPointsIdxAll);
-
-      acoustics->o_comPointsToSend = 
-            mesh->device.malloc(NComPointsToSendAllRanks*sizeof(dlong),comPointsToSend);
-      
-      acoustics->NComPointsToSendAllRanks = NComPointsToSendAllRanks;
-
-
-      occa::kernel ERmakeInterpolatorCom;
-      ERmakeInterpolatorCom = 
-          mesh->device.buildKernel(DACOUSTICS "/okl/acousticsERKernel.okl",
-                "ERmakeInterpolatorCom",
-                kernelInfo);
-      ERmakeInterpolatorCom(NComPointsToSendAllRanks,
-                            acoustics->o_comPointsToSend,
-                            o_ERComPointsAllRanks,
-                            acoustics->o_ERintpolElementsCom,
-                            o_EX,
-                            o_EY,
-                            o_EZ,
-                            acoustics->o_ERintpolCom,
-                            o_invVB);
-      
-      acoustics->vtSend = (dfloat*) calloc(NComPointsToSendAllRanks*3, sizeof(dfloat));;
-      acoustics->vtRecv = (dfloat*) calloc(acoustics->NERComPoints*3, sizeof(dfloat));;
-      acoustics->o_vtSend = 
-            mesh->device.malloc(NComPointsToSendAllRanks*3*sizeof(dfloat),acoustics->vtSend);
-      acoustics->o_vtRecv = 
-            mesh->device.malloc(acoustics->NERComPoints*3*sizeof(dfloat),acoustics->vtRecv);
-      /*
-      for(dlong jtt = 0; jtt < mesh->size;jtt++){
-        if(mesh->rank == jtt){
-          for(dlong itt = 0; itt <NComPointsIdx; itt++){
-            printf("r = %d,  %d\n",mesh->rank, comPointsIdxAll[itt]);
-          }
-        }
-        MPI_Barrier(mesh->comm);
-      }
-      */
     }
    #endif
 
@@ -947,8 +938,8 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   sprintf(fileName, DACOUSTICS "/okl/acousticsVolume%s.okl", suffix);
   sprintf(kernelName, "acousticsVolume%s", suffix);
 
-  printf("fileName=[ %s ] \n", fileName);
-  printf("kernelName=[ %s ] \n", kernelName);
+  //printf("fileName=[ %s ] \n", fileName);
+  //printf("kernelName=[ %s ]\n", kernelName);
   
   acoustics->volumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 

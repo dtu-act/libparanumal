@@ -113,26 +113,30 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
   mesh_t *mesh = acoustics->mesh;
   
   // [EA] Angle detection using wave-splitting
-  if(mesh->NERPoints){
+  if(acoustics->NERPointsTotal){
     // Do interpolation and send/receive wave-splitting points from other ranks 
     if(acoustics->NERComPoints || acoustics->NComPointsToSendAllRanks){
       
+      if(acoustics->NComPointsToSendAllRanks){
       acoustics->acousticsWSComInterpolation(acoustics->NComPointsToSendAllRanks,
 																		acoustics->o_comPointsToSend,
 																		acoustics->o_ERintpolElementsCom,
 																		acoustics->o_ERintpolCom,
 																		acoustics->o_q,
 																		acoustics->o_vtSend);
-
+      }
       
       // Communicate wave-splitting points between ranks
-      acousticsWSExchange(acoustics); 
+      acousticsWSExchange(acoustics);
+      
+      if(acoustics->NERComPoints){
       acoustics->ERInsertComVT(acoustics->NERComPoints,
 													acoustics->o_comPointsIdxAll,
 													acoustics->o_ERComPointsIdx,
 													acoustics->o_vtRecv,
 													acoustics->o_vt,
-                          mesh->rank);
+													mesh->rank);
+      }
     }
 
     //printf("r = %d, nerpoints = %d\n",mesh->rank,mesh->NERPoints);
@@ -268,24 +272,26 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
   }
 
   //---------RECEIVER---------
-  acoustics->acousticsReceiverInterpolation(acoustics->NReceiversLocal,
-																		acoustics->o_qRecv,
-																		acoustics->o_recvElements,
-                                    acoustics->o_recvElementsIdx,
-																		acoustics->o_recvintpol,
-																		acoustics->o_q,
-																		acoustics->qRecvCounter);
-  acoustics->qRecvCounter++;
-  if(acoustics->qRecvCounter == recvCopyRate){
-    for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
-      dlong offset = recvCopyRate*acoustics->qRecvCopyCounter + mesh->NtimeSteps*iRecv;
+  if(acoustics->NReceiversLocal){
+    acoustics->acousticsReceiverInterpolation(acoustics->NReceiversLocal,
+                                      acoustics->o_qRecv,
+                                      acoustics->o_recvElements,
+                                      acoustics->o_recvElementsIdx,
+                                      acoustics->o_recvintpol,
+                                      acoustics->o_q,
+                                      acoustics->qRecvCounter);
+    acoustics->qRecvCounter++;
+    if(acoustics->qRecvCounter == recvCopyRate){
+      for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
+        dlong offset = recvCopyRate*acoustics->qRecvCopyCounter + mesh->NtimeSteps*iRecv;
 
-      acoustics->o_qRecv.copyTo(acoustics->qRecv+offset,
-            acoustics->qRecvCounter*sizeof(dfloat), 
-            recvCopyRate*iRecv*sizeof(dfloat));  
+        acoustics->o_qRecv.copyTo(acoustics->qRecv+offset,
+              acoustics->qRecvCounter*sizeof(dfloat), 
+              recvCopyRate*iRecv*sizeof(dfloat));  
+      }
+      acoustics->qRecvCounter = 0;
+      acoustics->qRecvCopyCounter++;  
     }
-    acoustics->qRecvCounter = 0;
-    acoustics->qRecvCopyCounter++;  
   } 
   //---------RECEIVER---------
 }
@@ -295,26 +301,53 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
   mesh_t *mesh = acoustics->mesh;
   
   // [EA] Angle detection using wave-splitting
-  if(mesh->NERPoints){
-    acoustics->ERangleDetection(mesh->NERPoints,
-														 mesh->NLRPoints,
-														 acoustics->o_vt,
-														 acoustics->o_vi,
-														 acoustics->o_ERintpolElements,
-														 acoustics->o_q,
-														 mesh->o_sgeo,
-														 acoustics->o_ERintpol,
-														 acoustics->o_anglei,
-														 mesh->o_mapAccToQ,
-														 mesh->o_mapAccToN,
-														 mesh->dt);
+  if(acoustics->NERPointsTotal){
+    // Do interpolation and send/receive wave-splitting points from other ranks 
+    if(acoustics->NERComPoints || acoustics->NComPointsToSendAllRanks){
+      
+      if(acoustics->NComPointsToSendAllRanks){
+      acoustics->acousticsWSComInterpolation(acoustics->NComPointsToSendAllRanks,
+																		acoustics->o_comPointsToSend,
+																		acoustics->o_ERintpolElementsCom,
+																		acoustics->o_ERintpolCom,
+																		acoustics->o_q,
+																		acoustics->o_vtSend);
+      }
+      
+      // Communicate wave-splitting points between ranks
+      acousticsWSExchange(acoustics); 
+      
+      if(acoustics->NERComPoints){
+      acoustics->ERInsertComVT(acoustics->NERComPoints,
+													acoustics->o_comPointsIdxAll,
+													acoustics->o_ERComPointsIdx,
+													acoustics->o_vtRecv,
+													acoustics->o_vt,
+													mesh->rank);
+      }
+    }
+
+    if(mesh->NERPoints){
+      acoustics->ERangleDetection(mesh->NERPoints,
+                                mesh->NLRPoints,
+                                acoustics->o_vt,
+                                acoustics->o_vi,
+                                acoustics->o_ERintpolElements,
+                                acoustics->o_q,
+                                mesh->o_sgeo,
+                                acoustics->o_ERintpol,
+                                acoustics->o_anglei,
+                                mesh->o_mapAccToQ,
+                                mesh->o_mapAccToN,
+                                mesh->dt,
+                                mesh->rank);
 
 
-    // Move vt time steps
-    acoustics->ERMoveVT(mesh->NERPoints, acoustics->o_vt);    
+      // Move vt time steps
+      acoustics->ERMoveVT(mesh->NERPoints, acoustics->o_vt);    
+    }
   }
-
-
+  
   //----------------------------------------- STAGE 1 -----------------------------------------
   dfloat currentTime = time + mesh->erkc[0]*mesh->dt;
   // extract q halo on DEVICE
@@ -1068,25 +1101,27 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
           6);
   }
   //---------RECEIVER---------
-acoustics->acousticsReceiverInterpolation(acoustics->NReceiversLocal,
-																		acoustics->o_qRecv,
-																		acoustics->o_recvElements,
-                                    acoustics->o_recvElementsIdx,
-																		acoustics->o_recvintpol,
-																		acoustics->o_q,
-																		acoustics->qRecvCounter);
-  acoustics->qRecvCounter++;
-  if(acoustics->qRecvCounter == recvCopyRate){
-    for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
-      dlong offset = recvCopyRate*acoustics->qRecvCopyCounter + mesh->NtimeSteps*iRecv;
+  if(acoustics->NReceiversLocal){
+    acoustics->acousticsReceiverInterpolation(acoustics->NReceiversLocal,
+                                      acoustics->o_qRecv,
+                                      acoustics->o_recvElements,
+                                      acoustics->o_recvElementsIdx,
+                                      acoustics->o_recvintpol,
+                                      acoustics->o_q,
+                                      acoustics->qRecvCounter);
+    acoustics->qRecvCounter++;
+    if(acoustics->qRecvCounter == recvCopyRate){
+      for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
+        dlong offset = recvCopyRate*acoustics->qRecvCopyCounter + mesh->NtimeSteps*iRecv;
 
-      acoustics->o_qRecv.copyTo(acoustics->qRecv+offset,
-            acoustics->qRecvCounter*sizeof(dfloat), 
-            recvCopyRate*iRecv*sizeof(dfloat));  
-    }
-    acoustics->qRecvCounter = 0;
-    acoustics->qRecvCopyCounter++;  
-  } 
+        acoustics->o_qRecv.copyTo(acoustics->qRecv+offset,
+              acoustics->qRecvCounter*sizeof(dfloat), 
+              recvCopyRate*iRecv*sizeof(dfloat));  
+      }
+      acoustics->qRecvCounter = 0;
+      acoustics->qRecvCopyCounter++;  
+    } 
+  }
   //---------RECEIVER---------
   
 }

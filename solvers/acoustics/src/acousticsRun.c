@@ -165,7 +165,7 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
     for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
       dfloat time = tstep*mesh->dt;
-
+      //printf("r = %d, hej fra run!\n",mesh->rank);
       acousticsEirkStep(acoustics, newOptions, time);
 
       if(tstep % 500 == 0 && !mesh->rank){
