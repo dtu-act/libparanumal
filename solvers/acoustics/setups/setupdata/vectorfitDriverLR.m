@@ -3,14 +3,14 @@ clc
 close all
 
 %Name of output file
-fileName = 'LRDATA6.dat';
+fileName = 'LRDATA6_Finnur.dat';
 
 %Acoustic constants
 rho = 1.2;
 c = 343;
 
 %Material properties
-sigma = 47700;
+sigma = 14400;
 dmat = 0.05;
 
 %Frequency range

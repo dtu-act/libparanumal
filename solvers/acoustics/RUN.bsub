@@ -1,10 +1,10 @@
 #!/bin/bash
-#BSUB -n 4
-#BSUB -R "span[block=4]"
+#BSUB -n 100
+#BSUB -R "span[block=10]"
 #BSUB -W 1:00
-#BSUB -R "select[model == XeonGold6126]"
-#BSUB -R "rusage[mem=1GB]"
-#BSUB -J LP_4
+##BSUB -R "select[model == XeonGold6126]"
+#BSUB -R "rusage[mem=2GB]"
+#BSUB -J LP_100
 
 # Load modules
 module purge
@@ -21,7 +21,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 #cd ../solvers/acoustics/
 
 # Build project
-#make clean
+make clean
 make -j
 
 mpirun ./acousticsMain setups/setupTet3D_Template

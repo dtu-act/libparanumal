@@ -143,11 +143,39 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
     printf("run took %lg seconds for %d accepted steps and %d total steps\n", elapsed, tstep, allStep);
     
   } else if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")) {
+    dfloat time = 0.0;
+    dlong snapshotCounter = 0;
+    dlong snapshotFlag = 1;
+    dlong snapshotTotal = 0;
     for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-      dfloat time = tstep*mesh->dt;
+      
+      // [EA] Snapshot solution
+      if(acoustics->snapshot){
+        acoustics->Snapshott[snapshotCounter] = time;
+        if(tstep % acoustics->snapshot == 0){
+          dlong offset = mesh->Np*mesh->Nelements*mesh->Nfields*snapshotCounter; //where to write to qSnapshot
+          acoustics->o_q.copyTo(acoustics->q);
+          //acoustics->o_q.copyTo(acoustics->qSnapshot+offset,
+          //    mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat),
+          //    0);
+          for(int hejsa = 0; hejsa < mesh->Np*mesh->Nelements*mesh->Nfields; hejsa++){
+            acoustics->qSnapshot[offset+hejsa] = acoustics->q[hejsa];
+          }
+          snapshotCounter++;
+        }
+        if(snapshotCounter == acoustics->writeSnapshotEvery || (tstep == mesh->NtimeSteps-1 && snapshotCounter > 0)){
+          acousticsSnapshot(acoustics, time, newOptions, snapshotFlag, snapshotCounter);
+          snapshotCounter = 0;
+          snapshotFlag = 0;
+        }
+      }
+
+      time = tstep*mesh->dt;
+      
 
       acousticsLserkStep(acoustics, newOptions, time);
+
 
       if(tstep % 500 == 0 && !mesh->rank){
         printf("LSERK4 - Step: %d, out of: %d\n",tstep, mesh->NtimeSteps);
@@ -165,7 +193,6 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
     for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
       dfloat time = tstep*mesh->dt;
-      //printf("r = %d, hej fra run!\n",mesh->rank);
       acousticsEirkStep(acoustics, newOptions, time);
 
       if(tstep % 500 == 0 && !mesh->rank){
@@ -183,5 +210,8 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
             recvCopyRate*iRecv*sizeof(dfloat));  
     }
 
+  }
+  if(acoustics->snapshot){
+    acousticsSnapshotXYZ(acoustics, newOptions);
   }
 }

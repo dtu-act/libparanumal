@@ -50,6 +50,16 @@ typedef struct{
   dlong Nblock;
 
   dfloat *q, *rhsq, *resq;
+
+  // Snapshot solution q
+  dlong snapshot;
+  dfloat *qSnapshot;
+  occa::memory o_qSnapshot;
+  dlong writeSnapshotEvery;
+  dfloat *Snapshott;
+  dlong snapshotMax;
+
+
   //---------RECEIVER---------
   dfloat *qRecv; // Saves pres in receiver element in each timestep
   dlong qRecvCounter; // To keep track of which timestep we are on
@@ -264,6 +274,10 @@ void acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions
 void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dfloat time);
 
 void acousticsWSExchange(acoustics_t *acoustics);
+
+void acousticsSnapshot(acoustics_t *acoustics, dfloat time, setupAide &newOptions, dlong openNewFile, dlong snapshotCounter);
+
+void acousticsSnapshotXYZ(acoustics_t *acoustics, setupAide &newOptions);
 
 #define TRIANGLES 3
 #define QUADRILATERALS 4

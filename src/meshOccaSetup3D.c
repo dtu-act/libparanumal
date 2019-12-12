@@ -76,7 +76,7 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
   // mesh->o_resq =
   //   mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
 
-  reportMemoryUsage(mesh->device, "meshOccaSetup3D: before operators ");
+  //reportMemoryUsage(mesh->device, "meshOccaSetup3D: before operators ");
   
   if(mesh->Nfaces==4){
 
@@ -257,7 +257,7 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
       
     }
 
-    reportMemoryUsage(mesh->device, "meshOccaSetup3D: after operators and integration grids ");
+    //reportMemoryUsage(mesh->device, "meshOccaSetup3D: after operators and integration grids ");
     
     // =============== Bernstein-Bezier allocations [added by NC] ============
 

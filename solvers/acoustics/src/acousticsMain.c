@@ -80,6 +80,7 @@ int main(int argc, char **argv){
     mesh->device.malloc(acoustics->NReceiversLocal*recvCopyRate*sizeof(dfloat));
     acousticsRecvIntpolOperators(acoustics);
   }
+
   // run
   double startTime, endTime;
   startTime = MPI_Wtime();
