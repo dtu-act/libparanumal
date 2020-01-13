@@ -100,9 +100,9 @@ void meshConnectFaceNodes3D(mesh3D *mesh){
         mesh->vmapP[id] = idP + eP*mesh->Np;
         mesh->mapP[id] = eP*mesh->Nfaces*mesh->Nfp + fP*mesh->Nfp + nP;
         
-        // [EA] Map boundary point to LR accumulator
+        // [EA] Map boundary point to accumulator
         if (mesh->vmapM[id] == mesh->vmapP[id]){
-          mesh->mapAcc[id] = -2;
+          mesh->mapAcc[id] = -2; // -2 where it is a domain boundary, -1 everywhere else
           counter++;
         }
       }

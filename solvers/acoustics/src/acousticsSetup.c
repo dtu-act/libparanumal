@@ -130,7 +130,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       acoustics->q[qbase+1*mesh->Np] = u;
       acoustics->q[qbase+2*mesh->Np] = v;
       if(acoustics->dim==3)
-	acoustics->q[qbase+3*mesh->Np] = w;
+	      acoustics->q[qbase+3*mesh->Np] = w;
     }
   }
 
@@ -185,8 +185,6 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   //---------RECEIVER---------
   acoustics->qRecvCounter = 0; // Counter needed for later
   acoustics->qRecvCopyCounter = 0;
-
-  
 
 
   // Read from receiver locations file
