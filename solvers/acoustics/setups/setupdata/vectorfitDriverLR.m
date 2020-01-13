@@ -3,15 +3,16 @@ clc
 close all
 
 %Name of output file
-fileName = 'LRDATA6_Finnur.dat';
+fileName = 'LRData6.dat';
+
 
 %Acoustic constants
 rho = 1.2;
 c = 343;
 
 %Material properties
-sigma = 14400;
-dmat = 0.05;
+sigma = 10900;
+dmat = 0.04;
 
 %Frequency range
 f_range = [50,2000];
@@ -19,8 +20,9 @@ f_range = [50,2000];
 %Amount of poles
 Npoles = 6;
 
+%DONT CHANGE ANYTHING FROM HERE
 if(mod(Npoles,2)==1)
-    display('Npoles must be even')
+    display('Npoles must be even');
     return;
 end
 
@@ -83,15 +85,23 @@ Yinf = SER.D;
 
 fileID = fopen(fileName,'w');
 fprintf(fileID,'%d %d %d\n',[Npoles,length(A),length(B)]);
-fprintf(fileID,'%.12f\n',A);
-fprintf(fileID,'%.12f\n',B);
-fprintf(fileID,'%.12f\n',C);
-fprintf(fileID,'%.12f\n',lambda);
-fprintf(fileID,'%.12f\n',al);
-fprintf(fileID,'%.12f\n',be);
+if(length(A))
+    fprintf(fileID,'%.12f\n',A);
+end
+if(length(B))
+    fprintf(fileID,'%.12f\n',B);
+    fprintf(fileID,'%.12f\n',C);
+end
+if(length(lambda))
+    fprintf(fileID,'%.12f\n',lambda);
+end
+if(length(al))
+    fprintf(fileID,'%.12f\n',al);
+    fprintf(fileID,'%.12f\n',be);
+end
 fprintf(fileID,'%.12f\n',Yinf);
 fprintf(fileID,'-----\n');
-fprintf(fileID,'sigma = %d\n',sigma);
+fprintf(fileID,'sigma = %.12f\n',sigma);
 fprintf(fileID,'dmat = %.12f\n',dmat);
 fprintf(fileID,'freqRange = [%d,%d]\n',f_range);
 fclose(fileID);

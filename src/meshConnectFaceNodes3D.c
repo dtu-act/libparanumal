@@ -102,7 +102,7 @@ void meshConnectFaceNodes3D(mesh3D *mesh){
         
         // [EA] Map boundary point to LR accumulator
         if (mesh->vmapM[id] == mesh->vmapP[id]){
-          mesh->mapAcc[id] = counter;
+          mesh->mapAcc[id] = -2;
           counter++;
         }
       }

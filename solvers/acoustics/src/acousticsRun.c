@@ -149,20 +149,16 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
     dlong snapshotTotal = 0;
     for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-      
       // [EA] Snapshot solution
       if(acoustics->snapshot){
         acoustics->Snapshott[snapshotCounter] = time;
-        if(tstep % acoustics->snapshot == 0){
+        if(tstep % acoustics->snapshot == 0 && snapshotTotal < acoustics->snapshotMax){
           dlong offset = mesh->Np*mesh->Nelements*mesh->Nfields*snapshotCounter; //where to write to qSnapshot
-          acoustics->o_q.copyTo(acoustics->q);
-          //acoustics->o_q.copyTo(acoustics->qSnapshot+offset,
-          //    mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat),
-          //    0);
-          for(int hejsa = 0; hejsa < mesh->Np*mesh->Nelements*mesh->Nfields; hejsa++){
-            acoustics->qSnapshot[offset+hejsa] = acoustics->q[hejsa];
-          }
+          acoustics->o_q.copyTo(acoustics->qSnapshot+offset,
+              mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat),
+              0);
           snapshotCounter++;
+          snapshotTotal++;
         }
         if(snapshotCounter == acoustics->writeSnapshotEvery || (tstep == mesh->NtimeSteps-1 && snapshotCounter > 0)){
           acousticsSnapshot(acoustics, time, newOptions, snapshotFlag, snapshotCounter);
@@ -173,31 +169,94 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 
       time = tstep*mesh->dt;
       
-
       acousticsLserkStep(acoustics, newOptions, time);
 
 
       if(tstep % 500 == 0 && !mesh->rank){
         printf("LSERK4 - Step: %d, out of: %d\n",tstep, mesh->NtimeSteps);
       }
-    
-
-#if 0
-      if(((tstep+1)%mesh->errorStep)==0){
-	time += mesh->dt;
-        acousticsReport(acoustics, time, newOptions);
-      }
-#endif
     }
   } else if (newOptions.compareArgs("TIME INTEGRATOR","EIRK4")){
+    dfloat time = 0.0;
+    dlong snapshotCounter = 0;
+    dlong snapshotFlag = 1;
+    dlong snapshotTotal = 0;
     for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-      dfloat time = tstep*mesh->dt;
+      // [EA] Snapshot solution
+      if(acoustics->snapshot){
+        acoustics->Snapshott[snapshotCounter] = time;
+        if(tstep % acoustics->snapshot == 0 && snapshotTotal < acoustics->snapshotMax){
+          dlong offset = mesh->Np*mesh->Nelements*mesh->Nfields*snapshotCounter; //where to write to qSnapshot
+          acoustics->o_q.copyTo(acoustics->qSnapshot+offset,
+              mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat),
+              0);
+          snapshotCounter++;
+          snapshotTotal++;
+        }
+        if(snapshotCounter == acoustics->writeSnapshotEvery || (tstep == mesh->NtimeSteps-1 && snapshotCounter > 0)){
+          acousticsSnapshot(acoustics, time, newOptions, snapshotFlag, snapshotCounter);
+          snapshotCounter = 0;
+          snapshotFlag = 0;
+        }
+      }
+
+
+      time = tstep*mesh->dt;
       acousticsEirkStep(acoustics, newOptions, time);
 
       if(tstep % 500 == 0 && !mesh->rank){
         printf("EIRK4 - Step: %d, out of: %d\n",tstep, mesh->NtimeSteps);
       }
+    }
+  } else if(newOptions.compareArgs("TIME INTEGRATOR","EIRK4ADAP")){
+    dfloat time = 0.0;
+    dfloat dt = mesh->dt; // Initial dt
+    while(time < mesh->finalTime){
+      
+      if(time+dt > mesh->finalTime){
+        dt = mesh->finalTime - time;
+      }
+
+      // Solver
+        // New solver write to rkq instead of q and rkacc instead of acc or do some pointer magic stuff
+
+      // Time step controller
+        // Calculate error from k1k2k3k4k5k6
+      acoustics->acousticsErrorEIRK4(mesh->Nelements,
+		            dt,  
+		            mesh->o_erke,
+		            acoustics->o_k1rhsq,
+                acoustics->o_k2rhsq,
+                acoustics->o_k3rhsq,
+                acoustics->o_k4rhsq,
+                acoustics->o_k5rhsq,
+                acoustics->o_k6rhsq,
+                acoustics->o_rkerr,
+                acoustics->o_q);
+
+      dlong accLength = mesh->NLRPoints*acoustics->LRNpoles + mesh->NERPoints*acoustics->ERNpoles;
+      acoustics->acousticsErrorEIRK4Acc(accLength,
+		            dt,  
+		            mesh->o_esdirke,
+		            acoustics->o_k1acc,
+                acoustics->o_k2acc,
+                acoustics->o_k3acc,
+                acoustics->o_k4acc,
+                acoustics->o_k5acc,
+                acoustics->o_k6acc,
+                acoustics->o_rkerrAcc,
+                acoustics->o_acc);
+
+
+      acoustics->acousticsErrorEIRK4r(mesh->Nelements,
+                acoustics->o_rkerr,
+                acoustics->o_rkq);
+      
+      acoustics->acousticsErrorEIRK4Accr(accLength,
+                acoustics->o_rkerrAcc,
+                acoustics->o_rkAcc);
+
     }
   }
   // [EA] Copy remaining o_qRecv from device to host

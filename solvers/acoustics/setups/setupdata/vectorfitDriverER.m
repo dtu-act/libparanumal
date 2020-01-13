@@ -3,16 +3,22 @@ clc
 close all
 
 %Name of output file
-fileName = 'ERDATA14_d0.dat';
+fileName = 'ERDATA14.dat';
 
 %Acoustic constants
 rho = 1.2;
 c = 343;
 
 %Material properties
-sigma = 47700;
-dmat = 0.05;
-d0 = 0.15;
+%sigma = 47700;
+%dmat = 0.05;
+%d0 = 0.15;
+sigma = 9.323991e3; %2
+%sigma = 1.062646e4;%1
+
+
+dmat = 0.1;
+d0 = 0;
 
 %Frequency range
 f_range = [50,2000];
@@ -20,6 +26,7 @@ f_range = [50,2000];
 %Amount of poles
 Npoles = 14;
 
+%DONT CHANGE ANYTHING FROM HERE
 if(mod(Npoles,2)==1)
     display('Npoles must be even')
     return;
@@ -45,15 +52,14 @@ for jj = 1:length(thvec)
     if d0 == 0
         Z(jj,:) = -1i*Zc.*(kt./kx).*cot(kx*dmat);
     else
-        Zd = -1i*rho*c/cos(thetai)*cot(k0*cos(thetai)*d0); 
+        Zd = -1i*rho*c/cos(thetai)*cot(k0*cos(thetai)*d0);
         Z(jj,:) = Zc.*kt./kx.*((-1i*Zd.*cot(kx*dmat) + Zc.*kt./kx)./(Zd - 1i*Zc.*(kt./kx).*cot(kx*dmat)));
     end
     
     Y(jj,:) = 1./Z(jj,:);
-
-
+    
+    
 end
-
 
 % Fit the admittance to a rational function with vector fitting
 w = 2*pi*f;
@@ -64,21 +70,21 @@ Ns = length(ss);
 bet=linspace(w(1),w(Ns),Npoles/2);
 poles=[];
 for n=1:length(bet)
-  alf=-bet(n)*1e-2;
-  poles=[poles (alf-1i*bet(n)) (alf+1i*bet(n)) ]; 
-end    
+    alf=-bet(n)*1e-2;
+    poles=[poles (alf-1i*bet(n)) (alf+1i*bet(n)) ];
+end
 % Curve fitting parameters
 weight=1./abs(Y); %Inverse magnitude wighting
 opts.relax=1;      %Use vector fitting with relaxed non-triviality constraint
 opts.stable=1;     %Enforce stable poles
-opts.asymp=1;      %Include just D, not E in fitting    
+opts.asymp=1;      %Include just D, not E in fitting
 opts.skip_pole=0;  %Do NOT skip pole identification
-opts.skip_res=1;   %DO skip identification of residues (C,D,E) 
+opts.skip_res=0;   %DO skip identification of residues (C,D,E)
 opts.cmplx_ss=1;   %Create complex state space model
 opts.spy1=0;       %No plotting for first stage of vector fitting
-opts.spy2=0;       %Create magnitude plot for fitting of f(s) 
+opts.spy2=0;       %Create magnitude plot for fitting of f(s)
 opts.logx=1;       %Use linear abscissa axis
-opts.logy=1;       %Use logarithmic ordinate axis 
+opts.logy=1;       %Use logarithmic ordinate axis
 opts.errplot=0;    %Include deviation in magnitude plot
 opts.phaseplot=0;  %Do NOT produce plot of phase angle
 opts.legend=1;     %Include legends in plots
@@ -87,18 +93,18 @@ opts.legend=1;     %Include legends in plots
 disp('vector fitting...')
 Niter=10;
 for iter=1:Niter
-  if iter==Niter, opts.skip_res=0; end
-  disp(['   Iter ' num2str(iter)])
-  [SER,poles,rmserr,Yfit]=vectfit3(Y,ss,poles,weight,opts);
-  rms(iter,1)=rmserr;
-
-end 
+    if iter==Niter, opts.skip_res=0; end
+    disp(['   Iter ' num2str(iter)])
+    [SER,poles,rmserr,Yfit]=vectfit3(Y,ss,poles,weight,opts);
+    rms(iter,1)=rmserr
+    
+end
 
 % Get the parameters out and in the right format and construct the struct
 for jj = 1:length(thvec)
     PPmax = Npoles; % Max number of possible real poles
     Smax = Npoles/2; % Max number of possible complex pole pairs
-
+    
     % Count number of real poles
     PP = 0;
     for i = 1:Npoles
@@ -106,7 +112,7 @@ for jj = 1:length(thvec)
             PP = PP+1;
         end
     end
-
+    
     S2 = Npoles-PP; % number of complex poles (nb number of complex pole pairs S = S2/2)
     S = S2/2;
     
@@ -122,7 +128,7 @@ for jj = 1:length(thvec)
         A(i) = SER.C(jj,i);
         lambda(i) = -full(SER.A(i,i));
     end
-
+    
     % Retrieve parameters for complex poles
     cntr = 1;
     B = zeros(1,S);
@@ -148,26 +154,34 @@ end
 
 fileID = fopen(fileName,'w');
 fprintf(fileID,'%d %d %d\n',[Npoles,PP,S]);
-for i = 1:length(thvec)
-    fprintf(fileID,'%.12f\n',BCdata(i).A);
+if(length(A))
+    for i = 1:length(thvec)
+        fprintf(fileID,'%.12f\n',BCdata(i).A);
+    end
+end
+if(length(B))
+    for i = 1:length(thvec)
+        fprintf(fileID,'%.12f\n',BCdata(i).B);
+    end
+    for i = 1:length(thvec)
+        fprintf(fileID,'%.12f\n',BCdata(i).C);
+    end
+end
+if(length(lambda))
+    fprintf(fileID,'%.12f\n',lambda);
+end
+if(length(al))
+    fprintf(fileID,'%.12f\n',al);
+    fprintf(fileID,'%.12f\n',be);
 end
 for i = 1:length(thvec)
-    fprintf(fileID,'%.12f\n',BCdata(i).B);
-end
-for i = 1:length(thvec)
-    fprintf(fileID,'%.12f\n',BCdata(i).C);
-end
-fprintf(fileID,'%.12f\n',lambda);
-fprintf(fileID,'%.12f\n',al);
-fprintf(fileID,'%.12f\n',be);
-for i = 1:length(thvec)
-    fprintf(fileID,'%.12f\n',Yinf);
+    fprintf(fileID,'%.12f\n',BCdata(i).Yinf);
 end
 fprintf(fileID,'-----\n');
-fprintf(fileID,'sigma = %d\n',sigma);
+fprintf(fileID,'sigma = %.12f\n',sigma);
 fprintf(fileID,'dmat = %.12f\n',dmat);
 fprintf(fileID,'d0 = %.12f\n',d0);
 fprintf(fileID,'freqRange = [%d,%d]\n',f_range);
 fclose(fileID);
 
-length(BCdata(1).A)*91+length(BCdata(1).B)*91+length(BCdata(1).C)*91+length(lambda)+length(al)+length(be)+1+91
+%length(BCdata(1).A)*91+length(BCdata(1).B)*91+length(BCdata(1).C)*91+length(lambda)+length(al)+length(be)+1+91

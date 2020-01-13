@@ -412,7 +412,8 @@ void findElement(const dfloat x,
 					dfloat PI = 3.1415926536;
 					dfloat angleTemp = round(acos(fabs(dotvn/(magv*magn)))*180.0/PI);
 					dlong angleTemp2 = (dlong) angleTemp;
-					anglei[i] = angleTemp2;
+					
+					anglei[i] = 0;//angleTemp2;
 				}
 			}
 		}
@@ -456,4 +457,19 @@ void findElement(const dfloat x,
       vt[9*id+e+NERPoints*9] = vt[9*id+e];
     }
   }
+
+	// [EA] Possible rewrite of function
+	//for(dlong n1=0; n1<(NERPoints+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
+	//	for(dlong n2=0; n2 < p_blockSize; ++n2;@inner(0)){    
+	//		dlong i = n1*p_blockSize+n2;
+	//		const dlong id = i/NERPoints;
+	//		const dlong e = i%9;
+	//		if(i < NERPoints*9){
+	//			vt[9*id+e+3*NERPoints*9] = vt[9*id+e+2*NERPoints*9];
+	//			vt[9*id+e+2*NERPoints*9] = vt[9*id+e+NERPoints*9];
+	//			vt[9*id+e+NERPoints*9] = vt[9*id+e];
+	//		}
+	//	}
+	//}
 }
+

@@ -122,28 +122,12 @@ void centralBC(const dfloat nx,
           @restrict const dfloat *acc,
           @restrict dfloat *rhsacc,
           @restrict const  dlong *mapAcc,
-          @restrict const  dfloat *LRA,
-          @restrict const  dfloat *LRB,
-          @restrict const  dfloat *LRC,
-          @restrict const  dfloat *LRLambda,
-          @restrict const  dfloat *LRAlpha,
-          @restrict const  dfloat *LRBeta,
-          const dfloat LRYinf,
-          const dlong NLRpoles,
-          const dlong NLRRealPoles,
-          const dlong NLRImagPoles,
+          @restrict const  dfloat *LR,
+          @restrict const dlong *LRInfo,
           const dlong NLRPoints,
           @restrict const dlong * anglei,
-          @restrict const dfloat * ERYinf,
-          const dlong NERRealPoles,
-          const dlong NERImagPoles,
-          const dlong NERpoles,
-          @restrict const dfloat * ERLambda,
-          @restrict const dfloat * ERA,
-          @restrict const dfloat * ERAlpha,
-          @restrict const dfloat * ERBeta,
-          @restrict const dfloat * ERB,
-          @restrict const dfloat * ERC){
+          @restrict const dfloat * ER,
+          @restrict const dlong * ERInfo){
   
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -188,15 +172,15 @@ void centralBC(const dfloat nx,
             const dfloat rM  = q[qbaseM + 0*p_Np];
             const dfloat uM = q[qbaseM + 1*p_Np];
             const dfloat vM = q[qbaseM + 2*p_Np];
-	    const dfloat wM = q[qbaseM + 3*p_Np];
+            const dfloat wM = q[qbaseM + 3*p_Np];
 
             dfloat rP  = q[qbaseP + 0*p_Np];
             dfloat uP = q[qbaseP + 1*p_Np];
             dfloat vP = q[qbaseP + 2*p_Np];
-	    dfloat wP = q[qbaseP + 3*p_Np];
+            dfloat wP = q[qbaseP + 3*p_Np];
 
-      // [EA] Boundary term
-      dfloat vn = 0.0;
+            // [EA] Boundary term
+            dfloat vn = 0.0;
             
             // apply boundary condition
           const int bc = EToB[face+p_Nfaces*e];
@@ -216,53 +200,54 @@ void centralBC(const dfloat nx,
             const dlong idAcc = mapAcc[id];
 
             //printf("Surf: idAcc=%ld, rM = %f\n",idAcc,rM);
+            vn = LR[0+p_LRYinf] * rM;
             
-            vn = LRYinf * rM;
             // Real poles
-            for(int piEA = 0; piEA < NLRRealPoles; piEA++){
-              rhsacc[NLRpoles*idAcc+piEA] = -LRLambda[piEA]*acc[NLRpoles*idAcc+piEA] + rM;  
-            }
-            // [EA] Can't be in the above loop for some OCCA reason? Causes crashes if there.
-            for(int piEA = 0; piEA < NLRRealPoles; piEA++){
-              vn = vn + LRA[piEA]*acc[NLRpoles*idAcc+piEA];
+            for(int piEA = 0; piEA < LRInfo[1]; piEA++){
+              rhsacc[LRInfo[0]*idAcc+piEA] = -LR[p_LRLambda+piEA]*acc[LRInfo[0]*idAcc+piEA] + rM;  
             }
 
+            for(int piEA = 0; piEA < LRInfo[1]; piEA++){
+              vn = vn + LR[p_LRA+piEA]*acc[LRInfo[0]*idAcc+piEA];
+            }
             // Imag poles
             int pIdx;
-            for(int piEA = NLRRealPoles; piEA < NLRpoles; piEA+=2){
-              pIdx = (piEA - NLRRealPoles) / 2;
-              rhsacc[NLRpoles*idAcc+piEA] = -LRAlpha[pIdx]*acc[NLRpoles*idAcc+piEA] - LRBeta[pIdx]*acc[NLRpoles*idAcc+piEA+1] + rM;
-              rhsacc[NLRpoles*idAcc+piEA+1] = -LRAlpha[pIdx]*acc[NLRpoles*idAcc+piEA+1] + LRBeta[pIdx]*acc[NLRpoles*idAcc+piEA];
-              vn += 2.0 * (LRB[pIdx]*acc[NLRpoles*idAcc+piEA]+LRC[pIdx]*acc[NLRpoles*idAcc+piEA+1]);
+            for(int piEA = LRInfo[1]; piEA < LRInfo[0]; piEA+=2){
+              pIdx = (piEA - LRInfo[1]) / 2;
+              rhsacc[LRInfo[0]*idAcc+piEA] = -LR[p_LRAlpha+pIdx]*acc[LRInfo[0]*idAcc+piEA] - LR[p_LRBeta+pIdx]*acc[LRInfo[0]*idAcc+piEA+1] + rM;
+              rhsacc[LRInfo[0]*idAcc+piEA+1] = -LR[p_LRAlpha+pIdx]*acc[LRInfo[0]*idAcc+piEA+1] + LR[p_LRBeta+pIdx]*acc[LRInfo[0]*idAcc+piEA];
+              vn += 2.0 * (LR[p_LRB+pIdx]*acc[LRInfo[0]*idAcc+piEA]+LR[p_LRC+pIdx]*acc[LRInfo[0]*idAcc+piEA+1]);
             }
           }
-
+          
+          
           // Extended Reaction
           if(bc == 4){
             dlong idAcc = mapAcc[id];
             dlong angIdx = anglei[idAcc];
            
-            dlong accIdx = NLRpoles*NLRPoints + NERpoles*idAcc;
-
-            vn = ERYinf[angIdx] * rM;
+            dlong accIdx = LRInfo[0]*NLRPoints + ERInfo[0]*idAcc;
+          
+            vn = ER[p_ERYinf+angIdx] * rM;
             // Real poles
-            for(int piEA = 0; piEA < NERRealPoles; piEA++){
-              rhsacc[accIdx + piEA] = -ERLambda[piEA]*acc[accIdx + piEA] + rM;  
+            for(int piEA = 0; piEA < ERInfo[1]; piEA++){
+              rhsacc[accIdx + piEA] = -ER[p_ERLambda+piEA]*acc[accIdx + piEA] + rM;  
             }
-            // [EA] Can't be in the above loop for some OCCA reason? Causes crashes if there.
-            for(int piEA = 0; piEA < NERRealPoles; piEA++){
-              vn = vn + ERA[angIdx*NERRealPoles + piEA]*acc[accIdx+piEA];
+          
+            for(int piEA = 0; piEA < ERInfo[1]; piEA++){
+              vn = vn + ER[p_ERA+angIdx*ERInfo[1] + piEA]*acc[accIdx+piEA];
             }
-
+          
             // Imag poles
             int pIdx;
-            for(int piEA = NERRealPoles; piEA < NERpoles; piEA+=2){
-              pIdx = (piEA - NERRealPoles) / 2;
-              rhsacc[accIdx+piEA] = -ERAlpha[pIdx]*acc[accIdx+piEA] - ERBeta[pIdx]*acc[accIdx+piEA+1] + rM;
-              rhsacc[accIdx+piEA+1] = -ERAlpha[pIdx]*acc[accIdx+piEA+1] + ERBeta[pIdx]*acc[accIdx+piEA];
-              vn += 2.0 * (ERB[angIdx*NERImagPoles+pIdx]*acc[accIdx+piEA]+ERC[angIdx*NERImagPoles+pIdx]*acc[accIdx+piEA+1]);
+            for(int piEA = ERInfo[1]; piEA < ERInfo[0]; piEA+=2){
+              pIdx = (piEA - ERInfo[1]) / 2;
+              rhsacc[accIdx+piEA] = -ER[p_ERAlpha+pIdx]*acc[accIdx+piEA] - ER[p_ERBeta+pIdx]*acc[accIdx+piEA+1] + rM;
+              rhsacc[accIdx+piEA+1] = -ER[p_ERAlpha+pIdx]*acc[accIdx+piEA+1] + ER[p_ERBeta+pIdx]*acc[accIdx+piEA];
+              vn += 2.0 * (ER[p_ERB+angIdx*ERInfo[2]+pIdx]*acc[accIdx+piEA]+ER[p_ERC+angIdx*ERInfo[2]+pIdx]*acc[accIdx+piEA+1]);
             }
           }
+          
             
             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
             const dfloat sc = invJ*sJ;

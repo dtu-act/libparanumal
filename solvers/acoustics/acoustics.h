@@ -88,6 +88,16 @@ typedef struct{
 
 
 
+  dfloat *LR;
+  dlong *LRInfo;
+  occa::memory o_LR;
+  occa::memory o_LRInfo;
+  dfloat *ER;
+  dlong *ERInfo;
+  occa::memory o_ER;
+  occa::memory o_ERInfo;
+
+
   dfloat *LRA;
   dfloat *LRB;
   dfloat *LRC;
@@ -215,7 +225,16 @@ typedef struct{
   
   //[EA] 
   occa::memory o_qRecv;
+  occa::kernel acousticsErrorEIRK4;
+  occa::kernel acousticsErrorEIRK4r;
+  occa::kernel acousticsErrorEIRK4Acc;
+  occa::kernel acousticsErrorEIRK4Accr;
+  dfloat *rkAcc, *rkerrAcc;
+  occa::memory o_rkAcc, o_rkerrAcc;
+
+
   
+
   
 
   occa::memory o_rkq, o_rkrhsq, o_rkerr;

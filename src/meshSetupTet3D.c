@@ -101,6 +101,7 @@ mesh3D *meshSetupTet3D(char *filename, int N){
         };
   dfloat erkb[6] = {82889.0/524892.0,0.0,15625.0/83664.0,69875.0/102672.0,-2260.0/8211.0,1.0/4.0};
   dfloat erkc[6] = {0.0,1.0/2.0,83.0/250.0,31.0/50.0,17.0/20.0,1.0};
+  dfloat erke[6] = {31666707/9881966720, 0, -256875/105007616, -2768025/128864768, 169839/3864644, -5247/225920};
   dfloat esdirka[36] = {
         0.0,0.0,0.0,0.0,0.0,0.0,
         1.0/4.0,1.0/4.0,0.0,0.0,0.0,0,
@@ -111,14 +112,17 @@ mesh3D *meshSetupTet3D(char *filename, int N){
         };
   dfloat esdirkb[6] = {82889.0/524892.0,0.0,15625.0/83664.0,69875.0/102672.0,-2260.0/8211.0,1.0/4.0};
   dfloat esdirkc[6] = {0.0,1.0/2.0,83.0/250.0,31.0/50.0,17.0/20.0,1.0};
+  dfloat esdirke[6] = {31666707/9881966720, 0, -256875/105007616, -2768025/128864768, 169839/3864644, -5247/225920};
 
   mesh->INrk = INrk;
   memcpy(mesh->erka, erka, INrk*INrk*sizeof(dfloat));
   memcpy(mesh->erkb, erkb, INrk*sizeof(dfloat));
   memcpy(mesh->erkc, erkc, INrk*sizeof(dfloat));
+  memcpy(mesh->erke, erke, INrk*sizeof(dfloat));
   memcpy(mesh->esdirka, esdirka, INrk*INrk*sizeof(dfloat));
   memcpy(mesh->esdirkb, esdirkb, INrk*sizeof(dfloat));
   memcpy(mesh->esdirkc, esdirkc, INrk*sizeof(dfloat));
+  memcpy(mesh->esdirke, esdirke, INrk*sizeof(dfloat));
 
 
 #if 0

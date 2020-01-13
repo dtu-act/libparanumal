@@ -153,18 +153,105 @@ SOFTWARE.
   }
 }
 
+//[EA] - EIRK4 error adaptive kernel
+@kernel void acousticsErrorEIRK4(const dlong Nelements,
+		      const dfloat dt,  
+		      @restrict const dfloat *erke,
+		      @restrict const  dfloat *  k1rhsq,
+          @restrict const  dfloat *  k2rhsq,
+          @restrict const  dfloat *  k3rhsq,
+          @restrict const  dfloat *  k4rhsq,
+          @restrict const  dfloat *  k5rhsq,
+          @restrict const  dfloat *  k6rhsq,
+		      @restrict dfloat *  rkerr,
+		      @restrict dfloat *  q){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+
+      for(int fld=0; fld< p_Nfields; ++fld){
+
+        //const dlong id = e*p_Np*p_Nfields + fld*p_Np + n;
+        
+        //rkerr[id] = q[id] + dt*(erke[0]*k1rhsq[id] + erke[1]*k2rhsq[id] + erke[2]*k3rhsq[id] + erke[3]*k4rhsq[id] + erke[4]*k5rhsq[id] + erke[5]*k6rhsq[id]);
+        
+      }
+    }
+  }
+}
+
+//[EA] - EIRK4 accumulator error kernel
+@kernel void acousticsErrorEIRK4Acc(const dlong accLength,
+		      const dfloat dt,  
+		      @restrict const dfloat *esdirke,
+		      @restrict const  dfloat *  k1acc,
+          @restrict const  dfloat *  k2acc,
+          @restrict const  dfloat *  k3acc,
+          @restrict const  dfloat *  k4acc,
+          @restrict const  dfloat *  k5acc,
+          @restrict const  dfloat *  k6acc,
+          @restrict dfloat * erracc,
+          @restrict dfloat * acc){
+  for(dlong n1=0; n1<(accLength+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
+    for(dlong n2=0; n2 < p_blockSize; ++n2;@inner(0)){    
+      dlong id = n1*p_blockSize+n2;
+      if(id < accLength){
+        //erracc[id] = acc[id] + dt*(esdirke[0]*k1acc[id]+esdirke[1]*k2acc[id]+esdirke[2]*k3acc[id]+esdirke[3]*k4acc[id]+esdirke[4]*k5acc[id]+esdirke[5]*k6acc[id]);  
+      }
+    }
+  }
+}
+
+
+//[EA] - EIRK4 error adaptive r
+@kernel void acousticsErrorEIRK4r(const dlong Nelements,
+		      @restrict dfloat *  rkerr,
+		      @restrict dfloat *  rkq){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+
+      for(int fld=0; fld< p_Nfields; ++fld){
+
+        //const dlong id = e*p_Np*p_Nfields + fld*p_Np + n;
+        
+        //dfloat denominator = fabs(rkq[id])*p_reltol;
+        //denominator = p_abstol > denominator ? abstol : denominator;
+        //rkerr[id] = fabs(rkerr[id] / denominator);
+        
+      }
+    }
+  }
+}
+//[EA] - EIRK4 accumulator error kernel r
+@kernel void acousticsErrorEIRK4Accr(const dlong accLength,
+          @restrict dfloat * errAcc,
+          @restrict dfloat * rkAcc){
+  for(dlong n1=0; n1<(accLength+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
+    for(dlong n2=0; n2 < p_blockSize; ++n2;@inner(0)){    
+      dlong id = n1*p_blockSize+n2;
+      if(id < accLength){
+        //dfloat denominator = fabs(rkAcc[id])*p_reltol;
+        //denominator = p_abstol > denominator ? abstol : denominator;
+        //errAcc[id] = fabs(errAcc[id] / denominator);
+
+      }
+    }
+  }
+}
+
+
+
+
 
 //[EA] - EIRK4 LR accumulator update kernel
 @kernel void acousticsUpdateEIRK4AccLR(const dlong NLRPoints,
 		      const dfloat dt,  
 		      @restrict const dfloat *esdirka,
 		      @restrict const dfloat *esdirkb,
-          const dlong Npoles,
-          const dlong NRealPoles,
           @restrict const dlong * mapAccToQ,
-          @restrict const dfloat * LRAlpha,
-          @restrict const dfloat * LRBeta,
-          @restrict const dfloat * LRLambda,
+          @restrict const dfloat * LR,
+          @restrict const dlong * LRInfo,
 		      @restrict const  dfloat *  k1acc,
           @restrict const  dfloat *  k2acc,
           @restrict const  dfloat *  k3acc,
@@ -186,41 +273,41 @@ SOFTWARE.
         dfloat dt2 = dt*dt;  
         dlong presIdx = mapAccToQ[n];
         // Real poles
-        for(dlong e=0;e<NRealPoles;++e){
-          const dlong id = (n*Npoles)+e;
+        for(dlong e=0;e<LRInfo[1];++e){
+          const dlong id = (n*LRInfo[0])+e;
           if(Stage == 1){
-            Xacc[id] = (acc[id] + dt*esdirka[6]*k1acc[id] + dt*esdirka[7]*resq[presIdx]) / (1-dt*esdirka[7]*(-LRLambda[e]));
+            Xacc[id] = (acc[id] + dt*esdirka[6]*k1acc[id] + dt*esdirka[7]*resq[presIdx]) / (1-dt*esdirka[7]*(-LR[p_LRLambda+e]));
           } else if(Stage == 2){
-            Xacc[id] = (acc[id] + dt*esdirka[12]*k1acc[id] + dt*esdirka[13]*k2acc[id] + dt*esdirka[14]*resq[presIdx]) / (1-dt*esdirka[14]*(-LRLambda[e]));
+            Xacc[id] = (acc[id] + dt*esdirka[12]*k1acc[id] + dt*esdirka[13]*k2acc[id] + dt*esdirka[14]*resq[presIdx]) / (1-dt*esdirka[14]*(-LR[p_LRLambda+e]));
           } else if(Stage == 3){
-            Xacc[id] = (acc[id] + dt*esdirka[18]*k1acc[id]+dt*esdirka[19]*k2acc[id]+dt*esdirka[20]*k3acc[id]+dt*esdirka[21]*resq[presIdx]) / (1-dt*esdirka[21]*(-LRLambda[e]));
+            Xacc[id] = (acc[id] + dt*esdirka[18]*k1acc[id]+dt*esdirka[19]*k2acc[id]+dt*esdirka[20]*k3acc[id]+dt*esdirka[21]*resq[presIdx]) / (1-dt*esdirka[21]*(-LR[p_LRLambda+e]));
           } else if(Stage == 4){
-            Xacc[id] = (acc[id] + dt*esdirka[24]*k1acc[id]+dt*esdirka[25]*k2acc[id]+dt*esdirka[26]*k3acc[id]+dt*esdirka[27]*k4acc[id]+dt*esdirka[28]*resq[presIdx]) / (1-dt*esdirka[28]*(-LRLambda[e]));
+            Xacc[id] = (acc[id] + dt*esdirka[24]*k1acc[id]+dt*esdirka[25]*k2acc[id]+dt*esdirka[26]*k3acc[id]+dt*esdirka[27]*k4acc[id]+dt*esdirka[28]*resq[presIdx]) / (1-dt*esdirka[28]*(-LR[p_LRLambda+e]));
           } else if(Stage == 5){
-            Xacc[id] = (acc[id] + dt*esdirka[30]*k1acc[id]+dt*esdirka[31]*k2acc[id]+dt*esdirka[32]*k3acc[id]+dt*esdirka[33]*k4acc[id]+dt*esdirka[34]*k5acc[id]+dt*esdirka[35]*resq[presIdx]) / (1-dt*esdirka[35]*(-LRLambda[e]));
+            Xacc[id] = (acc[id] + dt*esdirka[30]*k1acc[id]+dt*esdirka[31]*k2acc[id]+dt*esdirka[32]*k3acc[id]+dt*esdirka[33]*k4acc[id]+dt*esdirka[34]*k5acc[id]+dt*esdirka[35]*resq[presIdx]) / (1-dt*esdirka[35]*(-LR[p_LRLambda+e]));
           } else if(Stage == 6){
             acc[id] = acc[id] + dt*(esdirkb[0]*k1acc[id]+esdirkb[1]*k2acc[id]+esdirkb[2]*k3acc[id]+esdirkb[3]*k4acc[id]+esdirkb[4]*k5acc[id]+esdirkb[5]*k6acc[id]);
           }
         }
         // Imag poles
-        for(dlong e=NRealPoles;e<Npoles;e+=2){
-          const dlong id = (n*Npoles)+e;
-          const dlong pIdx = (e-NRealPoles) / 2;
+        for(dlong e=LRInfo[1];e<LRInfo[0];e+=2){
+          const dlong id = (n*LRInfo[0])+e;
+          const dlong pIdx = (e-LRInfo[1]) / 2;
           if(Stage == 1){
-            Xacc[id] = (esdirka[7]*(resq[presIdx]*LRAlpha[pIdx]*esdirka[7] - esdirka[6]*(-LRAlpha[pIdx]*k1acc[id] + LRBeta[pIdx]*k1acc[id+1]))*dt2 + ((LRAlpha[pIdx]*acc[id] - acc[id+1]*LRBeta[pIdx] + resq[presIdx])*esdirka[7] + esdirka[6]*k1acc[id])*dt + acc[id])/(1 + esdirka[7]*esdirka[7]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[7]*dt);
-            Xacc[id+1] = ((resq[presIdx]*LRBeta[pIdx]*esdirka[7] + esdirka[6]*(LRAlpha[pIdx]*k1acc[id+1] + LRBeta[pIdx]*k1acc[id]))*esdirka[7]*dt2 + ((LRAlpha[pIdx]*acc[id+1] + acc[id]*LRBeta[pIdx])*esdirka[7] + esdirka[6]*k1acc[id+1])*dt + acc[id+1])/(1 + esdirka[7]*esdirka[7]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[7]*dt);
+            Xacc[id] = (esdirka[7]*(resq[presIdx]*LR[p_LRAlpha+pIdx]*esdirka[7] - esdirka[6]*(-LR[p_LRAlpha+pIdx]*k1acc[id] + LR[p_LRBeta+pIdx]*k1acc[id+1]))*dt2 + ((LR[p_LRAlpha+pIdx]*acc[id] - acc[id+1]*LR[p_LRBeta+pIdx] + resq[presIdx])*esdirka[7] + esdirka[6]*k1acc[id])*dt + acc[id])/(1 + esdirka[7]*esdirka[7]*(LR[p_LRAlpha+pIdx]*LR[p_LRAlpha+pIdx] + LR[p_LRBeta+pIdx]*LR[p_LRBeta+pIdx])*dt2 + 2*LR[p_LRAlpha+pIdx]*esdirka[7]*dt);
+            Xacc[id+1] = ((resq[presIdx]*LR[p_LRBeta+pIdx]*esdirka[7] + esdirka[6]*(LR[p_LRAlpha+pIdx]*k1acc[id+1] + LR[p_LRBeta+pIdx]*k1acc[id]))*esdirka[7]*dt2 + ((LR[p_LRAlpha+pIdx]*acc[id+1] + acc[id]*LR[p_LRBeta+pIdx])*esdirka[7] + esdirka[6]*k1acc[id+1])*dt + acc[id+1])/(1 + esdirka[7]*esdirka[7]*(LR[p_LRAlpha+pIdx]*LR[p_LRAlpha+pIdx] + LR[p_LRBeta+pIdx]*LR[p_LRBeta+pIdx])*dt2 + 2*LR[p_LRAlpha+pIdx]*esdirka[7]*dt);
           } else if(Stage == 2){
-            Xacc[id] = ((resq[presIdx]*LRAlpha[pIdx]*esdirka[14] + (esdirka[12]*k1acc[id] + esdirka[13]*k2acc[id])*LRAlpha[pIdx] - LRBeta[pIdx]*(esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1]))*esdirka[14]*dt2 + ((LRAlpha[pIdx]*acc[id] - acc[id+1]*LRBeta[pIdx] + resq[presIdx])*esdirka[14] + k1acc[id]*esdirka[12] + k2acc[id]*esdirka[13])*dt + acc[id])/(1 + esdirka[14]*esdirka[14]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[14]*dt);
-            Xacc[id+1] = (esdirka[14]*(resq[presIdx]*LRBeta[pIdx]*esdirka[14] + (esdirka[12]*k1acc[id] + esdirka[13]*k2acc[id])*LRBeta[pIdx] + LRAlpha[pIdx]*(esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1]))*dt2 + ((LRAlpha[pIdx]*acc[id+1] + acc[id]*LRBeta[pIdx])*esdirka[14] + esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1])*dt + acc[id+1])/(1 + esdirka[14]*esdirka[14]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[14]*dt);
+            Xacc[id] = ((resq[presIdx]*LR[p_LRAlpha+pIdx]*esdirka[14] + (esdirka[12]*k1acc[id] + esdirka[13]*k2acc[id])*LR[p_LRAlpha+pIdx] - LR[p_LRBeta+pIdx]*(esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1]))*esdirka[14]*dt2 + ((LR[p_LRAlpha+pIdx]*acc[id] - acc[id+1]*LR[p_LRBeta+pIdx] + resq[presIdx])*esdirka[14] + k1acc[id]*esdirka[12] + k2acc[id]*esdirka[13])*dt + acc[id])/(1 + esdirka[14]*esdirka[14]*(LR[p_LRAlpha+pIdx]*LR[p_LRAlpha+pIdx] + LR[p_LRBeta+pIdx]*LR[p_LRBeta+pIdx])*dt2 + 2*LR[p_LRAlpha+pIdx]*esdirka[14]*dt);
+            Xacc[id+1] = (esdirka[14]*(resq[presIdx]*LR[p_LRBeta+pIdx]*esdirka[14] + (esdirka[12]*k1acc[id] + esdirka[13]*k2acc[id])*LR[p_LRBeta+pIdx] + LR[p_LRAlpha+pIdx]*(esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1]))*dt2 + ((LR[p_LRAlpha+pIdx]*acc[id+1] + acc[id]*LR[p_LRBeta+pIdx])*esdirka[14] + esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1])*dt + acc[id+1])/(1 + esdirka[14]*esdirka[14]*(LR[p_LRAlpha+pIdx]*LR[p_LRAlpha+pIdx] + LR[p_LRBeta+pIdx]*LR[p_LRBeta+pIdx])*dt2 + 2*LR[p_LRAlpha+pIdx]*esdirka[14]*dt);
           } else if(Stage == 3){
-            Xacc[id] = (esdirka[21]*(esdirka[21]*resq[presIdx]*LRAlpha[pIdx] + (esdirka[18]*k1acc[id] + esdirka[19]*k2acc[id] + esdirka[20]*k3acc[id])*LRAlpha[pIdx] - LRBeta[pIdx]*(esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1]))*dt2 + ((LRAlpha[pIdx]*acc[id] - acc[id+1]*LRBeta[pIdx] + resq[presIdx])*esdirka[21] + k1acc[id]*esdirka[18] + k2acc[id]*esdirka[19] + k3acc[id]*esdirka[20])*dt + acc[id])/(1 + esdirka[21]*esdirka[21]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[21]*dt);
-            Xacc[id+1] = (esdirka[21]*(esdirka[21]*resq[presIdx]*LRBeta[pIdx] + (esdirka[18]*k1acc[id] + esdirka[19]*k2acc[id] + esdirka[20]*k3acc[id])*LRBeta[pIdx] + LRAlpha[pIdx]*(esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1]))*dt2 + ((LRAlpha[pIdx]*acc[id+1] + acc[id]*LRBeta[pIdx])*esdirka[21] + esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[21]*esdirka[21]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[21]*dt);
+            Xacc[id] = (esdirka[21]*(esdirka[21]*resq[presIdx]*LR[p_LRAlpha+pIdx] + (esdirka[18]*k1acc[id] + esdirka[19]*k2acc[id] + esdirka[20]*k3acc[id])*LR[p_LRAlpha+pIdx] - LR[p_LRBeta+pIdx]*(esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1]))*dt2 + ((LR[p_LRAlpha+pIdx]*acc[id] - acc[id+1]*LR[p_LRBeta+pIdx] + resq[presIdx])*esdirka[21] + k1acc[id]*esdirka[18] + k2acc[id]*esdirka[19] + k3acc[id]*esdirka[20])*dt + acc[id])/(1 + esdirka[21]*esdirka[21]*(LR[p_LRAlpha+pIdx]*LR[p_LRAlpha+pIdx] + LR[p_LRBeta+pIdx]*LR[p_LRBeta+pIdx])*dt2 + 2*LR[p_LRAlpha+pIdx]*esdirka[21]*dt);
+            Xacc[id+1] = (esdirka[21]*(esdirka[21]*resq[presIdx]*LR[p_LRBeta+pIdx] + (esdirka[18]*k1acc[id] + esdirka[19]*k2acc[id] + esdirka[20]*k3acc[id])*LR[p_LRBeta+pIdx] + LR[p_LRAlpha+pIdx]*(esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1]))*dt2 + ((LR[p_LRAlpha+pIdx]*acc[id+1] + acc[id]*LR[p_LRBeta+pIdx])*esdirka[21] + esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[21]*esdirka[21]*(LR[p_LRAlpha+pIdx]*LR[p_LRAlpha+pIdx] + LR[p_LRBeta+pIdx]*LR[p_LRBeta+pIdx])*dt2 + 2*LR[p_LRAlpha+pIdx]*esdirka[21]*dt);
           } else if(Stage == 4){
-            Xacc[id] = ((resq[presIdx]*LRAlpha[pIdx]*esdirka[28] + (esdirka[24]*k1acc[id] + esdirka[25]*k2acc[id] + esdirka[26]*k3acc[id] + esdirka[27]*k4acc[id])*LRAlpha[pIdx] - LRBeta[pIdx]*(esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1] + esdirka[27]*k4acc[id+1]))*esdirka[28]*dt2 + ((LRAlpha[pIdx]*acc[id] - acc[id+1]*LRBeta[pIdx] + resq[presIdx])*esdirka[28] + esdirka[27]*k4acc[id] + k1acc[id]*esdirka[24] + k2acc[id]*esdirka[25] + k3acc[id]*esdirka[26])*dt + acc[id])/(1 + esdirka[28]*esdirka[28]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[28]*dt);
-            Xacc[id+1] = ((resq[presIdx]*LRBeta[pIdx]*esdirka[28] + (esdirka[24]*k1acc[id] + esdirka[25]*k2acc[id] + esdirka[26]*k3acc[id] + esdirka[27]*k4acc[id])*LRBeta[pIdx] + LRAlpha[pIdx]*(esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1] + esdirka[27]*k4acc[id+1]))*esdirka[28]*dt2 + ((LRAlpha[pIdx]*acc[id+1] + acc[id]*LRBeta[pIdx])*esdirka[28] + esdirka[27]*k4acc[id+1] + esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[28]*esdirka[28]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[28]*dt);
+            Xacc[id] = ((resq[presIdx]*LR[p_LRAlpha+pIdx]*esdirka[28] + (esdirka[24]*k1acc[id] + esdirka[25]*k2acc[id] + esdirka[26]*k3acc[id] + esdirka[27]*k4acc[id])*LR[p_LRAlpha+pIdx] - LR[p_LRBeta+pIdx]*(esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1] + esdirka[27]*k4acc[id+1]))*esdirka[28]*dt2 + ((LR[p_LRAlpha+pIdx]*acc[id] - acc[id+1]*LR[p_LRBeta+pIdx] + resq[presIdx])*esdirka[28] + esdirka[27]*k4acc[id] + k1acc[id]*esdirka[24] + k2acc[id]*esdirka[25] + k3acc[id]*esdirka[26])*dt + acc[id])/(1 + esdirka[28]*esdirka[28]*(LR[p_LRAlpha+pIdx]*LR[p_LRAlpha+pIdx] + LR[p_LRBeta+pIdx]*LR[p_LRBeta+pIdx])*dt2 + 2*LR[p_LRAlpha+pIdx]*esdirka[28]*dt);
+            Xacc[id+1] = ((resq[presIdx]*LR[p_LRBeta+pIdx]*esdirka[28] + (esdirka[24]*k1acc[id] + esdirka[25]*k2acc[id] + esdirka[26]*k3acc[id] + esdirka[27]*k4acc[id])*LR[p_LRBeta+pIdx] + LR[p_LRAlpha+pIdx]*(esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1] + esdirka[27]*k4acc[id+1]))*esdirka[28]*dt2 + ((LR[p_LRAlpha+pIdx]*acc[id+1] + acc[id]*LR[p_LRBeta+pIdx])*esdirka[28] + esdirka[27]*k4acc[id+1] + esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[28]*esdirka[28]*(LR[p_LRAlpha+pIdx]*LR[p_LRAlpha+pIdx] + LR[p_LRBeta+pIdx]*LR[p_LRBeta+pIdx])*dt2 + 2*LR[p_LRAlpha+pIdx]*esdirka[28]*dt);
           } else if(Stage == 5){
-            Xacc[id] = (esdirka[35]*(resq[presIdx]*LRAlpha[pIdx]*esdirka[35] + (esdirka[30]*k1acc[id] + esdirka[31]*k2acc[id] + esdirka[32]*k3acc[id] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id])*LRAlpha[pIdx] - LRBeta[pIdx]*(esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1]))*dt2 + ((LRAlpha[pIdx]*acc[id] - acc[id+1]*LRBeta[pIdx] + resq[presIdx])*esdirka[35] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id] + k1acc[id]*esdirka[30] + k2acc[id]*esdirka[31] + k3acc[id]*esdirka[32])*dt + acc[id])/(1 + esdirka[35]*esdirka[35]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[35]*dt);
-            Xacc[id+1] = ((resq[presIdx]*LRBeta[pIdx]*esdirka[35] + (esdirka[30]*k1acc[id] + esdirka[31]*k2acc[id] + esdirka[32]*k3acc[id] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id])*LRBeta[pIdx] + LRAlpha[pIdx]*(esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1]))*esdirka[35]*dt2 + ((LRAlpha[pIdx]*acc[id+1] + acc[id]*LRBeta[pIdx])*esdirka[35] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1] + esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[35]*esdirka[35]*(LRAlpha[pIdx]*LRAlpha[pIdx] + LRBeta[pIdx]*LRBeta[pIdx])*dt2 + 2*LRAlpha[pIdx]*esdirka[35]*dt);
+            Xacc[id] = (esdirka[35]*(resq[presIdx]*LR[p_LRAlpha+pIdx]*esdirka[35] + (esdirka[30]*k1acc[id] + esdirka[31]*k2acc[id] + esdirka[32]*k3acc[id] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id])*LR[p_LRAlpha+pIdx] - LR[p_LRBeta+pIdx]*(esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1]))*dt2 + ((LR[p_LRAlpha+pIdx]*acc[id] - acc[id+1]*LR[p_LRBeta+pIdx] + resq[presIdx])*esdirka[35] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id] + k1acc[id]*esdirka[30] + k2acc[id]*esdirka[31] + k3acc[id]*esdirka[32])*dt + acc[id])/(1 + esdirka[35]*esdirka[35]*(LR[p_LRAlpha+pIdx]*LR[p_LRAlpha+pIdx] + LR[p_LRBeta+pIdx]*LR[p_LRBeta+pIdx])*dt2 + 2*LR[p_LRAlpha+pIdx]*esdirka[35]*dt);
+            Xacc[id+1] = ((resq[presIdx]*LR[p_LRBeta+pIdx]*esdirka[35] + (esdirka[30]*k1acc[id] + esdirka[31]*k2acc[id] + esdirka[32]*k3acc[id] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id])*LR[p_LRBeta+pIdx] + LR[p_LRAlpha+pIdx]*(esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1]))*esdirka[35]*dt2 + ((LR[p_LRAlpha+pIdx]*acc[id+1] + acc[id]*LR[p_LRBeta+pIdx])*esdirka[35] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1] + esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[35]*esdirka[35]*(LR[p_LRAlpha+pIdx]*LR[p_LRAlpha+pIdx] + LR[p_LRBeta+pIdx]*LR[p_LRBeta+pIdx])*dt2 + 2*LR[p_LRAlpha+pIdx]*esdirka[35]*dt);
           } else if(Stage == 6){
             acc[id] = acc[id] + dt*(esdirkb[0]*k1acc[id]+esdirkb[1]*k2acc[id]+esdirkb[2]*k3acc[id]+esdirkb[3]*k4acc[id]+esdirkb[4]*k5acc[id]+esdirkb[5]*k6acc[id]);
             acc[id+1] = acc[id+1] + dt*(esdirkb[0]*k1acc[id+1]+esdirkb[1]*k2acc[id+1]+esdirkb[2]*k3acc[id+1]+esdirkb[3]*k4acc[id+1]+esdirkb[4]*k5acc[id+1]+esdirkb[5]*k6acc[id+1]);
@@ -238,12 +325,9 @@ SOFTWARE.
 		      const dfloat dt,  
 		      @restrict const dfloat *esdirka,
 		      @restrict const dfloat *esdirkb,
-          const dlong Npoles,
-          const dlong NRealPoles,
           @restrict const dlong * mapAccToQ,
-          @restrict const dfloat * ERAlpha,
-          @restrict const dfloat * ERBeta,
-          @restrict const dfloat * ERLambda,
+          @restrict const dfloat * ER,
+          @restrict const dlong * ERInfo,
 		      @restrict const  dfloat *  k1acc,
           @restrict const  dfloat *  k2acc,
           @restrict const  dfloat *  k3acc,
@@ -265,41 +349,41 @@ SOFTWARE.
         dfloat dt2 = dt*dt;  
         dlong presIdx = mapAccToQ[n+NLRPoints];
         // Real poles
-        for(dlong e=0;e<NRealPoles;++e){
-          const dlong id = NLRPoints*NLRPoles+(n*Npoles)+e;
+        for(dlong e=0;e<ERInfo[1];++e){
+          const dlong id = NLRPoints*NLRPoles+(n*ERInfo[0])+e;
           if(Stage == 1){
-            Xacc[id] = (acc[id] + dt*esdirka[6]*k1acc[id] + dt*esdirka[7]*resq[presIdx]) / (1-dt*esdirka[7]*(-ERLambda[e]));
+            Xacc[id] = (acc[id] + dt*esdirka[6]*k1acc[id] + dt*esdirka[7]*resq[presIdx]) / (1-dt*esdirka[7]*(-ER[p_ERLambda+e]));
           } else if(Stage == 2){
-            Xacc[id] = (acc[id] + dt*esdirka[12]*k1acc[id] + dt*esdirka[13]*k2acc[id] + dt*esdirka[14]*resq[presIdx]) / (1-dt*esdirka[14]*(-ERLambda[e]));
+            Xacc[id] = (acc[id] + dt*esdirka[12]*k1acc[id] + dt*esdirka[13]*k2acc[id] + dt*esdirka[14]*resq[presIdx]) / (1-dt*esdirka[14]*(-ER[p_ERLambda+e]));
           } else if(Stage == 3){
-            Xacc[id] = (acc[id] + dt*esdirka[18]*k1acc[id]+dt*esdirka[19]*k2acc[id]+dt*esdirka[20]*k3acc[id]+dt*esdirka[21]*resq[presIdx]) / (1-dt*esdirka[21]*(-ERLambda[e]));
+            Xacc[id] = (acc[id] + dt*esdirka[18]*k1acc[id]+dt*esdirka[19]*k2acc[id]+dt*esdirka[20]*k3acc[id]+dt*esdirka[21]*resq[presIdx]) / (1-dt*esdirka[21]*(-ER[p_ERLambda+e]));
           } else if(Stage == 4){
-            Xacc[id] = (acc[id] + dt*esdirka[24]*k1acc[id]+dt*esdirka[25]*k2acc[id]+dt*esdirka[26]*k3acc[id]+dt*esdirka[27]*k4acc[id]+dt*esdirka[28]*resq[presIdx]) / (1-dt*esdirka[28]*(-ERLambda[e]));
+            Xacc[id] = (acc[id] + dt*esdirka[24]*k1acc[id]+dt*esdirka[25]*k2acc[id]+dt*esdirka[26]*k3acc[id]+dt*esdirka[27]*k4acc[id]+dt*esdirka[28]*resq[presIdx]) / (1-dt*esdirka[28]*(-ER[p_ERLambda+e]));
           } else if(Stage == 5){
-            Xacc[id] = (acc[id] + dt*esdirka[30]*k1acc[id]+dt*esdirka[31]*k2acc[id]+dt*esdirka[32]*k3acc[id]+dt*esdirka[33]*k4acc[id]+dt*esdirka[34]*k5acc[id]+dt*esdirka[35]*resq[presIdx]) / (1-dt*esdirka[35]*(-ERLambda[e]));
+            Xacc[id] = (acc[id] + dt*esdirka[30]*k1acc[id]+dt*esdirka[31]*k2acc[id]+dt*esdirka[32]*k3acc[id]+dt*esdirka[33]*k4acc[id]+dt*esdirka[34]*k5acc[id]+dt*esdirka[35]*resq[presIdx]) / (1-dt*esdirka[35]*(-ER[p_ERLambda+e]));
           } else if(Stage == 6){
             acc[id] = acc[id] + dt*(esdirkb[0]*k1acc[id]+esdirkb[1]*k2acc[id]+esdirkb[2]*k3acc[id]+esdirkb[3]*k4acc[id]+esdirkb[4]*k5acc[id]+esdirkb[5]*k6acc[id]);
           }
         }
         // Imag poles
-        for(dlong e=NRealPoles;e<Npoles;e+=2){
-          const dlong id = (n*Npoles)+e;
-          const dlong pIdx = (e-NRealPoles) / 2;
+        for(dlong e=ERInfo[1];e<ERInfo[0];e+=2){
+          const dlong id = NLRPoints*NLRPoles+(n*ERInfo[0])+e;
+          const dlong pIdx = (e-ERInfo[1]) / 2;
           if(Stage == 1){
-            Xacc[id] = (esdirka[7]*(resq[presIdx]*ERAlpha[pIdx]*esdirka[7] - esdirka[6]*(-ERAlpha[pIdx]*k1acc[id] + ERBeta[pIdx]*k1acc[id+1]))*dt2 + ((ERAlpha[pIdx]*acc[id] - acc[id+1]*ERBeta[pIdx] + resq[presIdx])*esdirka[7] + esdirka[6]*k1acc[id])*dt + acc[id])/(1 + esdirka[7]*esdirka[7]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[7]*dt);
-            Xacc[id+1] = ((resq[presIdx]*ERBeta[pIdx]*esdirka[7] + esdirka[6]*(ERAlpha[pIdx]*k1acc[id+1] + ERBeta[pIdx]*k1acc[id]))*esdirka[7]*dt2 + ((ERAlpha[pIdx]*acc[id+1] + acc[id]*ERBeta[pIdx])*esdirka[7] + esdirka[6]*k1acc[id+1])*dt + acc[id+1])/(1 + esdirka[7]*esdirka[7]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[7]*dt);
+            Xacc[id] = (esdirka[7]*(resq[presIdx]*ER[p_ERAlpha+pIdx]*esdirka[7] - esdirka[6]*(-ER[p_ERAlpha+pIdx]*k1acc[id] + ER[p_ERBeta+pIdx]*k1acc[id+1]))*dt2 + ((ER[p_ERAlpha+pIdx]*acc[id] - acc[id+1]*ER[p_ERBeta+pIdx] + resq[presIdx])*esdirka[7] + esdirka[6]*k1acc[id])*dt + acc[id])/(1 + esdirka[7]*esdirka[7]*(ER[p_ERAlpha+pIdx]*ER[p_ERAlpha+pIdx] + ER[p_ERBeta+pIdx]*ER[p_ERBeta+pIdx])*dt2 + 2*ER[p_ERAlpha+pIdx]*esdirka[7]*dt);
+            Xacc[id+1] = ((resq[presIdx]*ER[p_ERBeta+pIdx]*esdirka[7] + esdirka[6]*(ER[p_ERAlpha+pIdx]*k1acc[id+1] + ER[p_ERBeta+pIdx]*k1acc[id]))*esdirka[7]*dt2 + ((ER[p_ERAlpha+pIdx]*acc[id+1] + acc[id]*ER[p_ERBeta+pIdx])*esdirka[7] + esdirka[6]*k1acc[id+1])*dt + acc[id+1])/(1 + esdirka[7]*esdirka[7]*(ER[p_ERAlpha+pIdx]*ER[p_ERAlpha+pIdx] + ER[p_ERBeta+pIdx]*ER[p_ERBeta+pIdx])*dt2 + 2*ER[p_ERAlpha+pIdx]*esdirka[7]*dt);
           } else if(Stage == 2){
-            Xacc[id] = ((resq[presIdx]*ERAlpha[pIdx]*esdirka[14] + (esdirka[12]*k1acc[id] + esdirka[13]*k2acc[id])*ERAlpha[pIdx] - ERBeta[pIdx]*(esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1]))*esdirka[14]*dt2 + ((ERAlpha[pIdx]*acc[id] - acc[id+1]*ERBeta[pIdx] + resq[presIdx])*esdirka[14] + k1acc[id]*esdirka[12] + k2acc[id]*esdirka[13])*dt + acc[id])/(1 + esdirka[14]*esdirka[14]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[14]*dt);
-            Xacc[id+1] = (esdirka[14]*(resq[presIdx]*ERBeta[pIdx]*esdirka[14] + (esdirka[12]*k1acc[id] + esdirka[13]*k2acc[id])*ERBeta[pIdx] + ERAlpha[pIdx]*(esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1]))*dt2 + ((ERAlpha[pIdx]*acc[id+1] + acc[id]*ERBeta[pIdx])*esdirka[14] + esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1])*dt + acc[id+1])/(1 + esdirka[14]*esdirka[14]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[14]*dt);
+            Xacc[id] = ((resq[presIdx]*ER[p_ERAlpha+pIdx]*esdirka[14] + (esdirka[12]*k1acc[id] + esdirka[13]*k2acc[id])*ER[p_ERAlpha+pIdx] - ER[p_ERBeta+pIdx]*(esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1]))*esdirka[14]*dt2 + ((ER[p_ERAlpha+pIdx]*acc[id] - acc[id+1]*ER[p_ERBeta+pIdx] + resq[presIdx])*esdirka[14] + k1acc[id]*esdirka[12] + k2acc[id]*esdirka[13])*dt + acc[id])/(1 + esdirka[14]*esdirka[14]*(ER[p_ERAlpha+pIdx]*ER[p_ERAlpha+pIdx] + ER[p_ERBeta+pIdx]*ER[p_ERBeta+pIdx])*dt2 + 2*ER[p_ERAlpha+pIdx]*esdirka[14]*dt);
+            Xacc[id+1] = (esdirka[14]*(resq[presIdx]*ER[p_ERBeta+pIdx]*esdirka[14] + (esdirka[12]*k1acc[id] + esdirka[13]*k2acc[id])*ER[p_ERBeta+pIdx] + ER[p_ERAlpha+pIdx]*(esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1]))*dt2 + ((ER[p_ERAlpha+pIdx]*acc[id+1] + acc[id]*ER[p_ERBeta+pIdx])*esdirka[14] + esdirka[12]*k1acc[id+1] + esdirka[13]*k2acc[id+1])*dt + acc[id+1])/(1 + esdirka[14]*esdirka[14]*(ER[p_ERAlpha+pIdx]*ER[p_ERAlpha+pIdx] + ER[p_ERBeta+pIdx]*ER[p_ERBeta+pIdx])*dt2 + 2*ER[p_ERAlpha+pIdx]*esdirka[14]*dt);
           } else if(Stage == 3){
-            Xacc[id] = (esdirka[21]*(esdirka[21]*resq[presIdx]*ERAlpha[pIdx] + (esdirka[18]*k1acc[id] + esdirka[19]*k2acc[id] + esdirka[20]*k3acc[id])*ERAlpha[pIdx] - ERBeta[pIdx]*(esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1]))*dt2 + ((ERAlpha[pIdx]*acc[id] - acc[id+1]*ERBeta[pIdx] + resq[presIdx])*esdirka[21] + k1acc[id]*esdirka[18] + k2acc[id]*esdirka[19] + k3acc[id]*esdirka[20])*dt + acc[id])/(1 + esdirka[21]*esdirka[21]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[21]*dt);
-            Xacc[id+1] = (esdirka[21]*(esdirka[21]*resq[presIdx]*ERBeta[pIdx] + (esdirka[18]*k1acc[id] + esdirka[19]*k2acc[id] + esdirka[20]*k3acc[id])*ERBeta[pIdx] + ERAlpha[pIdx]*(esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1]))*dt2 + ((ERAlpha[pIdx]*acc[id+1] + acc[id]*ERBeta[pIdx])*esdirka[21] + esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[21]*esdirka[21]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[21]*dt);
+            Xacc[id] = (esdirka[21]*(esdirka[21]*resq[presIdx]*ER[p_ERAlpha+pIdx] + (esdirka[18]*k1acc[id] + esdirka[19]*k2acc[id] + esdirka[20]*k3acc[id])*ER[p_ERAlpha+pIdx] - ER[p_ERBeta+pIdx]*(esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1]))*dt2 + ((ER[p_ERAlpha+pIdx]*acc[id] - acc[id+1]*ER[p_ERBeta+pIdx] + resq[presIdx])*esdirka[21] + k1acc[id]*esdirka[18] + k2acc[id]*esdirka[19] + k3acc[id]*esdirka[20])*dt + acc[id])/(1 + esdirka[21]*esdirka[21]*(ER[p_ERAlpha+pIdx]*ER[p_ERAlpha+pIdx] + ER[p_ERBeta+pIdx]*ER[p_ERBeta+pIdx])*dt2 + 2*ER[p_ERAlpha+pIdx]*esdirka[21]*dt);
+            Xacc[id+1] = (esdirka[21]*(esdirka[21]*resq[presIdx]*ER[p_ERBeta+pIdx] + (esdirka[18]*k1acc[id] + esdirka[19]*k2acc[id] + esdirka[20]*k3acc[id])*ER[p_ERBeta+pIdx] + ER[p_ERAlpha+pIdx]*(esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1]))*dt2 + ((ER[p_ERAlpha+pIdx]*acc[id+1] + acc[id]*ER[p_ERBeta+pIdx])*esdirka[21] + esdirka[18]*k1acc[id+1] + esdirka[19]*k2acc[id+1] + esdirka[20]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[21]*esdirka[21]*(ER[p_ERAlpha+pIdx]*ER[p_ERAlpha+pIdx] + ER[p_ERBeta+pIdx]*ER[p_ERBeta+pIdx])*dt2 + 2*ER[p_ERAlpha+pIdx]*esdirka[21]*dt);
           } else if(Stage == 4){
-            Xacc[id] = ((resq[presIdx]*ERAlpha[pIdx]*esdirka[28] + (esdirka[24]*k1acc[id] + esdirka[25]*k2acc[id] + esdirka[26]*k3acc[id] + esdirka[27]*k4acc[id])*ERAlpha[pIdx] - ERBeta[pIdx]*(esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1] + esdirka[27]*k4acc[id+1]))*esdirka[28]*dt2 + ((ERAlpha[pIdx]*acc[id] - acc[id+1]*ERBeta[pIdx] + resq[presIdx])*esdirka[28] + esdirka[27]*k4acc[id] + k1acc[id]*esdirka[24] + k2acc[id]*esdirka[25] + k3acc[id]*esdirka[26])*dt + acc[id])/(1 + esdirka[28]*esdirka[28]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[28]*dt);
-            Xacc[id+1] = ((resq[presIdx]*ERBeta[pIdx]*esdirka[28] + (esdirka[24]*k1acc[id] + esdirka[25]*k2acc[id] + esdirka[26]*k3acc[id] + esdirka[27]*k4acc[id])*ERBeta[pIdx] + ERAlpha[pIdx]*(esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1] + esdirka[27]*k4acc[id+1]))*esdirka[28]*dt2 + ((ERAlpha[pIdx]*acc[id+1] + acc[id]*ERBeta[pIdx])*esdirka[28] + esdirka[27]*k4acc[id+1] + esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[28]*esdirka[28]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[28]*dt);
+            Xacc[id] = ((resq[presIdx]*ER[p_ERAlpha+pIdx]*esdirka[28] + (esdirka[24]*k1acc[id] + esdirka[25]*k2acc[id] + esdirka[26]*k3acc[id] + esdirka[27]*k4acc[id])*ER[p_ERAlpha+pIdx] - ER[p_ERBeta+pIdx]*(esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1] + esdirka[27]*k4acc[id+1]))*esdirka[28]*dt2 + ((ER[p_ERAlpha+pIdx]*acc[id] - acc[id+1]*ER[p_ERBeta+pIdx] + resq[presIdx])*esdirka[28] + esdirka[27]*k4acc[id] + k1acc[id]*esdirka[24] + k2acc[id]*esdirka[25] + k3acc[id]*esdirka[26])*dt + acc[id])/(1 + esdirka[28]*esdirka[28]*(ER[p_ERAlpha+pIdx]*ER[p_ERAlpha+pIdx] + ER[p_ERBeta+pIdx]*ER[p_ERBeta+pIdx])*dt2 + 2*ER[p_ERAlpha+pIdx]*esdirka[28]*dt);
+            Xacc[id+1] = ((resq[presIdx]*ER[p_ERBeta+pIdx]*esdirka[28] + (esdirka[24]*k1acc[id] + esdirka[25]*k2acc[id] + esdirka[26]*k3acc[id] + esdirka[27]*k4acc[id])*ER[p_ERBeta+pIdx] + ER[p_ERAlpha+pIdx]*(esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1] + esdirka[27]*k4acc[id+1]))*esdirka[28]*dt2 + ((ER[p_ERAlpha+pIdx]*acc[id+1] + acc[id]*ER[p_ERBeta+pIdx])*esdirka[28] + esdirka[27]*k4acc[id+1] + esdirka[24]*k1acc[id+1] + esdirka[25]*k2acc[id+1] + esdirka[26]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[28]*esdirka[28]*(ER[p_ERAlpha+pIdx]*ER[p_ERAlpha+pIdx] + ER[p_ERBeta+pIdx]*ER[p_ERBeta+pIdx])*dt2 + 2*ER[p_ERAlpha+pIdx]*esdirka[28]*dt);
           } else if(Stage == 5){
-            Xacc[id] = (esdirka[35]*(resq[presIdx]*ERAlpha[pIdx]*esdirka[35] + (esdirka[30]*k1acc[id] + esdirka[31]*k2acc[id] + esdirka[32]*k3acc[id] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id])*ERAlpha[pIdx] - ERBeta[pIdx]*(esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1]))*dt2 + ((ERAlpha[pIdx]*acc[id] - acc[id+1]*ERBeta[pIdx] + resq[presIdx])*esdirka[35] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id] + k1acc[id]*esdirka[30] + k2acc[id]*esdirka[31] + k3acc[id]*esdirka[32])*dt + acc[id])/(1 + esdirka[35]*esdirka[35]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[35]*dt);
-            Xacc[id+1] = ((resq[presIdx]*ERBeta[pIdx]*esdirka[35] + (esdirka[30]*k1acc[id] + esdirka[31]*k2acc[id] + esdirka[32]*k3acc[id] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id])*ERBeta[pIdx] + ERAlpha[pIdx]*(esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1]))*esdirka[35]*dt2 + ((ERAlpha[pIdx]*acc[id+1] + acc[id]*ERBeta[pIdx])*esdirka[35] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1] + esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[35]*esdirka[35]*(ERAlpha[pIdx]*ERAlpha[pIdx] + ERBeta[pIdx]*ERBeta[pIdx])*dt2 + 2*ERAlpha[pIdx]*esdirka[35]*dt);
+            Xacc[id] = (esdirka[35]*(resq[presIdx]*ER[p_ERAlpha+pIdx]*esdirka[35] + (esdirka[30]*k1acc[id] + esdirka[31]*k2acc[id] + esdirka[32]*k3acc[id] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id])*ER[p_ERAlpha+pIdx] - ER[p_ERBeta+pIdx]*(esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1]))*dt2 + ((ER[p_ERAlpha+pIdx]*acc[id] - acc[id+1]*ER[p_ERBeta+pIdx] + resq[presIdx])*esdirka[35] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id] + k1acc[id]*esdirka[30] + k2acc[id]*esdirka[31] + k3acc[id]*esdirka[32])*dt + acc[id])/(1 + esdirka[35]*esdirka[35]*(ER[p_ERAlpha+pIdx]*ER[p_ERAlpha+pIdx] + ER[p_ERBeta+pIdx]*ER[p_ERBeta+pIdx])*dt2 + 2*ER[p_ERAlpha+pIdx]*esdirka[35]*dt);
+            Xacc[id+1] = ((resq[presIdx]*ER[p_ERBeta+pIdx]*esdirka[35] + (esdirka[30]*k1acc[id] + esdirka[31]*k2acc[id] + esdirka[32]*k3acc[id] + esdirka[33]*k4acc[id] + esdirka[34]*k5acc[id])*ER[p_ERBeta+pIdx] + ER[p_ERAlpha+pIdx]*(esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1]))*esdirka[35]*dt2 + ((ER[p_ERAlpha+pIdx]*acc[id+1] + acc[id]*ER[p_ERBeta+pIdx])*esdirka[35] + esdirka[33]*k4acc[id+1] + esdirka[34]*k5acc[id+1] + esdirka[30]*k1acc[id+1] + esdirka[31]*k2acc[id+1] + esdirka[32]*k3acc[id+1])*dt + acc[id+1])/(1 + esdirka[35]*esdirka[35]*(ER[p_ERAlpha+pIdx]*ER[p_ERAlpha+pIdx] + ER[p_ERBeta+pIdx]*ER[p_ERBeta+pIdx])*dt2 + 2*ER[p_ERAlpha+pIdx]*esdirka[35]*dt);
           } else if(Stage == 6){
             acc[id] = acc[id] + dt*(esdirkb[0]*k1acc[id]+esdirkb[1]*k2acc[id]+esdirkb[2]*k3acc[id]+esdirkb[3]*k4acc[id]+esdirkb[4]*k5acc[id]+esdirkb[5]*k6acc[id]);
             acc[id+1] = acc[id+1] + dt*(esdirkb[0]*k1acc[id+1]+esdirkb[1]*k2acc[id+1]+esdirkb[2]*k3acc[id+1]+esdirkb[3]*k4acc[id+1]+esdirkb[4]*k5acc[id+1]+esdirkb[5]*k6acc[id+1]);
@@ -434,3 +518,4 @@ SOFTWARE.
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) errtmp[b] = s_err[0] + s_err[1];
   }
 }
+

@@ -171,7 +171,6 @@ void acousticsSnapshotXYZ(acoustics_t *acoustics, setupAide &newOptions){
 void acousticsSnapshot(acoustics_t *acoustics, dfloat time, setupAide &newOptions, dlong openNewFile, dlong snapshotCounter){
   
   mesh3D *mesh = acoustics->mesh;
-  //acoustics->o_qSnapshot.copyTo(acoustics->qSnapshot);
   FILE *snapshotFilex;
   FILE *snapshotFiley;
   FILE *snapshotFilez;
@@ -203,21 +202,22 @@ void acousticsSnapshot(acoustics_t *acoustics, dfloat time, setupAide &newOption
     }
     fclose(snapshotFilet);
   }
-
-  for(int i = 0; i < mesh->size; i++){
-    if(mesh->rank == i){
-      if(mesh->rank == 0 && openNewFile == 1){
-        snapshotFilex = fopen(fnamex,"w");
-        snapshotFiley = fopen(fnamey,"w");
-        snapshotFilez = fopen(fnamez,"w");
-        snapshotFilep = fopen(fnamep,"w");
-      } else {
-        snapshotFilex = fopen(fnamex,"a");
-        snapshotFiley = fopen(fnamey,"a");
-        snapshotFilez = fopen(fnamez,"a");
-        snapshotFilep = fopen(fnamep,"a");
-      }
-      for(int jtt = 0; jtt < snapshotCounter; jtt++){
+  
+  for(int jtt = 0; jtt < snapshotCounter; jtt++){
+    for(int i = 0; i < mesh->size; i++){
+      if(mesh->rank == i){
+        if(mesh->rank == 0 && openNewFile == 1){
+          snapshotFilex = fopen(fnamex,"w");
+          snapshotFiley = fopen(fnamey,"w");
+          snapshotFilez = fopen(fnamez,"w");
+          snapshotFilep = fopen(fnamep,"w");
+          openNewFile = 0;
+        } else {
+          snapshotFilex = fopen(fnamex,"a");
+          snapshotFiley = fopen(fnamey,"a");
+          snapshotFilez = fopen(fnamez,"a");
+          snapshotFilep = fopen(fnamep,"a");
+        }
         for(int itt = 0; itt < mesh->Nfields; itt++){
           for(dlong e=0;e<mesh->Nelements;++e){
             for(int n=0;n<mesh->Np;++n){
@@ -226,10 +226,6 @@ void acousticsSnapshot(acoustics_t *acoustics, dfloat time, setupAide &newOption
               dlong qbaseEA = e*mesh->Np*mesh->Nfields + n;
               dlong offsetSnapshot = mesh->Np*mesh->Nelements*mesh->Nfields*jtt;
               dfloat out = acoustics->qSnapshot[offsetSnapshot+qbaseEA+itt*mesh->Np];
-
-              //if(offsetSnapshot+qbaseEA+itt*mesh->Np >= mesh->Np*mesh->Nelements*mesh->Nfields*10 - 2){
-              //  printf("Hejsa her fra %d\n",offsetSnapshot+qbaseEA+itt*mesh->Np);
-              //}
 
               if(itt == 0){
                 fprintf(snapshotFilep, "%.15lf ",out);
@@ -249,14 +245,14 @@ void acousticsSnapshot(acoustics_t *acoustics, dfloat time, setupAide &newOption
           fprintf(snapshotFilez, "\n");
           fprintf(snapshotFilep, "\n");
         }
+        fclose(snapshotFilex);
+        fclose(snapshotFiley);
+        fclose(snapshotFilez);
+        fclose(snapshotFilep);
       }
-
-      fclose(snapshotFilex);
-      fclose(snapshotFiley);
-      fclose(snapshotFilez);
-      fclose(snapshotFilep);
+      MPI_Barrier(MPI_COMM_WORLD);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    
   }
 
   #if 0

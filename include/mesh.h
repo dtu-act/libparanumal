@@ -294,12 +294,14 @@ typedef struct {
 
   // [EA] ERK/ESDIRK time stepping
   int INrk;
-  dfloat erka[36], erkb[6], erkc[6];
-  dfloat esdirka[36], esdirkb[6], esdirkc[6];
+  dfloat erka[36], erkb[6], erkc[6], erke[6];
+  dfloat esdirka[36], esdirkb[6], esdirkc[6], esdirke[6];
   occa::memory o_erka;
   occa::memory o_erkb;
+  occa::memory o_erke;
   occa::memory o_esdirka;
   occa::memory o_esdirkb;
+  occa::memory o_esdirke;
 
 
   // MRAB,SAAB coefficients
