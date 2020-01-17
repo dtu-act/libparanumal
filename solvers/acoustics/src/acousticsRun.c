@@ -26,6 +26,35 @@ SOFTWARE.
 
 #include "acoustics.h"
 
+
+void acousticsBCChange(acoustics_t *acoustics, dfloat time){
+
+  mesh_t *mesh = acoustics->mesh;
+  if(acoustics->BCChangeTime > 0.0 && acoustics->BCChangeTime < time){
+  
+    // Change ER BC to LR BC ( 4 to 3 )
+    for(int ei = 0; ei < mesh->Nelements*mesh->Nfaces; ei++){
+      if(mesh->EToB[ei] == 4){
+        mesh->EToB[ei] = 3;
+      }
+    }
+    mesh->o_EToB.copyFrom(mesh->EToB);
+
+    printf("Swapping from ER to LR at time = %f\n",time);
+
+    // Reset acc to 0
+    acoustics->o_acc.copyFrom(acoustics->acc);
+
+    // Swap ER points to LR
+    mesh->NLRPoints = mesh->NERPoints;
+    mesh->NERPoints = 0;
+
+    // Make sure this swap only happens once
+    acoustics->BCChangeTime = 0.0;
+  }
+
+}
+
 void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 
   mesh_t *mesh = acoustics->mesh;
@@ -169,6 +198,9 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 
       time = tstep*mesh->dt;
       
+      // [EA] Change BC from ER to LR at time acoustics->BCChangeTime
+      acousticsBCChange(acoustics, time);
+
       acousticsLserkStep(acoustics, newOptions, time);
 
 
@@ -203,6 +235,10 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 
 
       time = tstep*mesh->dt;
+
+      // [EA] Change BC from ER to LR at time acoustics->BCChangeTime
+      acousticsBCChange(acoustics, time);
+
       acousticsEirkStep(acoustics, newOptions, time);
 
       if(tstep % 500 == 0 && !mesh->rank){

@@ -333,8 +333,8 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       acoustics->o_ER = mesh->device.malloc(1*sizeof(dfloat));
       acoustics->o_ERInfo = mesh->device.malloc(3*sizeof(dlong), acoustics->ERInfo);
   }
-  
-  if(mesh->NLRFaces){
+  newOptions.getArgs("BCCHANGETIME", acoustics->BCChangeTime);
+  if(mesh->NLRFaces || (acoustics->BCChangeTime > 0.0 && mesh->NERFaces)){
     // [EA] LR BCs
     
     string LRDATAFileName;
@@ -404,11 +404,11 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   }
 
-
   mesh->NboundaryPointsLocal = mesh->Nfp*mesh->NboundaryFacesLocal;
   mesh->NLRPoints = mesh->Nfp*mesh->NLRFaces;
   mesh->NERPoints = mesh->Nfp*mesh->NERFaces;
-  
+
+
   dlong RPointsAlloc = mesh->NLRPoints+mesh->NERPoints ? mesh->NLRPoints+mesh->NERPoints:1; // [EA] Occa cannot have pointers to empty arrays
   dlong NERPointsAlloc = mesh->NERPoints ? mesh->NERPoints:1;
   mesh->mapAccToQ = (dlong*) calloc(RPointsAlloc, sizeof(dlong));
@@ -486,6 +486,21 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   acoustics->NERPointsTotal = 0;
   MPI_Allreduce(&mesh->NERPoints, &acoustics->NERPointsTotal, 1, MPI_DLONG, MPI_SUM, mesh->comm);
+
+
+  // [EA] BCChangeTime error checking
+  if(acoustics->BCChangeTime > 0.0){
+    if(acoustics->NERPointsTotal == 0){
+      printf("BCCHANGETIME is greater than 0 with no Extended Reaction boundaries!\n");
+      exit(-1);
+    }
+    if(acoustics->LRInfo[0] != acoustics->ERInfo[0]){
+      printf("BCCHANGETIME is greater than 0, but number of poles in Local Reaction and Extended Reaction are not equal!\n");
+      exit(-1);
+    }
+  }
+
+
   if(acoustics->NERPointsTotal){
     occa::kernel ERInterpolationOperators = 
               mesh->device.buildKernel(DACOUSTICS "/okl/acousticsERKernel.okl",

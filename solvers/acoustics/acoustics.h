@@ -86,6 +86,7 @@ typedef struct{
   dlong ERNImagPoles;
 
 
+  dfloat BCChangeTime;
   dfloat *LR;
   dlong *LRInfo;
   occa::memory o_LR;
