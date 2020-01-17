@@ -284,15 +284,6 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     acoustics->ERInfo[2] = acoustics->ERNImagPoles;
 
 
-    acoustics->ERA = (dfloat*) calloc(acoustics->ERNRealPoles*Nangles, sizeof(dfloat));
-    acoustics->ERLambda = (dfloat*) calloc(acoustics->ERNRealPoles, sizeof(dfloat));
-    acoustics->ERB = (dfloat*) calloc(acoustics->ERNImagPoles*Nangles, sizeof(dfloat));
-    acoustics->ERC = (dfloat*) calloc(acoustics->ERNImagPoles*Nangles, sizeof(dfloat));
-    acoustics->ERAlpha = (dfloat*) calloc(acoustics->ERNImagPoles, sizeof(dfloat));
-    acoustics->ERBeta = (dfloat*) calloc(acoustics->ERNImagPoles, sizeof(dfloat));
-    acoustics->ERYinf = (dfloat*) calloc(Nangles, sizeof(dfloat));
-
-
     dlong iReadOffset = 0;
     for(int iRead = 0; iRead < acoustics->ERNRealPoles*Nangles; iRead++){
       fscanf(ERDATAFILE,"%lf",&acoustics->ER[iReadOffset+iRead]);
@@ -324,38 +315,6 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     }
     fclose(ERDATAFILE);
 
-    /*
-    for(int iRead = 0; iRead < acoustics->ERNRealPoles*Nangles; iRead++){
-      fscanf(ERDATAFILE,"%lf",&acoustics->ERA[iRead]);
-    }
-    for(int iRead = 0; iRead < acoustics->ERNImagPoles*Nangles; iRead++){
-      fscanf(ERDATAFILE,"%lf",&acoustics->ERB[iRead]);
-    }
-    for(int iRead = 0; iRead < acoustics->ERNImagPoles*Nangles; iRead++){
-      fscanf(ERDATAFILE,"%lf",&acoustics->ERC[iRead]);
-    }
-    for(int iRead = 0; iRead < acoustics->ERNRealPoles; iRead++){
-      fscanf(ERDATAFILE,"%lf",&acoustics->ERLambda[iRead]);
-    }
-    for(int iRead = 0; iRead < acoustics->ERNImagPoles; iRead++){
-      fscanf(ERDATAFILE,"%lf",&acoustics->ERAlpha[iRead]);
-    }
-    for(int iRead = 0; iRead < acoustics->ERNImagPoles; iRead++){
-      fscanf(ERDATAFILE,"%lf",&acoustics->ERBeta[iRead]);
-    }
-    for(int iRead = 0; iRead < Nangles; iRead++){
-      fscanf(ERDATAFILE,"%lf",&acoustics->ERYinf[iRead]);
-    }
-    fclose(ERDATAFILE);*/
-
-    
-    acoustics->o_ERA = mesh->device.malloc(acoustics->ERNRealPoles*Nangles*sizeof(dfloat), acoustics->ERA);
-    acoustics->o_ERB = mesh->device.malloc(acoustics->ERNImagPoles*Nangles*sizeof(dfloat), acoustics->ERB);
-    acoustics->o_ERC = mesh->device.malloc(acoustics->ERNImagPoles*Nangles*sizeof(dfloat), acoustics->ERC);
-    acoustics->o_ERLambda = mesh->device.malloc(acoustics->ERNRealPoles*sizeof(dfloat), acoustics->ERLambda);
-    acoustics->o_ERAlpha = mesh->device.malloc(acoustics->ERNImagPoles*sizeof(dfloat), acoustics->ERAlpha);
-    acoustics->o_ERBeta = mesh->device.malloc(acoustics->ERNImagPoles*sizeof(dfloat), acoustics->ERBeta);
-    acoustics->o_ERYinf = mesh->device.malloc(Nangles*sizeof(dfloat), acoustics->ERYinf);
 
     acoustics->o_ER = mesh->device.malloc((Nangles + acoustics->ERNRealPoles+acoustics->ERNRealPoles*Nangles 
     + 2*acoustics->ERNImagPoles*Nangles+2*acoustics->ERNImagPoles)*sizeof(dfloat), acoustics->ER);
@@ -363,20 +322,6 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   } else {
       // [EA] To avoid empty pointers as this causes crashes on gpu
-      acoustics->ERA = (dfloat*) calloc(1, sizeof(dfloat));
-      acoustics->ERLambda = (dfloat*) calloc(1, sizeof(dfloat));
-
-      acoustics->ERB = (dfloat*) calloc(1, sizeof(dfloat));
-      acoustics->ERC = (dfloat*) calloc(1, sizeof(dfloat));
-      acoustics->ERAlpha = (dfloat*) calloc(1, sizeof(dfloat));
-      acoustics->ERBeta = (dfloat*) calloc(1, sizeof(dfloat));
-      acoustics->o_ERA = mesh->device.malloc(sizeof(dfloat), acoustics->ERA);
-      acoustics->o_ERB = mesh->device.malloc(sizeof(dfloat), acoustics->ERB);
-      acoustics->o_ERC = mesh->device.malloc(sizeof(dfloat), acoustics->ERC);
-      acoustics->o_ERLambda = mesh->device.malloc(sizeof(dfloat), acoustics->ERLambda);
-      acoustics->o_ERAlpha = mesh->device.malloc(sizeof(dfloat), acoustics->ERAlpha);
-      acoustics->o_ERBeta = mesh->device.malloc(sizeof(dfloat), acoustics->ERBeta);
-      acoustics->o_ERYinf = mesh->device.malloc(sizeof(dfloat), acoustics->ERYinf);
       acoustics->ERNpoles = 1;
       acoustics->ERNRealPoles = 0;
       acoustics->ERNImagPoles = 0;
@@ -387,9 +332,8 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       acoustics->ERInfo[2] = 0;
       acoustics->o_ER = mesh->device.malloc(1*sizeof(dfloat));
       acoustics->o_ERInfo = mesh->device.malloc(3*sizeof(dlong), acoustics->ERInfo);
-
-
-    }
+  }
+  
   if(mesh->NLRFaces){
     // [EA] LR BCs
     
@@ -403,14 +347,6 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     }
 
     fscanf(LRDATAFILE,"%d %d %d",&acoustics->LRNpoles, &acoustics->LRNRealPoles,&acoustics->LRNImagPoles);
-    acoustics->LRA = (dfloat*) calloc(acoustics->LRNRealPoles, sizeof(dfloat));
-    acoustics->LRLambda = (dfloat*) calloc(acoustics->LRNRealPoles, sizeof(dfloat));
-
-    acoustics->LRB = (dfloat*) calloc(acoustics->LRNImagPoles, sizeof(dfloat));
-    acoustics->LRC = (dfloat*) calloc(acoustics->LRNImagPoles, sizeof(dfloat));
-    acoustics->LRAlpha = (dfloat*) calloc(acoustics->LRNImagPoles, sizeof(dfloat));
-    acoustics->LRBeta = (dfloat*) calloc(acoustics->LRNImagPoles, sizeof(dfloat));
-
     
     acoustics->LR = (dfloat*) calloc(1 + 2*acoustics->LRNRealPoles + 4*acoustics->LRNImagPoles,sizeof(dfloat));
     acoustics->LRInfo = (dlong*) calloc(3,sizeof(dlong));
@@ -423,86 +359,37 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     dlong iReadOffset = 0;
     for(int iRead = 0; iRead < acoustics->LRNRealPoles; iRead++){
       fscanf(LRDATAFILE,"%lf",&acoustics->LR[iReadOffset+iRead]);
-      printf("A = %f\n",acoustics->LR[iReadOffset+iRead]);
     }
     iReadOffset += acoustics->LRNRealPoles;
     for(int iRead = 0; iRead < acoustics->LRNImagPoles; iRead++){
       fscanf(LRDATAFILE,"%lf",&acoustics->LR[iReadOffset+iRead]);
-      printf("B = %f\n",acoustics->LR[iReadOffset+iRead]);
     }
     iReadOffset += acoustics->LRNImagPoles;
     for(int iRead = 0; iRead < acoustics->LRNImagPoles; iRead++){
       fscanf(LRDATAFILE,"%lf",&acoustics->LR[iReadOffset+iRead]);
-      printf("C = %f\n",acoustics->LR[iReadOffset+iRead]);
     }
     iReadOffset += acoustics->LRNImagPoles;
     for(int iRead = 0; iRead < acoustics->LRNRealPoles; iRead++){
       fscanf(LRDATAFILE,"%lf",&acoustics->LR[iReadOffset+iRead]);
-      printf("lambda = %f\n",acoustics->LR[iReadOffset+iRead]);
     }
 
     iReadOffset += acoustics->LRNRealPoles;
     for(int iRead = 0; iRead < acoustics->LRNImagPoles; iRead++){
       fscanf(LRDATAFILE,"%lf",&acoustics->LR[iReadOffset+iRead]);
-      printf("alpha = %f\n",acoustics->LR[iReadOffset+iRead]);
     }
     iReadOffset += acoustics->LRNImagPoles;
     for(int iRead = 0; iRead < acoustics->LRNImagPoles; iRead++){
       fscanf(LRDATAFILE,"%lf",&acoustics->LR[iReadOffset+iRead]);
-      printf("beta = %f\n",acoustics->LR[iReadOffset+iRead]);
     }
     iReadOffset += acoustics->LRNImagPoles;
     fscanf(LRDATAFILE,"%lf",&acoustics->LR[iReadOffset]);
-    printf("yinf = %f\n",acoustics->LR[iReadOffset]);
     fclose(LRDATAFILE);
     acoustics->o_LR = mesh->device.malloc((1 + 2*acoustics->LRNRealPoles + 4*acoustics->LRNImagPoles)*sizeof(dfloat), acoustics->LR);
     acoustics->o_LRInfo = mesh->device.malloc(3*sizeof(dlong), acoustics->LRInfo);
     
- 
-
-   /*
-    for(int iRead = 0; iRead < acoustics->LRNRealPoles; iRead++){
-      fscanf(LRDATAFILE,"%lf",&acoustics->LRA[iRead]);
-    }
-    for(int iRead = 0; iRead < acoustics->LRNImagPoles; iRead++){
-      fscanf(LRDATAFILE,"%lf",&acoustics->LRB[iRead]);
-    }
-    for(int iRead = 0; iRead < acoustics->LRNImagPoles; iRead++){
-      fscanf(LRDATAFILE,"%lf",&acoustics->LRC[iRead]);
-    }
-    for(int iRead = 0; iRead < acoustics->LRNRealPoles; iRead++){
-      fscanf(LRDATAFILE,"%lf",&acoustics->LRLambda[iRead]);
-    }
-    for(int iRead = 0; iRead < acoustics->LRNImagPoles; iRead++){
-      fscanf(LRDATAFILE,"%lf",&acoustics->LRAlpha[iRead]);
-    }
-    for(int iRead = 0; iRead < acoustics->LRNImagPoles; iRead++){
-      fscanf(LRDATAFILE,"%lf",&acoustics->LRBeta[iRead]);
-    }
-    fscanf(LRDATAFILE,"%lf",&acoustics->LRYinf);
-    fclose(LRDATAFILE);
-    */
-    acoustics->o_LRA = mesh->device.malloc(acoustics->LRNRealPoles*sizeof(dfloat), acoustics->LRA);
-    acoustics->o_LRB = mesh->device.malloc(acoustics->LRNImagPoles*sizeof(dfloat), acoustics->LRB);
-    acoustics->o_LRC = mesh->device.malloc(acoustics->LRNImagPoles*sizeof(dfloat), acoustics->LRC);
-    acoustics->o_LRLambda = mesh->device.malloc(acoustics->LRNRealPoles*sizeof(dfloat), acoustics->LRLambda);
-    acoustics->o_LRAlpha = mesh->device.malloc(acoustics->LRNImagPoles*sizeof(dfloat), acoustics->LRAlpha);
-    acoustics->o_LRBeta = mesh->device.malloc(acoustics->LRNImagPoles*sizeof(dfloat), acoustics->LRBeta);
   } else {
       // [EA] To avoid empty pointers as this causes crashes on gpu
-      acoustics->LRA = (dfloat*) calloc(1, sizeof(dfloat));
-      acoustics->LRLambda = (dfloat*) calloc(1, sizeof(dfloat));
 
-      acoustics->LRB = (dfloat*) calloc(1, sizeof(dfloat));
-      acoustics->LRC = (dfloat*) calloc(1, sizeof(dfloat));
-      acoustics->LRAlpha = (dfloat*) calloc(1, sizeof(dfloat));
-      acoustics->LRBeta = (dfloat*) calloc(1, sizeof(dfloat));
-      acoustics->o_LRA = mesh->device.malloc(sizeof(dfloat), acoustics->LRA);
-      acoustics->o_LRB = mesh->device.malloc(sizeof(dfloat), acoustics->LRB);
-      acoustics->o_LRC = mesh->device.malloc(sizeof(dfloat), acoustics->LRC);
-      acoustics->o_LRLambda = mesh->device.malloc(sizeof(dfloat), acoustics->LRLambda);
-      acoustics->o_LRAlpha = mesh->device.malloc(sizeof(dfloat), acoustics->LRAlpha);
-      acoustics->o_LRBeta = mesh->device.malloc(sizeof(dfloat), acoustics->LRBeta);
       acoustics->LRNpoles = 1;
       acoustics->LRNRealPoles = 0;
       acoustics->LRNImagPoles = 0;
@@ -943,7 +830,6 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     o_EZ.free();
     mesh->o_mapAccToXYZ.free();
     free(mesh->mapAccToXYZ);
-    ERInterpolationOperators.free();
   } else {
     // [EA] To avoid empty pointers, if no ER points.
     acoustics->o_ERintpol = mesh->device.malloc(1*sizeof(dfloat));
@@ -966,18 +852,20 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   mesh->o_esdirke = 
     mesh->device.malloc(6*sizeof(dfloat), mesh->esdirke);
 
+
+  
   acoustics->acc = 
-    (dfloat*) calloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles), sizeof(dfloat));
+    (dfloat*) calloc(acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1, sizeof(dfloat));
   acoustics->rhsacc = 
-    (dfloat*) calloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles), sizeof(dfloat));
+    (dfloat*) calloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1), sizeof(dfloat));
   acoustics->resacc = 
-    (dfloat*) calloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles), sizeof(dfloat));
+    (dfloat*) calloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1), sizeof(dfloat));
   acoustics->o_acc =
-    mesh->device.malloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles)*sizeof(dfloat), acoustics->acc);
+    mesh->device.malloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1)*sizeof(dfloat), acoustics->acc);
   acoustics->o_rhsacc =
-    mesh->device.malloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles)*sizeof(dfloat), acoustics->rhsacc);
+    mesh->device.malloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1)*sizeof(dfloat), acoustics->rhsacc);
   acoustics->o_resacc =
-    mesh->device.malloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles)*sizeof(dfloat), acoustics->resacc);
+    mesh->device.malloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1)*sizeof(dfloat), acoustics->resacc);
 
   if(!mesh->rank){
     cout << "TIME INTEGRATOR (" << newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
@@ -1004,14 +892,14 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   }
 
   if (newOptions.compareArgs("TIME INTEGRATOR","EIRK4") || newOptions.compareArgs("TIME INTEGRATOR","EIRK4Adap")){
-    acoustics->k1acc = (dfloat*) calloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles), sizeof(dfloat));
-    acoustics->k2acc = (dfloat*) calloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles), sizeof(dfloat));
-    acoustics->k3acc = (dfloat*) calloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles), sizeof(dfloat));
-    acoustics->k4acc = (dfloat*) calloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles), sizeof(dfloat));
-    acoustics->k5acc = (dfloat*) calloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles), sizeof(dfloat));
-    acoustics->k6acc = (dfloat*) calloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles), sizeof(dfloat));
+    acoustics->k1acc = (dfloat*) calloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1), sizeof(dfloat));
+    acoustics->k2acc = (dfloat*) calloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1), sizeof(dfloat));
+    acoustics->k3acc = (dfloat*) calloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1), sizeof(dfloat));
+    acoustics->k4acc = (dfloat*) calloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1), sizeof(dfloat));
+    acoustics->k5acc = (dfloat*) calloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1), sizeof(dfloat));
+    acoustics->k6acc = (dfloat*) calloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1), sizeof(dfloat));
 
-    acoustics->Xacc = (dfloat*) calloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles), sizeof(dfloat));
+    acoustics->Xacc = (dfloat*) calloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1), sizeof(dfloat));
 
     acoustics->k1rhsq = (dfloat*) calloc(mesh->Np*mesh->Nelements*mesh->Nfields, sizeof(dfloat));
     acoustics->k2rhsq = (dfloat*) calloc(mesh->Np*mesh->Nelements*mesh->Nfields, sizeof(dfloat));
@@ -1023,20 +911,20 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     acoustics->resq = (dfloat*) calloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields, sizeof(dfloat));
 
     acoustics->o_k1acc = 
-          mesh->device.malloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles)*sizeof(dfloat), acoustics->k1acc);
+          mesh->device.malloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1)*sizeof(dfloat), acoustics->k1acc);
     acoustics->o_k2acc = 
-          mesh->device.malloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles)*sizeof(dfloat), acoustics->k2acc);
+          mesh->device.malloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1)*sizeof(dfloat), acoustics->k2acc);
     acoustics->o_k3acc = 
-          mesh->device.malloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles)*sizeof(dfloat), acoustics->k3acc);
+          mesh->device.malloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1)*sizeof(dfloat), acoustics->k3acc);
     acoustics->o_k4acc = 
-          mesh->device.malloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles)*sizeof(dfloat), acoustics->k4acc);
+          mesh->device.malloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1)*sizeof(dfloat), acoustics->k4acc);
     acoustics->o_k5acc = 
-          mesh->device.malloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles)*sizeof(dfloat), acoustics->k5acc);
+          mesh->device.malloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1)*sizeof(dfloat), acoustics->k5acc);
     acoustics->o_k6acc = 
-          mesh->device.malloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles)*sizeof(dfloat), acoustics->k6acc);
+          mesh->device.malloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1)*sizeof(dfloat), acoustics->k6acc);
 
     acoustics->o_Xacc = 
-          mesh->device.malloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles)*sizeof(dfloat), acoustics->resacc);
+          mesh->device.malloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1)*sizeof(dfloat), acoustics->resacc);
 
     acoustics->o_k1rhsq = 
           mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), acoustics->k1rhsq);
@@ -1061,10 +949,10 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     acoustics->rkerr = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
 
-    acoustics->rkAcc = (dfloat*) calloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles),
+    acoustics->rkAcc = (dfloat*) calloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1),
 				sizeof(dfloat));
 
-    acoustics->rkerrAcc = (dfloat*) calloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles),
+    acoustics->rkerrAcc = (dfloat*) calloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1),
 				sizeof(dfloat));
 
     acoustics->o_rkq =
@@ -1072,9 +960,9 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     acoustics->o_rkerr =
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), acoustics->rkerr);
     acoustics->o_rkAcc = 
-          mesh->device.malloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles)*sizeof(dfloat), acoustics->rkAcc);
+          mesh->device.malloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1)*sizeof(dfloat), acoustics->rkAcc);
     acoustics->o_rkerrAcc = 
-          mesh->device.malloc(RPointsAlloc*(acoustics->LRNpoles+acoustics->ERNpoles)*sizeof(dfloat), acoustics->rkerrAcc);
+          mesh->device.malloc((acoustics->LRInfo[0]*mesh->NLRPoints + acoustics->ERInfo[0]*mesh->NERPoints + 1)*sizeof(dfloat), acoustics->rkerrAcc);
   }
   
   if(mesh->totalHaloPairs>0){

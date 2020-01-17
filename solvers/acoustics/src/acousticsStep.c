@@ -211,7 +211,7 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
            acoustics->o_anglei,
            acoustics->o_ER,
            acoustics->o_ERInfo);
-
+    
     // update solution using Runge-Kutta
     acoustics->updateKernel(mesh->Nelements, 
 		      mesh->dt, 
@@ -223,7 +223,7 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
 
     if(mesh->NLRPoints){
       acoustics->updateKernelLR(mesh->NLRPoints,
-            acoustics->LRNpoles,
+            acoustics->LRInfo[0],
             mesh->dt,  
             mesh->rka[rk],
             mesh->rkb[rk],
@@ -234,14 +234,14 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
 
     if(mesh->NERPoints){
       acoustics->updateKernelER(mesh->NERPoints,
-            acoustics->ERNpoles,
+            acoustics->ERInfo[0],
             mesh->dt,  
             mesh->rka[rk],
             mesh->rkb[rk],
             acoustics->o_rhsacc,
             acoustics->o_resacc,
             acoustics->o_acc,
-            acoustics->LRNpoles*mesh->NLRPoints);
+            acoustics->LRInfo[0]*mesh->NLRPoints);
     }
 
   }

@@ -48,9 +48,36 @@ void upwind(const dfloat nx,
   *rflux  = p_half*   (ndotUP-ndotUM - (rP-rM));
   *uflux  = p_half*nx*(rP-rM         - (ndotUP-ndotUM));
   *vflux  = p_half*ny*(rP-rM         - (ndotUP-ndotUM));
-  *wflux  = p_half*nz*(rP-rM         - (ndotUP-ndotUM));
-  
+  *wflux  = p_half*nz*(rP-rM         - (ndotUP-ndotUM)); 
 }
+
+void upwindBC(const dfloat nx,
+	    const dfloat ny,
+	    const dfloat nz,
+	    const dfloat rM,
+	    const dfloat uM,
+	    const dfloat vM,
+	    const dfloat wM,
+	    const dfloat rP,
+	    const dfloat uP,
+	    const dfloat vP,
+	    const dfloat wP,
+	    dfloat *rflux,
+	    dfloat *uflux,
+	    dfloat *vflux,
+	    dfloat *wflux,
+      dfloat vn){
+
+  //subtract F(qM)
+  dfloat ndotUM = nx*uM + ny*vM + nz*wM;
+  dfloat ndotUP = nx*uP + ny*vP + nz*wP;
+  vn = 2.0*vn;
+  *rflux  = p_half*   ((ndotUP+vn-ndotUM)*p_AcConstant - (rP-rM)*p_c);
+  *uflux  = p_half*nx*((rP-rM)/p_rho - (ndotUP+vn-ndotUM)*p_c);
+  *vflux  = p_half*ny*((rP-rM)/p_rho - (ndotUP+vn-ndotUM)*p_c);
+  *wflux  = p_half*nz*((rP-rM)/p_rho - (ndotUP+vn-ndotUM)*p_c);
+}
+
 
 void central(const dfloat nx,
 	    const dfloat ny,
@@ -186,9 +213,9 @@ void centralBC(const dfloat nx,
           const int bc = EToB[face+p_Nfaces*e];
 
           if(bc > 0){
-            uP = -uP;
-            vP = -vP;
-            wP = -wP;
+            uP = -uM;
+            vP = -vM;
+            wP = -wM;
           }          
           // Frequency independent
           if(bc == 2){
@@ -199,7 +226,6 @@ void centralBC(const dfloat nx,
           if(bc == 3){
             const dlong idAcc = mapAcc[id];
 
-            //printf("Surf: idAcc=%ld, rM = %f\n",idAcc,rM);
             vn = LR[0+p_LRYinf] * rM;
             
             // Real poles
@@ -217,7 +243,7 @@ void centralBC(const dfloat nx,
               rhsacc[LRInfo[0]*idAcc+piEA] = -LR[p_LRAlpha+pIdx]*acc[LRInfo[0]*idAcc+piEA] - LR[p_LRBeta+pIdx]*acc[LRInfo[0]*idAcc+piEA+1] + rM;
               rhsacc[LRInfo[0]*idAcc+piEA+1] = -LR[p_LRAlpha+pIdx]*acc[LRInfo[0]*idAcc+piEA+1] + LR[p_LRBeta+pIdx]*acc[LRInfo[0]*idAcc+piEA];
               vn += 2.0 * (LR[p_LRB+pIdx]*acc[LRInfo[0]*idAcc+piEA]+LR[p_LRC+pIdx]*acc[LRInfo[0]*idAcc+piEA+1]);
-            }
+            }  
           }
           
           
@@ -257,13 +283,13 @@ void centralBC(const dfloat nx,
             // [EA] - CHANGED HERE FOR CENTRAL FLUX
             //upwind(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux);
             //central(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux);
-            centralBC(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, vn, &rflux, &uflux, &vflux, &wflux);
+            //centralBC(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, vn, &rflux, &uflux, &vflux, &wflux);
+            upwindBC(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux, vn);
 
-
-            s_rflux[es][n]  = sc*(-rflux );
+            s_rflux[es][n]  = sc*(-rflux);
             s_uflux[es][n] = sc*(-uflux);
             s_vflux[es][n] = sc*(-vflux);
-	    s_wflux[es][n] = sc*(-wflux);
+	          s_wflux[es][n] = sc*(-wflux);
           }
         }
       }
@@ -290,18 +316,18 @@ void centralBC(const dfloat nx,
                 Lvflux += L*s_vflux[es][m];
 		            Lwflux += L*s_wflux[es][m];
               }
-            
-            const dlong base = e*p_Np*p_Nfields+n;
-            rhsq[base+0*p_Np] += Lrflux;
-            rhsq[base+1*p_Np] += Luflux;
-            rhsq[base+2*p_Np] += Lvflux;
-	          rhsq[base+3*p_Np] += Lwflux;
-            
+
             //[EA] - Scaled to our equations
+            const dlong base = e*p_Np*p_Nfields+n;
             rhsq[base+0*p_Np] *= p_AcConstant;
             rhsq[base+1*p_Np] /= p_rho;
             rhsq[base+2*p_Np] /= p_rho;
 	          rhsq[base+3*p_Np] /= p_rho;
+
+            rhsq[base+0*p_Np] += Lrflux;
+            rhsq[base+1*p_Np] += Luflux;
+            rhsq[base+2*p_Np] += Lvflux;
+	          rhsq[base+3*p_Np] += Lwflux;
           }
         }
       }

@@ -351,6 +351,7 @@ SOFTWARE.
         // Real poles
         for(dlong e=0;e<ERInfo[1];++e){
           const dlong id = NLRPoints*NLRPoles+(n*ERInfo[0])+e;
+          
           if(Stage == 1){
             Xacc[id] = (acc[id] + dt*esdirka[6]*k1acc[id] + dt*esdirka[7]*resq[presIdx]) / (1-dt*esdirka[7]*(-ER[p_ERLambda+e]));
           } else if(Stage == 2){

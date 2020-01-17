@@ -1,9 +1,9 @@
 #!/bin/bash
-#BSUB -n 96
+#BSUB -n 48
 #BSUB -R "span[block=12]"
 #BSUB -W 1:00
 #BSUB -R "select[model == XeonGold6126]"
-#BSUB -R "rusage[mem=5GB]"
+#BSUB -R "rusage[mem=1GB]"
 #BSUB -J LP_96
 
 # Load modules
@@ -24,5 +24,5 @@ cd ../solvers/acoustics/
 make clean
 make -j
 
-#mpirun ./acousticsMain setups/setupTet3D_Template
-mpirun ./acousticsMain setups/setupTet3D_ER_100mm_rigid_2
+mpirun ./acousticsMain setups/setupTet3D_Template
+#mpirun ./acousticsMain setups/setupTet3D_ER_100mm_rigid_2

@@ -74,7 +74,6 @@ typedef struct{
   occa::memory o_recvElementsIdx;
   //---------RECEIVER---------
 
-  //---------Local reaction accumulators---------
   dfloat *acc;
   dfloat *rhsacc;
   dfloat *resacc;
@@ -87,7 +86,6 @@ typedef struct{
   dlong ERNImagPoles;
 
 
-
   dfloat *LR;
   dlong *LRInfo;
   occa::memory o_LR;
@@ -98,20 +96,6 @@ typedef struct{
   occa::memory o_ERInfo;
 
 
-  dfloat *LRA;
-  dfloat *LRB;
-  dfloat *LRC;
-  dfloat *LRLambda;
-  dfloat *LRAlpha;
-  dfloat *LRBeta;
-  dfloat LRYinf;
-  dfloat *ERA;
-  dfloat *ERB;
-  dfloat *ERC;
-  dfloat *ERLambda;
-  dfloat *ERAlpha;
-  dfloat *ERBeta;
-  dfloat *ERYinf;
   dlong NERComPoints;
   dfloat *ERComPoints;
   dlong NERPointsTotal;
@@ -124,19 +108,6 @@ typedef struct{
   dlong *recvCountsArray;
   
 
-  occa::memory o_LRA;
-  occa::memory o_LRB;
-  occa::memory o_LRC;
-  occa::memory o_LRLambda;
-  occa::memory o_LRAlpha;
-  occa::memory o_LRBeta;
-  occa::memory o_ERA;
-  occa::memory o_ERB;
-  occa::memory o_ERC;
-  occa::memory o_ERLambda;
-  occa::memory o_ERAlpha;
-  occa::memory o_ERBeta;
-  occa::memory o_ERYinf;
   occa::memory o_acc;
   occa::memory o_rhsacc;
   occa::memory o_resacc;
@@ -190,7 +161,6 @@ typedef struct{
   occa::memory o_k5rhsq;
   occa::memory o_k6rhsq;
 
-  //---------Local reaction accumulators---------
 
   dfloat *Vort;
 

@@ -412,7 +412,7 @@ void findElement(const dfloat x,
 					dfloat PI = 3.1415926536;
 					dfloat angleTemp = round(acos(fabs(dotvn/(magv*magn)))*180.0/PI);
 					dlong angleTemp2 = (dlong) angleTemp;
-					
+
 					anglei[i] = angleTemp2;
 				}
 			}
