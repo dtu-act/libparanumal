@@ -38,8 +38,7 @@ void acousticsGaussianPulse(dfloat x, dfloat y, dfloat z, dfloat t,
 }
 */
 
-// [EA] - Our version
-// TODO: Allow source to be moved
+
 void acousticsGaussianPulse(dfloat x, dfloat y, dfloat z, dfloat t,
 		      dfloat *r, dfloat *u, dfloat *v, dfloat *w, dfloat *sloc, dfloat sxyz){
   dfloat sxyzSQ = sxyz*sxyz;

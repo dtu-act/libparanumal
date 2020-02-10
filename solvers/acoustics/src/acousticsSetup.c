@@ -178,7 +178,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     if (newOptions.compareArgs("TIME INTEGRATOR","EIRK4")){
     mesh->dt = mesh->finalTime/mesh->NtimeSteps;
   }
-
+  
   if (mesh->rank ==0) printf("dtAdv = %lg (before cfl), dt = %lg\n",
    dtAdv, dt);
 
@@ -1244,10 +1244,62 @@ printf("hejsa2\n");
   #endif
 
 
-
   
 
-
+  // Print setup parameters to out file
+  if(!mesh->rank){
+    string mshFileName;
+    newOptions.getArgs("MESH FILE", mshFileName);
+    string timeInt;
+    newOptions.getArgs("TIME INTEGRATOR", timeInt);
+    string recvFile;
+    newOptions.getArgs("RECEIVER", recvFile);
+    string LRFile;
+    newOptions.getArgs("LRVECTFIT", LRFile);
+    string ERFile;
+    newOptions.getArgs("ERVECTFIT", ERFile);
+    printf("-----SETUP PARAMETERS START-----\n");
+    printf("N = %d\n",mesh->N);
+    printf("Mesh file: %s\n",(char*)mshFileName.c_str());
+    printf("Final Time: %g\n",mesh->finalTime);
+    printf("CFL = %g\n",cfl);
+    printf("dt = %g\n",mesh->dt);
+    printf("Time integrator: %s\n",(char*)timeInt.c_str());
+    printf("Receiver file: %s\n",(char*)recvFile.c_str());
+    printf("Local Reaction file: %s\n",(char*)LRFile.c_str());
+    printf("Extended Reaction file: %s\n",(char*)ERFile.c_str());
+    printf("BCCHANGETIME = %g\n",acoustics->BCChangeTime);
+    printf("Boundary conditions on surface indices from .msh file:\n");
+    printf("Rigid = [ ");
+    for(int jj = 1; jj < 1000; jj+=2){ // Hardcoded for 500 surfaces, see meshParallelReaderTet3D.c
+      if(1 == mesh->mshPrint[jj]){
+        printf("%d ",mesh->mshPrint[jj-1]);
+      }
+    }
+    printf("]\nFrequency Independent = [ ");
+    for(int jj = 1; jj < 1000; jj+=2){ // Hardcoded for 500 surfaces, see meshParallelReaderTet3D.c
+      if(2 == mesh->mshPrint[jj]){
+        printf("%d ",mesh->mshPrint[jj-1]);
+      }
+    }
+    printf("]\nLocal Reaction = [ ");
+    for(int jj = 1; jj < 1000; jj+=2){ // Hardcoded for 500 surfaces, see meshParallelReaderTet3D.c
+      if(3 == mesh->mshPrint[jj]){
+        printf("%d ",mesh->mshPrint[jj-1]);
+      }
+    }
+    printf("]\nExtended Reaction = [ ");
+    for(int jj = 1; jj < 1000; jj+=2){ // Hardcoded for 500 surfaces, see meshParallelReaderTet3D.c
+      if(4 == mesh->mshPrint[jj]){
+        printf("%d ",mesh->mshPrint[jj-1]);
+      }
+    }
+  printf("]\n");
+  printf("-----SETUP PARAMETERS END-----\n");
+  }
+  free(mesh->mshPrint);  
+    
+  
 
   
   return acoustics;

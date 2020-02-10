@@ -27,7 +27,8 @@ make -j
 
 # Run solver
 
-mpirun ./acousticsMain setups/setupTet3D_Template
+mpirun ./acousticsMain setups/setupClassroom2
+#mpirun ./acousticsMain setups/setupTet3D_Template
 #mpirun ./acousticsMain setups/setupTet3D_ER_100mm_rigid_2
 #mpirun ./acousticsMain setups/setupTet3D_1
 

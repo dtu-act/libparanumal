@@ -203,7 +203,6 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 
       acousticsLserkStep(acoustics, newOptions, time);
 
-
       if(tstep % 500 == 0 && !mesh->rank){
         printf("LSERK4 - Step: %d, out of: %d\n",tstep, mesh->NtimeSteps);
       }
@@ -297,6 +296,7 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
   }
   // [EA] Copy remaining o_qRecv from device to host
   if(acoustics->NReceiversLocal > 0){
+
     for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
       dlong offset = recvCopyRate*acoustics->qRecvCopyCounter + mesh->NtimeSteps*iRecv;
       

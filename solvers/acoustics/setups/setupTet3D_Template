@@ -3,31 +3,34 @@
 
 [MESH FILE]
 #../../meshes/cubeTet_02_1ER5FI_res02.msh
-../../meshes/cubeTet_02_1ER5FI_res01.msh
+#../../meshes/cubeTet_02_1ER5FI_res01.msh
 #../../meshes/cubeTet_02_FreqIndep_res01.msh
 #../../meshes/cubeTet_02_1LR5FI_res02.msh
 #../../meshes/cubeTet_FL_room_full_size.msh
 #../../meshes/cubeTet_02_PerfRefl_res01.msh
 #../../meshes/cubeTet_02_PerfRefl_res007.msh
-#../../meshes/rectTet_0204_PerfRefl.msh
+#../../meshes/rectTet_0204_PerfRefl_res01.msh
+#../../meshes/3DCylinderNoCurv.msh
+../../meshes/3DCylinderNoCurvFiner.msh
+#../../meshes/cubeTest.msh
 
 [POLYNOMIAL DEGREE]
 4
 
 [TIME INTEGRATOR]
 #DOPRI5 # Currently broken
-#LSERK4
-EIRK4
+LSERK4
+#EIRK4
 
 [FINAL TIME]
 #1.0
-0.05
+0.005
 
 [RECEIVER]
 setups/setupdata/ReceiverLocations.dat
 
 [RECEIVERPREFIX] # Prefix for data/PREFIX_RecvPoints_xx.txt
-96cpuERLR
+CylinderLibPFiner
 
 [CFL]
 5
@@ -45,25 +48,25 @@ setups/setupdata/ReceiverLocations.dat
 142780.0    # 346.88*rho*c      - ~ alpha = 0.0115
 
 [LRVECTFIT] # Vectorfit filename from vectorfitDriverLR.m
-#setups/setupdata/LRDATA14.dat
-setups/setupdata/ER_100mm_rigid_2_2_TIL_LR.dat
+setups/setupdata/LRDATA14.dat
+#setups/setupdata/ER_100mm_rigid_2_2_TIL_LR.dat
 
 [ERVECTFIT] # Vectorfit filename from vectorfitDriverER.m
 #setups/setupdata/ERDATA14.dat
-#setups/setupdata/ERDATA14_d0.dat
-setups/setupdata/ER_100mm_rigid_2.dat
+setups/setupdata/ERDATA14_d0.dat
+#setups/setupdata/ER_100mm_rigid_2.dat
 
 [SXYZ] # Width of initial pulse
-0.3
+0.175
 
 [SX] # x coordinate of initial pulse
-0.8
+0.05
 
 [SY] # y coordinate of initial pulse
-0.8
+-0.05
 
 [SZ] # z coordinate of initial pulse
-0.8
+0.5
 
 [SNAPSHOT] # Take a snapshot of solution every X timesteps, 0 to turn off
 0
@@ -75,7 +78,7 @@ snap1
 100
 
 [BCCHANGETIME] # Switch from ER to LR BCs at time = BCCHANGETIME, 0 to turn off
-0.03
+0
 
 ### DON'T CHANGE BELOW ###
 [MESH DIMENSION]

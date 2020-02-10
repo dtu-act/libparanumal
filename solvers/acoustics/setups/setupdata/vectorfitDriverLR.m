@@ -3,16 +3,16 @@ clc
 close all
 
 %Name of output file
-fileName = 'LRData6.dat';
-
+fileName = 'LRData.dat';
 
 %Acoustic constants
 rho = 1.2;
 c = 343;
 
 %Material properties
-sigma = 10900;
-dmat = 0.04;
+sigma = 9323.991;
+dmat = 0.1;
+
 
 %Frequency range
 f_range = [50,2000];
@@ -26,6 +26,19 @@ if(mod(Npoles,2)==1)
     return;
 end
 
+opts.relax=1;      %Use vector fitting with relaxed non-triviality constraint
+opts.stable=1;     %Enforce stable poles
+opts.asymp=1;      %Include just D, not E in fitting
+opts.skip_pole=0;  %Do NOT skip pole identification
+opts.skip_res=0;   %DO skip identification of residues (C,D,E)
+opts.cmplx_ss=1;   %Create complex state space model
+opts.spy1=0;       %No plotting for first stage of vector fitting
+opts.spy2=0;       %Create magnitude plot for fitting of f(s)
+opts.logx=1;       %Use linear abscissa axis
+opts.logy=1;       %Use logarithmic ordinate axis
+opts.errplot=0;    %Include deviation in magnitude plot
+opts.phaseplot=0;  %Do NOT produce plot of phase angle
+opts.legend=1;     %Include legends in plots
 
 f = f_range(1):1:f_range(2); % Range where boundary conditions are defined
 Zc = rho*c*(1+0.07*(f./sigma).^(-0.632) - 1i*0.107*(f./sigma).^(-0.632));
@@ -38,8 +51,6 @@ Y = 1./Z;
 % Fit impedance to a rational function
 w = 2*pi*f;
 ss = 1i*w;
-opts.cmplx_ss = 1;
-opts.spy2 = 0;
 Ns = length(ss);
 weight = ones(1,Ns);
 
@@ -51,7 +62,7 @@ for n=1:length(bet)
   poles=[poles (alf-1i*bet(n)) (alf+1i*bet(n)) ]; 
 end
 
-Niter=3;
+Niter=10;
 for iter=1:Niter
   if iter==Niter, opts.skip_res=0; end
   disp(['   Iter ' num2str(iter)])
@@ -105,4 +116,3 @@ fprintf(fileID,'sigma = %.12f\n',sigma);
 fprintf(fileID,'dmat = %.12f\n',dmat);
 fprintf(fileID,'freqRange = [%d,%d]\n',f_range);
 fclose(fileID);
-

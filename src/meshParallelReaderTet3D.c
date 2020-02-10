@@ -133,18 +133,35 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   hlong cnt=0, bcnt = 0;
   Ntets = 0;
 
+  hlong surfIdCounter = 0;
+  hlong currentSurfId = -1;
+  mesh->mshPrint = (hlong*) calloc(1000, sizeof(hlong)); // Hardcoded 1000 long. Assuming max 500 surfaces
+  for(hlong jj = 0; jj < 1000; jj++){
+    mesh->mshPrint[jj] = -1;
+  }
   mesh->boundaryInfo = (hlong*) calloc(NboundaryFaces*4, sizeof(hlong));
   for(hlong n=0;n<Nelements;++n){
     int elementType; 
     hlong v1, v2, v3, v4;
+    hlong surfId;
+    
     status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
+    
     if(elementType==2){ // boundary face
-      sscanf(buf, "%*d%*d %*d"hlongFormat"%*d" hlongFormat hlongFormat hlongFormat, 
-             mesh->boundaryInfo+bcnt*4, &v1, &v2, &v3);
+      sscanf(buf, "%*d%*d %*d" hlongFormat hlongFormat hlongFormat hlongFormat hlongFormat, 
+             mesh->boundaryInfo+bcnt*4, &surfId, &v1, &v2, &v3);
       mesh->boundaryInfo[bcnt*4+1] = v1-1;
       mesh->boundaryInfo[bcnt*4+2] = v2-1;
       mesh->boundaryInfo[bcnt*4+3] = v3-1;
+
+      if(surfId != currentSurfId){
+        mesh->mshPrint[surfIdCounter] = surfId;
+        mesh->mshPrint[surfIdCounter+1] = mesh->boundaryInfo[bcnt*4];
+        currentSurfId = surfId;
+        surfIdCounter += 2;
+      }
+
       ++bcnt;
     }
 

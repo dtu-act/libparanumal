@@ -82,6 +82,9 @@ typedef struct {
   dlong NLRPoints; // [EA] Number of points with local reaction BC
   dlong NERPoints; // [EA] Number of points with extended reaction BC
 
+  hlong *mshPrint;
+
+
   // MPI halo exchange info
   dlong  totalHaloPairs;  // number of elements to be sent in halo exchange
   dlong *haloElementList; // sorted list of elements to be sent in halo exchange

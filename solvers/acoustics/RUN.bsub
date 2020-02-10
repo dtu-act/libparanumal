@@ -1,10 +1,10 @@
 #!/bin/bash
-#BSUB -n 96
-#BSUB -R "span[block=12]"
+#BSUB -n 50
+#BSUB -R "span[block=10]"
 #BSUB -W 1:00
 #BSUB -R "select[model == XeonGold6126]"
 #BSUB -R "rusage[mem=1GB]"
-#BSUB -J LP_96
+#BSUB -J LP_50
 
 # Load modules
 module purge
@@ -15,14 +15,15 @@ export OCCA_DIR=~/libparanumal/occa
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 
 # Make occa for CPU - Only needed if already compiled for GPU or not compiled yet
-#cd ../../occa
-#make clean
-#make -j
-#cd ../solvers/acoustics/
+cd ../../occa
+make clean
+make -j
+cd ../solvers/acoustics/
 
 # Build project
-#make clean
+make clean
 make -j
 
-mpirun ./acousticsMain setups/setupTet3D_Template
+mpirun ./acousticsMain setups/setupClassroom2
+#mpirun ./acousticsMain setups/setupTet3D_Template
 #mpirun ./acousticsMain setups/setupTet3D_ER_100mm_rigid_2

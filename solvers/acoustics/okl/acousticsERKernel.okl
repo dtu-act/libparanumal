@@ -397,7 +397,7 @@ void findElement(const dfloat x,
 				dfloat magv = sqrt(vxt*vxt + vyt*vyt + vzt*vzt);
 				
 				// To avoid NaN
-				if(magv == 0.0){
+				if(magv < 1.0e-14){
 					anglei[i] = 0;
 				} else {
 
