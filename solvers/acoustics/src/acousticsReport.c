@@ -32,7 +32,7 @@ void acousticsReport(acoustics_t *acoustics, dfloat time, setupAide &newOptions)
 
   // copy data back to host
   acoustics->o_q.copyTo(acoustics->q);
-// Print output to txt files
+// Print x,y,z, and pressure to txt files
 #if 0
   int nprocs, procid;
   MPI_Comm_rank(MPI_COMM_WORLD,&procid);
@@ -40,12 +40,22 @@ void acousticsReport(acoustics_t *acoustics, dfloat time, setupAide &newOptions)
 
   hlong globalNelements;
   MPI_Reduce(&mesh->Nelements, &globalNelements, 1, MPI_HLONG, MPI_SUM, 0, mesh->comm);
-  
+  string PREFIX;
+  newOptions.getArgs("RECEIVERPREFIX", PREFIX);
+
   FILE * xFP, * yFP, * zFP, * pFP;
-  char xFN[50] = "data/x.txt";
-  char yFN[50] = "data/y.txt";
-  char zFN[50] = "data/z.txt";
-  char pFN[50] = "data/p.txt";  
+  char xFN[BUFSIZ];
+  char yFN[BUFSIZ];
+  char zFN[BUFSIZ];
+  char pFN[BUFSIZ];
+  sprintf(xFN, "data/x_%s.txt", (char*)PREFIX.c_str());
+  sprintf(yFN, "data/y_%s.txt", (char*)PREFIX.c_str());
+  sprintf(zFN, "data/z_%s.txt", (char*)PREFIX.c_str());
+  sprintf(pFN, "data/p_%s.txt", (char*)PREFIX.c_str());
+  //char xFN[50] = "data/x.txt";
+  //char yFN[50] = "data/y.txt";
+  //char zFN[50] = "data/z.txt";
+  //char pFN[50] = "data/p.txt";
   for(int i = 0; i < nprocs; i++){
     if(procid == i){
       if(procid == 0){
@@ -99,7 +109,7 @@ void acousticsReport(acoustics_t *acoustics, dfloat time, setupAide &newOptions)
 
   sprintf(fname, "foo_%04d_%04d.vtu", mesh->rank, acoustics->frame++);
 
-  //acousticsPlotVTU(acoustics, fname);
+//  acousticsPlotVTU(acoustics, fname);
 }
 
 
@@ -150,11 +160,7 @@ void acousticsSnapshotXYZ(acoustics_t *acoustics, setupAide &newOptions){
       fprintf(yFP, "%.15lf ",yEA);
       fprintf(zFP, "%.15lf ",zEA);
       
-        }
-        //fprintf(xFP, "\n");
-        //fprintf(yFP, "\n");
-        //fprintf(zFP, "\n");
-        
+        }       
       }
 
       fclose(xFP);

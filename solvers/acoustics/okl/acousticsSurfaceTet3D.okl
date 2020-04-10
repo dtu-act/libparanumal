@@ -125,10 +125,10 @@ void centralBC(const dfloat nx,
 
   dfloat ndotUM = nx*uM + ny*vM + nz*wM;
   dfloat ndotUP = nx*uP + ny*vP + nz*wP;
-  *rflux = p_half * (ndotUP - ndotUM) + vn;
-  *uflux  = p_half*nx*(rP-rM);
-  *vflux  = p_half*ny*(rP-rM);
-  *wflux  = p_half*nz*(rP-rM);
+  *rflux = (p_half * (ndotUP - ndotUM) + vn)*p_AcConstant;
+  *uflux  = p_half*nx*(rP-rM)/p_rho;
+  *vflux  = p_half*ny*(rP-rM)/p_rho;
+  *wflux  = p_half*nz*(rP-rM)/p_rho;
 
 }
 
@@ -280,12 +280,12 @@ void centralBC(const dfloat nx,
 
             dfloat rflux, uflux, vflux, wflux;
             
-            // [EA] - CHANGED HERE FOR CENTRAL FLUX
+            // [EA]
             //upwind(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux);
             //central(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux);
             //centralBC(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, vn, &rflux, &uflux, &vflux, &wflux);
             upwindBC(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux, vn);
-
+            
             s_rflux[es][n]  = sc*(-rflux);
             s_uflux[es][n] = sc*(-uflux);
             s_vflux[es][n] = sc*(-vflux);
@@ -334,3 +334,229 @@ void centralBC(const dfloat nx,
     }
   }
 }
+
+// batch process elements
+@kernel void acousticsSurfaceTet3DCurv(const dlong Nelements,
+				  @restrict const  dfloat *  sgeo,
+				  @restrict const  dfloat *  sgeoCurv,
+				  @restrict const  dlong *  mapCurv,
+				  @restrict const  dfloat *  LIFTT,
+				  @restrict const  dlong  *  vmapM,
+				  @restrict const  dlong  *  vmapP,
+				  @restrict const  int    *  EToB,
+				  const dfloat time,
+				  @restrict const  dfloat *  x,
+				  @restrict const  dfloat *  y,
+				  @restrict const  dfloat *  z,	
+				  @restrict const  dfloat *  q,
+				  @restrict dfloat *  rhsq,
+          @restrict const dfloat *acc,
+          @restrict dfloat *rhsacc,
+          @restrict const  dlong *mapAcc,
+          @restrict const  dfloat *LR,
+          @restrict const dlong *LRInfo,
+          const dlong NLRPoints,
+          @restrict const dlong * anglei,
+          @restrict const dfloat * ER,
+          @restrict const dlong * ERInfo){
+  
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+    
+    // @shared storage for flux terms
+    @shared dfloat s_rflux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_uflux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_vflux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_wflux[p_NblockS][p_NfacesNfp];
+
+    // for all face nodes of all elements
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_NfacesNfp){
+            // find face that owns this node
+            const int face = n/p_Nfp;
+            
+            
+
+            const dlong eCurv = mapCurv[e];
+            
+            dfloat nx;
+            dfloat ny;
+	          dfloat nz;
+            dfloat sJ;
+            dfloat invJ;            
+            if(eCurv < 0){
+              // load surface geofactors for this face
+              const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
+              nx   = sgeo[sid+p_NXID];
+              ny   = sgeo[sid+p_NYID];
+              nz   = sgeo[sid+p_NZID];
+              sJ   = sgeo[sid+p_SJID];
+              invJ = sgeo[sid+p_IJID];
+            } else {
+              const int nID = n % p_Nfp;
+              const dlong sid = eCurv*p_NsgeoCurv*p_Nfp*p_Nfaces + face*p_Nfp*p_NsgeoCurv + nID*p_NsgeoCurv;
+              nx   = sgeoCurv[sid+p_NXIDC];
+              ny   = sgeoCurv[sid+p_NYIDC];
+              nz   = sgeoCurv[sid+p_NZIDC];
+              sJ   = sgeoCurv[sid+p_SJIDC];
+              invJ = sgeoCurv[sid+p_IJIDC];
+            }
+            
+            // indices of negative and positive traces of face node
+            const dlong id  = e*p_Nfp*p_Nfaces + n;
+            const dlong idM = vmapM[id];
+            const dlong idP = vmapP[id];
+            
+            // load traces
+            const dlong eM = e;
+            const dlong eP = idP/p_Np;
+            const int vidM = idM%p_Np;
+            const int vidP = idP%p_Np;
+
+            const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+            const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
+            
+            const dfloat rM  = q[qbaseM + 0*p_Np];
+            const dfloat uM = q[qbaseM + 1*p_Np];
+            const dfloat vM = q[qbaseM + 2*p_Np];
+            const dfloat wM = q[qbaseM + 3*p_Np];
+
+            dfloat rP  = q[qbaseP + 0*p_Np];
+            dfloat uP = q[qbaseP + 1*p_Np];
+            dfloat vP = q[qbaseP + 2*p_Np];
+            dfloat wP = q[qbaseP + 3*p_Np];
+
+            // [EA] Boundary term
+            dfloat vn = 0.0;
+            
+            // apply boundary condition
+          const int bc = EToB[face+p_Nfaces*e];
+
+
+          if(bc > 0){
+            uP = -uM;
+            vP = -vM;
+            wP = -wM;
+          }          
+          // Frequency independent
+          if(bc == 2){
+            vn = rM / p_Z_IND;
+          }
+
+          // Local Reaction
+          if(bc == 3){
+            const dlong idAcc = mapAcc[id];
+
+            vn = LR[0+p_LRYinf] * rM;
+            
+            // Real poles
+            for(int piEA = 0; piEA < LRInfo[1]; piEA++){
+              rhsacc[LRInfo[0]*idAcc+piEA] = -LR[p_LRLambda+piEA]*acc[LRInfo[0]*idAcc+piEA] + rM;  
+            }
+
+            for(int piEA = 0; piEA < LRInfo[1]; piEA++){
+              vn = vn + LR[p_LRA+piEA]*acc[LRInfo[0]*idAcc+piEA];
+            }
+            // Imag poles
+            int pIdx;
+            for(int piEA = LRInfo[1]; piEA < LRInfo[0]; piEA+=2){
+              pIdx = (piEA - LRInfo[1]) / 2;
+              rhsacc[LRInfo[0]*idAcc+piEA] = -LR[p_LRAlpha+pIdx]*acc[LRInfo[0]*idAcc+piEA] - LR[p_LRBeta+pIdx]*acc[LRInfo[0]*idAcc+piEA+1] + rM;
+              rhsacc[LRInfo[0]*idAcc+piEA+1] = -LR[p_LRAlpha+pIdx]*acc[LRInfo[0]*idAcc+piEA+1] + LR[p_LRBeta+pIdx]*acc[LRInfo[0]*idAcc+piEA];
+              vn += 2.0 * (LR[p_LRB+pIdx]*acc[LRInfo[0]*idAcc+piEA]+LR[p_LRC+pIdx]*acc[LRInfo[0]*idAcc+piEA+1]);
+            }  
+          }
+          
+          
+          // Extended Reaction
+          if(bc == 4){
+            dlong idAcc = mapAcc[id];
+            dlong angIdx = anglei[idAcc];
+           
+            dlong accIdx = LRInfo[0]*NLRPoints + ERInfo[0]*idAcc;
+          
+            vn = ER[p_ERYinf+angIdx] * rM;
+            // Real poles
+            for(int piEA = 0; piEA < ERInfo[1]; piEA++){
+              rhsacc[accIdx + piEA] = -ER[p_ERLambda+piEA]*acc[accIdx + piEA] + rM;  
+            }
+          
+            for(int piEA = 0; piEA < ERInfo[1]; piEA++){
+              vn = vn + ER[p_ERA+angIdx*ERInfo[1] + piEA]*acc[accIdx+piEA];
+            }
+          
+            // Imag poles
+            int pIdx;
+            for(int piEA = ERInfo[1]; piEA < ERInfo[0]; piEA+=2){
+              pIdx = (piEA - ERInfo[1]) / 2;
+              rhsacc[accIdx+piEA] = -ER[p_ERAlpha+pIdx]*acc[accIdx+piEA] - ER[p_ERBeta+pIdx]*acc[accIdx+piEA+1] + rM;
+              rhsacc[accIdx+piEA+1] = -ER[p_ERAlpha+pIdx]*acc[accIdx+piEA+1] + ER[p_ERBeta+pIdx]*acc[accIdx+piEA];
+              vn += 2.0 * (ER[p_ERB+angIdx*ERInfo[2]+pIdx]*acc[accIdx+piEA]+ER[p_ERC+angIdx*ERInfo[2]+pIdx]*acc[accIdx+piEA+1]);
+            }
+          }
+          
+            
+            // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
+            const dfloat sc = invJ*sJ;
+
+            dfloat rflux, uflux, vflux, wflux;
+            
+            
+            //upwind(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux);
+            //central(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux);
+            //centralBC(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, vn, &rflux, &uflux, &vflux, &wflux);
+            upwindBC(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux, vn);
+            
+            s_rflux[es][n]  = sc*(-rflux);
+            s_uflux[es][n] = sc*(-uflux);
+            s_vflux[es][n] = sc*(-vflux);
+	          s_wflux[es][n] = sc*(-wflux);
+            
+          }
+        }
+      }
+    }
+    
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
+
+    // for each node in the element
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_Np){            
+            // load rhs data from volume fluxes
+            dfloat Lrflux = 0.f, Luflux = 0.f, Lvflux = 0.f, Lwflux = 0.f;
+            
+            // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+            #pragma unroll p_NfacesNfp
+              for(int m=0;m<p_NfacesNfp;++m){
+                const dfloat L = LIFTT[n+m*p_Np];
+                Lrflux += L*s_rflux[es][m];
+                Luflux += L*s_uflux[es][m];
+                Lvflux += L*s_vflux[es][m];
+		            Lwflux += L*s_wflux[es][m];
+              }
+
+            //[EA] - Scaled to our equations
+            const dlong base = e*p_Np*p_Nfields+n;
+            rhsq[base+0*p_Np] *= p_AcConstant;
+            rhsq[base+1*p_Np] /= p_rho;
+            rhsq[base+2*p_Np] /= p_rho;
+	          rhsq[base+3*p_Np] /= p_rho;
+
+            rhsq[base+0*p_Np] += Lrflux;
+            rhsq[base+1*p_Np] += Luflux;
+            rhsq[base+2*p_Np] += Lvflux;
+	          rhsq[base+3*p_Np] += Lwflux;
+          }
+        }
+      }
+    }
+  }
+}
+

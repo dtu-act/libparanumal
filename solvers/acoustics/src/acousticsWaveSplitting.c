@@ -16,7 +16,7 @@ void acousticsWSExchange(acoustics_t *acoustics){
 					dlong sendCount = acoustics->recvCountsArray[mesh->size*i + j];
 					if(sendCount){
 						
-						// TODO: PRECALCULATE ONCE, INSTED OF EVERY TIME.
+						// TODO: PRECALCULATE ONCE, INSTEAD OF EVERY TIME.
 						dlong sendOffset = 0;
 						for(int k = 0; k < j; k++){
 							sendOffset += acoustics->recvCountsArray[mesh->size*i + k]*3;
@@ -32,7 +32,7 @@ void acousticsWSExchange(acoustics_t *acoustics){
 			dlong recvCount = acoustics->recvCountsArray[mesh->size*i + mesh->rank];
 			if(recvCount){
 				
-				// TODO: PRECALCULATE ONCE, INSTED OF EVERY TIME.
+				// TODO: PRECALCULATE ONCE, INSTEAD OF EVERY TIME.
 				dlong recvOffset = 0;
 				for(int k = 0; k < i; k++){
 					recvOffset += acoustics->recvCountsArray[mesh->size*k + mesh->rank]*3;

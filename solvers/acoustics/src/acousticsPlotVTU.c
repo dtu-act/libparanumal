@@ -41,7 +41,7 @@ void acousticsPlotVTU(acoustics_t *acoustics, char *fileName){
           mesh->Nelements*mesh->plotNelements);
   // write out nodes
   fprintf(fp, "      <Points>\n");
-  fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
+  fprintf(fp, "        <DataArray type=\"Float64\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   
   // compute plot node coordinates on the fly
   for(dlong e=0;e<mesh->Nelements;++e){
@@ -64,7 +64,7 @@ void acousticsPlotVTU(acoustics_t *acoustics, char *fileName){
 
   // write out pressure
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Density\" Format=\"ascii\">\n");
+  fprintf(fp, "        <DataArray type=\"Float64\" Name=\"Density\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
@@ -80,7 +80,7 @@ void acousticsPlotVTU(acoustics_t *acoustics, char *fileName){
   fprintf(fp, "       </DataArray>\n");
 
   // write out velocity
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
+  fprintf(fp, "        <DataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotun = 0, plotvn = 0, plotwn = 0;

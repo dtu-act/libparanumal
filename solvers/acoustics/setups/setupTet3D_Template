@@ -2,20 +2,13 @@
 1.0
 
 [MESH FILE]
-#../../meshes/cubeTet_02_1ER5FI_res02.msh
-#../../meshes/cubeTet_02_1ER5FI_res01.msh
-#../../meshes/cubeTet_02_FreqIndep_res01.msh
-#../../meshes/cubeTet_02_1LR5FI_res02.msh
-#../../meshes/cubeTet_FL_room_full_size.msh
-#../../meshes/cubeTet_02_PerfRefl_res01.msh
-#../../meshes/cubeTet_02_PerfRefl_res007.msh
-#../../meshes/rectTet_0204_PerfRefl_res01.msh
-#../../meshes/3DCylinderNoCurv.msh
-../../meshes/3DCylinderNoCurvFiner.msh
-#../../meshes/cubeTest.msh
+../../meshes/mesh.msh
 
 [POLYNOMIAL DEGREE]
 4
+
+[CURVILINEAR MESH] # 0: Off, 1: On. Mesh order MUST match [POLYNOMIAL DEGREE]
+0
 
 [TIME INTEGRATOR]
 #DOPRI5 # Currently broken
@@ -23,17 +16,16 @@ LSERK4
 #EIRK4
 
 [FINAL TIME]
-#1.0
-0.005
+0.05
 
 [RECEIVER]
 setups/setupdata/ReceiverLocations.dat
 
 [RECEIVERPREFIX] # Prefix for data/PREFIX_RecvPoints_xx.txt
-CylinderLibPFiner
+Receivers
 
 [CFL]
-5
+0.5
 
 [RHO] # Density of the medium
 1.2
@@ -42,31 +34,28 @@ CylinderLibPFiner
 343.0
 
 [Z_IND] # Z value for frequency independent boundary condition
-#411.6   			# rho*c 		   - ~100% absorption
+411.6   			# rho*c 		   - ~100% absorption
 #2399.628 		# 5.83*rho*c   - ~50% absorption
 #4116000.0    # 10000*rho*c  - ~rigid boundary
-142780.0    # 346.88*rho*c      - ~ alpha = 0.0115
+#142780.0    # 346.88*rho*c      - ~ alpha = 0.0115
 
 [LRVECTFIT] # Vectorfit filename from vectorfitDriverLR.m
-setups/setupdata/LRDATA14.dat
-#setups/setupdata/ER_100mm_rigid_2_2_TIL_LR.dat
+setups/setupdata/LRDATA.dat
 
 [ERVECTFIT] # Vectorfit filename from vectorfitDriverER.m
-#setups/setupdata/ERDATA14.dat
-setups/setupdata/ERDATA14_d0.dat
-#setups/setupdata/ER_100mm_rigid_2.dat
+setups/setupdata/ERDATA.dat
 
 [SXYZ] # Width of initial pulse
-0.175
+0.3
 
 [SX] # x coordinate of initial pulse
-0.05
+0.5
 
 [SY] # y coordinate of initial pulse
--0.05
+0.3
 
 [SZ] # z coordinate of initial pulse
-0.5
+0.8
 
 [SNAPSHOT] # Take a snapshot of solution every X timesteps, 0 to turn off
 0

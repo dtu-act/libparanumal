@@ -58,6 +58,6 @@ void acousticsError(acoustics_t *acoustics, dfloat time){
   MPI_Allreduce(&minR, &globalMinR, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
 
   if(mesh->rank==0)
-    printf("%g, %g, %g ( time, min density, max density)\n", time, globalMinR, globalMaxR);
+    printf("%g, %g, %g ( time, min pressure, max pressure)\n", time, globalMinR, globalMaxR);
   
 }

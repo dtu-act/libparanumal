@@ -26,6 +26,79 @@ SOFTWARE.
 
 #include "acoustics.h"
 
+
+
+void acousticsVolumeKernel(acoustics_t *acoustics, occa::memory qPtr, occa::memory rhsqPtr){
+  mesh_t *mesh = acoustics->mesh;
+  if(!mesh->Ncurv){
+    acoustics->volumeKernel(mesh->Nelements, 
+          mesh->o_vgeo, 
+          mesh->o_Dmatrices,
+          qPtr, 
+          rhsqPtr);
+  } else {
+    acoustics->volumeKernelCurv(mesh->Nelements,
+        mesh->o_vgeo,
+        mesh->o_vgeoCurv,
+        mesh->o_mapCurv,
+        mesh->o_Dmatrices,
+        qPtr,
+        rhsqPtr);
+  }
+}
+
+void acousticsSurfaceKernel(acoustics_t *acoustics, occa::memory qPtr, occa::memory rhsqPtr,
+                      occa::memory accPtr, occa::memory rhsaccPtr, const dfloat currentTime){
+  mesh_t *mesh = acoustics->mesh;
+  if(!mesh->Ncurv){
+      acoustics->surfaceKernel(mesh->Nelements, 
+		       mesh->o_sgeo, 
+		       mesh->o_LIFTT, 
+		       mesh->o_vmapM, 
+		       mesh->o_vmapP, 
+		       mesh->o_EToB,
+		       currentTime, 
+		       mesh->o_x, 
+		       mesh->o_y,
+		       mesh->o_z, 
+		       qPtr, 
+		       rhsqPtr,
+           accPtr,
+           rhsaccPtr,
+           mesh->o_mapAcc,
+           acoustics->o_LR,
+           acoustics->o_LRInfo,
+           mesh->NLRPoints,
+           acoustics->o_anglei,
+           acoustics->o_ER,
+           acoustics->o_ERInfo);
+    } else {
+      acoustics->surfaceKernelCurv(mesh->Nelements, 
+		       mesh->o_sgeo, 
+           mesh->o_sgeoCurv,
+           mesh->o_mapCurv,
+		       mesh->o_LIFTT, 
+		       mesh->o_vmapM, 
+		       mesh->o_vmapP, 
+		       mesh->o_EToB,
+		       currentTime, 
+		       mesh->o_x, 
+		       mesh->o_y,
+		       mesh->o_z, 
+		       qPtr, 
+		       rhsqPtr,
+           accPtr,
+           rhsaccPtr,
+           mesh->o_mapAcc,
+           acoustics->o_LR,
+           acoustics->o_LRInfo,
+           mesh->NLRPoints,
+           acoustics->o_anglei,
+           acoustics->o_ER,
+           acoustics->o_ERInfo);
+    }
+}
+
 void acousticsDopriStep(acoustics_t *acoustics, setupAide &newOptions, const dfloat time){
 
   mesh_t *mesh = acoustics->mesh;
@@ -175,11 +248,7 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
       meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
     }
 
-    acoustics->volumeKernel(mesh->Nelements, 
-		      mesh->o_vgeo, 
-		      mesh->o_Dmatrices,
-		      acoustics->o_q, 
-		      acoustics->o_rhsq);
+    acousticsVolumeKernel(acoustics, acoustics->o_q, acoustics->o_rhsq);
 
     // wait for q halo data to arrive
     if(mesh->totalHaloPairs>0){
@@ -190,27 +259,8 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
       acoustics->o_q.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
     }
 
-    acoustics->surfaceKernel(mesh->Nelements, 
-		       mesh->o_sgeo, 
-		       mesh->o_LIFTT, 
-		       mesh->o_vmapM, 
-		       mesh->o_vmapP, 
-		       mesh->o_EToB,
-		       currentTime, 
-		       mesh->o_x, 
-		       mesh->o_y,
-		       mesh->o_z, 
-		       acoustics->o_q, 
-		       acoustics->o_rhsq,
-           acoustics->o_acc,
-           acoustics->o_rhsacc,
-           mesh->o_mapAcc,
-           acoustics->o_LR,
-           acoustics->o_LRInfo,
-           mesh->NLRPoints,
-           acoustics->o_anglei,
-           acoustics->o_ER,
-           acoustics->o_ERInfo);
+    acousticsSurfaceKernel(acoustics, acoustics->o_q, acoustics->o_rhsq,
+                      acoustics->o_acc, acoustics->o_rhsacc, currentTime);
     
     // update solution using Runge-Kutta
     acoustics->updateKernel(mesh->Nelements, 
@@ -231,7 +281,6 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
             acoustics->o_resacc,
             acoustics->o_acc);
     }
-
     if(mesh->NERPoints){
       acoustics->updateKernelER(mesh->NERPoints,
             acoustics->ERInfo[0],
@@ -243,7 +292,6 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
             acoustics->o_acc,
             acoustics->LRInfo[0]*mesh->NLRPoints);
     }
-
   }
 
   
@@ -269,7 +317,6 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
       acoustics->qRecvCopyCounter++;  
     }
   }
-
   //---------RECEIVER---------
   }
 
@@ -324,647 +371,134 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
       acoustics->ERMoveVT(mesh->NERPoints, acoustics->o_vt);    
     }
   }
+  for(int s = 0; s < 6; s++){
+    dfloat currentTime = time + mesh->erkc[s]*mesh->dt;
+    
+    // [EA] Make pointers for each stage
+    occa::memory qPtr;
+    occa::memory rhsqPtr;
+    occa::memory accPtr;
+    occa::memory rhsaccPtr;
+    switch(s){
+      case 0:
+        qPtr = acoustics->o_q;
+        rhsqPtr = acoustics->o_k1rhsq;
+        accPtr = acoustics->o_acc;
+        rhsaccPtr = acoustics->o_k1acc;
+        break;
+      case 1:
+        qPtr = acoustics->o_resq;
+        rhsqPtr = acoustics->o_k2rhsq;
+        accPtr = acoustics->o_Xacc;
+        rhsaccPtr = acoustics->o_k2acc;
+        break;
+      case 2:
+        qPtr = acoustics->o_resq;
+        rhsqPtr = acoustics->o_k3rhsq;
+        accPtr = acoustics->o_Xacc;
+        rhsaccPtr = acoustics->o_k3acc;
+        break;
+      case 3:
+        qPtr = acoustics->o_resq;
+        rhsqPtr = acoustics->o_k4rhsq;
+        accPtr = acoustics->o_Xacc;
+        rhsaccPtr = acoustics->o_k4acc;
+        break;
+      case 4:
+        qPtr = acoustics->o_resq;
+        rhsqPtr = acoustics->o_k5rhsq;
+        accPtr = acoustics->o_Xacc;
+        rhsaccPtr = acoustics->o_k5acc;
+        break;
+      case 5:
+        qPtr = acoustics->o_resq;
+        rhsqPtr = acoustics->o_k6rhsq;
+        accPtr = acoustics->o_Xacc;
+        rhsaccPtr = acoustics->o_k6acc;
+        break;
+    }
+    
+    // extract q halo on DEVICE
+    if(mesh->totalHaloPairs>0){
+      int Nentries = mesh->Np*acoustics->Nfields;
+      mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, qPtr, acoustics->o_haloBuffer);
+        
+      // copy extracted halo to HOST 
+      acoustics->o_haloBuffer.copyTo(acoustics->sendBuffer);      
+        
+      // start halo exchange
+      meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
+    }
 
-  //----------------------------------------- STAGE 1 -----------------------------------------
-  dfloat currentTime = time + mesh->erkc[0]*mesh->dt;
-  // extract q halo on DEVICE
-  if(mesh->totalHaloPairs>0){
-    int Nentries = mesh->Np*acoustics->Nfields;
-      
-    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, acoustics->o_q, acoustics->o_haloBuffer);
-      
-    // copy extracted halo to HOST 
-    acoustics->o_haloBuffer.copyTo(acoustics->sendBuffer);      
-      
-    // start halo exchange
-    meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
-  }
+    acousticsVolumeKernel(acoustics, qPtr, rhsqPtr);
 
-  acoustics->volumeKernel(mesh->Nelements, 
-	     mesh->o_vgeo, 
-	     mesh->o_Dmatrices,
-	     acoustics->o_q, 
-	     acoustics->o_k1rhsq);
+    if(mesh->totalHaloPairs>0){
+      meshHaloExchangeFinish(mesh);
+        
+      // copy halo data to DEVICE
+      size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
+      qPtr.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
+    }
+    
+    acousticsSurfaceKernel(acoustics, qPtr, rhsqPtr, accPtr, rhsaccPtr, currentTime);
 
-  if(mesh->totalHaloPairs>0){
-    meshHaloExchangeFinish(mesh);
-      
-    // copy halo data to DEVICE
-    size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    acoustics->o_q.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
-  }
-  acoustics->surfaceKernel(mesh->Nelements, 
-		       mesh->o_sgeo, 
-		       mesh->o_LIFTT, 
-		       mesh->o_vmapM, 
-		       mesh->o_vmapP, 
-		       mesh->o_EToB,
-		       currentTime, 
-		       mesh->o_x, 
-		       mesh->o_y,
-		       mesh->o_z, 
-		       acoustics->o_q, 
-		       acoustics->o_k1rhsq,
-           acoustics->o_acc,
-           acoustics->o_k1acc,
-           mesh->o_mapAcc,
-           acoustics->o_LR,
-           acoustics->o_LRInfo,
-           mesh->NLRPoints,
-           acoustics->o_anglei,
-           acoustics->o_ER,
-           acoustics->o_ERInfo);
+    acoustics->acousticsUpdateEIRK4(mesh->Nelements,
+            mesh->dt,  
+            mesh->o_erka,
+            mesh->o_erkb,
+            acoustics->o_k1rhsq,
+            acoustics->o_k2rhsq,
+            acoustics->o_k3rhsq,
+            acoustics->o_k4rhsq,
+            acoustics->o_k5rhsq,
+            acoustics->o_k6rhsq,
+            acoustics->o_resq,
+            acoustics->o_q,
+            s+1);
 
- 
-  acoustics->acousticsUpdateEIRK4(mesh->Nelements,
-		      mesh->dt,  
-		      mesh->o_erka,
-		      mesh->o_erkb,
-		      acoustics->o_k1rhsq,
-          acoustics->o_k2rhsq,
-          acoustics->o_k3rhsq,
-          acoustics->o_k4rhsq,
-          acoustics->o_k5rhsq,
-          acoustics->o_k6rhsq,
-		      acoustics->o_resq,
-		      acoustics->o_q,
-          1);
-
-  if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          mesh->o_mapAccToQ,
-          acoustics->o_LR,
-          acoustics->o_LRInfo,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          1);
-
-  }
-  if(mesh->NERPoints){
-    acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
-					mesh->NLRPoints,
-					acoustics->LRInfo[0],
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          mesh->o_mapAccToQ,
-          acoustics->o_ER,
-          acoustics->o_ERInfo,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          1);
-  }
-
-          
-  //----------------------------------------- STAGE 2 -----------------------------------------
-  
-  currentTime = time + mesh->erkc[1]*mesh->dt;
-  // extract q halo on DEVICE
-  if(mesh->totalHaloPairs>0){
-    int Nentries = mesh->Np*acoustics->Nfields;
-      
-    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, acoustics->o_resq, acoustics->o_haloBuffer);
-      
-    // copy extracted halo to HOST 
-    acoustics->o_haloBuffer.copyTo(acoustics->sendBuffer);      
-      
-    // start halo exchange
-    meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
-  }
-  acoustics->volumeKernel(mesh->Nelements, 
-	     mesh->o_vgeo, 
-	     mesh->o_Dmatrices,
-	     acoustics->o_resq, 
-	     acoustics->o_k2rhsq);
-
-  if(mesh->totalHaloPairs>0){
-    meshHaloExchangeFinish(mesh);
-      
-    // copy halo data to DEVICE
-    size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    acoustics->o_resq.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
-  }
-  acoustics->surfaceKernel(mesh->Nelements, 
-		       mesh->o_sgeo, 
-		       mesh->o_LIFTT, 
-		       mesh->o_vmapM, 
-		       mesh->o_vmapP, 
-		       mesh->o_EToB,
-		       currentTime, 
-		       mesh->o_x, 
-		       mesh->o_y,
-		       mesh->o_z, 
-		       acoustics->o_resq, 
-		       acoustics->o_k2rhsq,
-           acoustics->o_Xacc,
-           acoustics->o_k2acc,
-           mesh->o_mapAcc,
-           acoustics->o_LR,
-           acoustics->o_LRInfo,
-           mesh->NLRPoints,
-           acoustics->o_anglei,
-           acoustics->o_ER,
-           acoustics->o_ERInfo);
-
-  acoustics->acousticsUpdateEIRK4(mesh->Nelements,
-		      mesh->dt,  
-		      mesh->o_erka,
-		      mesh->o_erkb,
-		      acoustics->o_k1rhsq,
-          acoustics->o_k2rhsq,
-          acoustics->o_k3rhsq,
-          acoustics->o_k4rhsq,
-          acoustics->o_k5rhsq,
-          acoustics->o_k6rhsq,
-		      acoustics->o_resq,
-		      acoustics->o_q,
-          2);
-
-  if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          mesh->o_mapAccToQ,
-          acoustics->o_LR,
-          acoustics->o_LRInfo,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          2);
-  }
-    if(mesh->NERPoints){
-    acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
-					mesh->NLRPoints,
-					acoustics->LRInfo[0],
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          mesh->o_mapAccToQ,
-          acoustics->o_ER,
-          acoustics->o_ERInfo,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          2);
-  }
-
-  //----------------------------------------- STAGE 3 -----------------------------------------
-  
-  currentTime = time + mesh->erkc[2]*mesh->dt;
-
-  // extract q halo on DEVICE
-  if(mesh->totalHaloPairs>0){
-    int Nentries = mesh->Np*acoustics->Nfields;
-      
-    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, acoustics->o_resq, acoustics->o_haloBuffer);
-      
-    // copy extracted halo to HOST 
-    acoustics->o_haloBuffer.copyTo(acoustics->sendBuffer);      
-      
-    // start halo exchange
-    meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
-  }
-  acoustics->volumeKernel(mesh->Nelements, 
-	     mesh->o_vgeo, 
-	     mesh->o_Dmatrices,
-	     acoustics->o_resq, 
-	     acoustics->o_k3rhsq);
-
-  if(mesh->totalHaloPairs>0){
-    meshHaloExchangeFinish(mesh);
-      
-    // copy halo data to DEVICE
-    size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    acoustics->o_resq.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
-  }
-  acoustics->surfaceKernel(mesh->Nelements, 
-		       mesh->o_sgeo, 
-		       mesh->o_LIFTT, 
-		       mesh->o_vmapM, 
-		       mesh->o_vmapP, 
-		       mesh->o_EToB,
-		       currentTime, 
-		       mesh->o_x, 
-		       mesh->o_y,
-		       mesh->o_z, 
-		       acoustics->o_resq, 
-		       acoustics->o_k3rhsq,
-           acoustics->o_Xacc,
-           acoustics->o_k3acc,
-           mesh->o_mapAcc,
-           acoustics->o_LR,
-           acoustics->o_LRInfo,
-           mesh->NLRPoints,
-           acoustics->o_anglei,
-           acoustics->o_ER,
-           acoustics->o_ERInfo);
-
-  acoustics->acousticsUpdateEIRK4(mesh->Nelements,
-		      mesh->dt,  
-		      mesh->o_erka,
-		      mesh->o_erkb,
-		      acoustics->o_k1rhsq,
-          acoustics->o_k2rhsq,
-          acoustics->o_k3rhsq,
-          acoustics->o_k4rhsq,
-          acoustics->o_k5rhsq,
-          acoustics->o_k6rhsq,
-		      acoustics->o_resq,
-		      acoustics->o_q,
-          3);
-
-  if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          mesh->o_mapAccToQ,
-          acoustics->o_LR,
-          acoustics->o_LRInfo,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          3);
-  }
-  if(mesh->NERPoints){
-  acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
-					mesh->NLRPoints,
-					acoustics->LRInfo[0],
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          mesh->o_mapAccToQ,
-          acoustics->o_ER,
-          acoustics->o_ERInfo,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-        3);
-  }
-
-  //----------------------------------------- STAGE 4 -----------------------------------------
-  
-  currentTime = time + mesh->erkc[3]*mesh->dt;
-
-  // extract q halo on DEVICE
-  if(mesh->totalHaloPairs>0){
-    int Nentries = mesh->Np*acoustics->Nfields;
-      
-    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, acoustics->o_resq, acoustics->o_haloBuffer);
-      
-    // copy extracted halo to HOST 
-    acoustics->o_haloBuffer.copyTo(acoustics->sendBuffer);      
-      
-    // start halo exchange
-    meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
-  }
-  acoustics->volumeKernel(mesh->Nelements, 
-	     mesh->o_vgeo, 
-	     mesh->o_Dmatrices,
-	     acoustics->o_resq, 
-	     acoustics->o_k4rhsq);
-
-  if(mesh->totalHaloPairs>0){
-    meshHaloExchangeFinish(mesh);
-      
-    // copy halo data to DEVICE
-    size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    acoustics->o_resq.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
-  }
-  acoustics->surfaceKernel(mesh->Nelements, 
-		       mesh->o_sgeo, 
-		       mesh->o_LIFTT, 
-		       mesh->o_vmapM, 
-		       mesh->o_vmapP, 
-		       mesh->o_EToB,
-		       currentTime, 
-		       mesh->o_x, 
-		       mesh->o_y,
-		       mesh->o_z, 
-		       acoustics->o_resq, 
-		       acoustics->o_k4rhsq,
-           acoustics->o_Xacc,
-           acoustics->o_k4acc,
-           mesh->o_mapAcc,
-           acoustics->o_LR,
-           acoustics->o_LRInfo,
-           mesh->NLRPoints,
-           acoustics->o_anglei,
-           acoustics->o_ER,
-           acoustics->o_ERInfo);
-
-
-  acoustics->acousticsUpdateEIRK4(mesh->Nelements,
-		      mesh->dt,  
-		      mesh->o_erka,
-		      mesh->o_erkb,
-		      acoustics->o_k1rhsq,
-          acoustics->o_k2rhsq,
-          acoustics->o_k3rhsq,
-          acoustics->o_k4rhsq,
-          acoustics->o_k5rhsq,
-          acoustics->o_k6rhsq,
-		      acoustics->o_resq,
-		      acoustics->o_q,
-          4);
-
-  if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          mesh->o_mapAccToQ,
-          acoustics->o_LR,
-          acoustics->o_LRInfo,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          4);
-  }
-  if(mesh->NERPoints){
-  acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
-					mesh->NLRPoints,
-					acoustics->LRInfo[0],
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          mesh->o_mapAccToQ,
-          acoustics->o_ER,
-          acoustics->o_ERInfo,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-        4);
-  }
-
-  //----------------------------------------- STAGE 5 -----------------------------------------
-  
-  currentTime = time + mesh->erkc[4]*mesh->dt;
-
-  // extract q halo on DEVICE
-  if(mesh->totalHaloPairs>0){
-    int Nentries = mesh->Np*acoustics->Nfields;
-      
-    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, acoustics->o_resq, acoustics->o_haloBuffer);
-      
-    // copy extracted halo to HOST 
-    acoustics->o_haloBuffer.copyTo(acoustics->sendBuffer);      
-      
-    // start halo exchange
-    meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
-  }
-  acoustics->volumeKernel(mesh->Nelements, 
-	     mesh->o_vgeo, 
-	     mesh->o_Dmatrices,
-	     acoustics->o_resq, 
-	     acoustics->o_k5rhsq);
-
-
-  if(mesh->totalHaloPairs>0){
-    meshHaloExchangeFinish(mesh);
-      
-    // copy halo data to DEVICE
-    size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    acoustics->o_resq.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
-  }
-  acoustics->surfaceKernel(mesh->Nelements, 
-		       mesh->o_sgeo, 
-		       mesh->o_LIFTT, 
-		       mesh->o_vmapM, 
-		       mesh->o_vmapP, 
-		       mesh->o_EToB,
-		       currentTime, 
-		       mesh->o_x, 
-		       mesh->o_y,
-		       mesh->o_z, 
-		       acoustics->o_resq, 
-		       acoustics->o_k5rhsq,
-           acoustics->o_Xacc,
-           acoustics->o_k5acc,
-           mesh->o_mapAcc,
-           acoustics->o_LR,
-           acoustics->o_LRInfo,
-           mesh->NLRPoints,
-           acoustics->o_anglei,
-           acoustics->o_ER,
-           acoustics->o_ERInfo);
-
-
-  acoustics->acousticsUpdateEIRK4(mesh->Nelements,
-		      mesh->dt,  
-		      mesh->o_erka,
-		      mesh->o_erkb,
-		      acoustics->o_k1rhsq,
-          acoustics->o_k2rhsq,
-          acoustics->o_k3rhsq,
-          acoustics->o_k4rhsq,
-          acoustics->o_k5rhsq,
-          acoustics->o_k6rhsq,
-		      acoustics->o_resq,
-		      acoustics->o_q,
-          5);
-
-  if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          mesh->o_mapAccToQ,
-          acoustics->o_LR,
-          acoustics->o_LRInfo,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          5);
-  }
-  if(mesh->NERPoints){
-  acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
-					mesh->NLRPoints,
-					acoustics->LRInfo[0],
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          mesh->o_mapAccToQ,
-          acoustics->o_ER,
-          acoustics->o_ERInfo,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-        5);
-  }
-
-  //----------------------------------------- STAGE 6 -----------------------------------------
-  
-  currentTime = time + mesh->erkc[5]*mesh->dt;
-
-  // extract q halo on DEVICE
-  if(mesh->totalHaloPairs>0){
-    int Nentries = mesh->Np*acoustics->Nfields;
-      
-    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, acoustics->o_resq, acoustics->o_haloBuffer);
-      
-    // copy extracted halo to HOST 
-    acoustics->o_haloBuffer.copyTo(acoustics->sendBuffer);      
-      
-    // start halo exchange
-    meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
-  }
-  acoustics->volumeKernel(mesh->Nelements, 
-	     mesh->o_vgeo, 
-	     mesh->o_Dmatrices,
-	     acoustics->o_resq, 
-	     acoustics->o_k6rhsq);
-
-  if(mesh->totalHaloPairs>0){
-    meshHaloExchangeFinish(mesh);
-      
-    // copy halo data to DEVICE
-    size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    acoustics->o_resq.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
-  }
-  acoustics->surfaceKernel(mesh->Nelements, 
-		       mesh->o_sgeo, 
-		       mesh->o_LIFTT, 
-		       mesh->o_vmapM, 
-		       mesh->o_vmapP, 
-		       mesh->o_EToB,
-		       currentTime, 
-		       mesh->o_x, 
-		       mesh->o_y,
-		       mesh->o_z, 
-		       acoustics->o_resq, 
-		       acoustics->o_k6rhsq,
-           acoustics->o_Xacc,
-           acoustics->o_k6acc,
-           mesh->o_mapAcc,
-           acoustics->o_LR,
-           acoustics->o_LRInfo,
-           mesh->NLRPoints,
-           acoustics->o_anglei,
-           acoustics->o_ER,
-           acoustics->o_ERInfo);
-
-  acoustics->acousticsUpdateEIRK4(mesh->Nelements,
-		      mesh->dt,  
-		      mesh->o_erka,
-		      mesh->o_erkb,
-		      acoustics->o_k1rhsq,
-          acoustics->o_k2rhsq,
-          acoustics->o_k3rhsq,
-          acoustics->o_k4rhsq,
-          acoustics->o_k5rhsq,
-          acoustics->o_k6rhsq,
-		      acoustics->o_resq,
-		      acoustics->o_q,
-          6);
-
-  if(mesh->NLRPoints){
+    if(mesh->NLRPoints){
     acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          mesh->o_mapAccToQ,
-          acoustics->o_LR,
-          acoustics->o_LRInfo,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          6);
+            mesh->dt,  
+            mesh->o_esdirka,
+            mesh->o_esdirkb,
+            mesh->o_mapAccToQ,
+            acoustics->o_LR,
+            acoustics->o_LRInfo,
+            acoustics->o_k1acc,
+            acoustics->o_k2acc,
+            acoustics->o_k3acc,
+            acoustics->o_k4acc,
+            acoustics->o_k5acc,
+            acoustics->o_k6acc,
+            acoustics->o_resq,
+            acoustics->o_acc,
+            acoustics->o_Xacc,
+            s+1);
+
     }
     if(mesh->NERPoints){
       acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
-					mesh->NLRPoints,
-					acoustics->LRInfo[0],
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          mesh->o_mapAccToQ,
-          acoustics->o_ER,
-          acoustics->o_ERInfo,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          6);
+            mesh->NLRPoints,
+            acoustics->LRInfo[0],
+            mesh->dt,  
+            mesh->o_esdirka,
+            mesh->o_esdirkb,
+            mesh->o_mapAccToQ,
+            acoustics->o_ER,
+            acoustics->o_ERInfo,
+            acoustics->o_k1acc,
+            acoustics->o_k2acc,
+            acoustics->o_k3acc,
+            acoustics->o_k4acc,
+            acoustics->o_k5acc,
+            acoustics->o_k6acc,
+            acoustics->o_resq,
+            acoustics->o_acc,
+            acoustics->o_Xacc,
+            s+1);
+    }
   }
-
+  
   //---------RECEIVER---------
   if(acoustics->NReceiversLocal){
     acoustics->acousticsReceiverInterpolation(acoustics->NReceiversLocal,
@@ -987,846 +521,6 @@ void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dflo
       acoustics->qRecvCounter = 0;
       acoustics->qRecvCopyCounter++;  
     } 
-
   }
   //---------RECEIVER---------
-  
 }
-
-
-/* WIP
-void acousticsEirkStepAdap(acoustics_t *acoustics, setupAide &newOptions, const dfloat time){
-
-  mesh_t *mesh = acoustics->mesh;
-  
-  // [EA] Angle detection using wave-splitting
-  if(acoustics->NERPointsTotal){
-    // Do interpolation and send/receive wave-splitting points from other ranks 
-    if(acoustics->NERComPoints || acoustics->NComPointsToSendAllRanks){
-      
-      if(acoustics->NComPointsToSendAllRanks){
-      acoustics->acousticsWSComInterpolation(acoustics->NComPointsToSendAllRanks,
-																		acoustics->o_comPointsToSend,
-																		acoustics->o_ERintpolElementsCom,
-																		acoustics->o_ERintpolCom,
-																		acoustics->o_q,
-																		acoustics->o_vtSend);
-      }
-      
-      // Communicate wave-splitting points between ranks
-      acousticsWSExchange(acoustics); 
-      
-      if(acoustics->NERComPoints){
-      acoustics->ERInsertComVT(acoustics->NERComPoints,
-													acoustics->o_comPointsIdxAll,
-													acoustics->o_ERComPointsIdx,
-													acoustics->o_vtRecv,
-													acoustics->o_vt,
-													mesh->rank);
-      }
-    }
-
-    if(mesh->NERPoints){
-      acoustics->ERangleDetection(mesh->NERPoints,
-                                mesh->NLRPoints,
-                                acoustics->o_vt,
-                                acoustics->o_vi,
-                                acoustics->o_ERintpolElements,
-                                acoustics->o_q,
-                                mesh->o_sgeo,
-                                acoustics->o_ERintpol,
-                                acoustics->o_anglei,
-                                mesh->o_mapAccToQ,
-                                mesh->o_mapAccToN,
-                                mesh->dt,
-                                mesh->rank);
-
-
-      // Move vt time steps
-      acoustics->ERMoveVT(mesh->NERPoints, acoustics->o_vt);    
-    }
-  }
-  
-  //----------------------------------------- STAGE 1 -----------------------------------------
-  dfloat currentTime = time + mesh->erkc[0]*mesh->dt;
-  // extract q halo on DEVICE
-  if(mesh->totalHaloPairs>0){
-    int Nentries = mesh->Np*acoustics->Nfields;
-      
-    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, acoustics->o_q, acoustics->o_haloBuffer);
-      
-    // copy extracted halo to HOST 
-    acoustics->o_haloBuffer.copyTo(acoustics->sendBuffer);      
-      
-    // start halo exchange
-    meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
-  }
-  acoustics->volumeKernel(mesh->Nelements, 
-	     mesh->o_vgeo, 
-	     mesh->o_Dmatrices,
-	     acoustics->o_q, 
-	     acoustics->o_k1rhsq);
-  if(mesh->totalHaloPairs>0){
-    meshHaloExchangeFinish(mesh);
-      
-    // copy halo data to DEVICE
-    size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    acoustics->o_q.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
-  }
-  acoustics->surfaceKernel(mesh->Nelements, 
-		       mesh->o_sgeo, 
-		       mesh->o_LIFTT, 
-		       mesh->o_vmapM, 
-		       mesh->o_vmapP, 
-		       mesh->o_EToB,
-		       currentTime, 
-		       mesh->o_x, 
-		       mesh->o_y,
-		       mesh->o_z, 
-		       acoustics->o_q, 
-		       acoustics->o_k1rhsq,
-           acoustics->o_acc,
-           acoustics->o_k1acc,
-           mesh->o_mapAcc,
-           acoustics->o_LRA,
-           acoustics->o_LRB,
-           acoustics->o_LRC,
-           acoustics->o_LRLambda,
-           acoustics->o_LRAlpha,
-           acoustics->o_LRBeta,
-           acoustics->LRYinf,
-           acoustics->LRNpoles,
-           acoustics->LRNRealPoles,
-           acoustics->LRNImagPoles,
-           mesh->NLRPoints,
-           acoustics->o_anglei,
-           acoustics->o_ERYinf,
-           acoustics->ERNRealPoles,
-           acoustics->ERNImagPoles,
-           acoustics->ERNpoles,
-           acoustics->o_ERLambda,
-           acoustics->o_ERA,
-           acoustics->o_ERAlpha,
-           acoustics->o_ERBeta,
-           acoustics->o_ERB,
-           acoustics->o_ERC);
-  
- 
-  acoustics->acousticsUpdateEIRK4(mesh->Nelements,
-		      mesh->dt,  
-		      mesh->o_erka,
-		      mesh->o_erkb,
-		      acoustics->o_k1rhsq,
-          acoustics->o_k2rhsq,
-          acoustics->o_k3rhsq,
-          acoustics->o_k4rhsq,
-          acoustics->o_k5rhsq,
-          acoustics->o_k6rhsq,
-		      acoustics->o_resq,
-		      acoustics->o_q,
-          1);
-  if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          acoustics->LRNpoles,
-          acoustics->LRNRealPoles,
-          mesh->o_mapAccToQ,
-          acoustics->o_LRAlpha,
-          acoustics->o_LRBeta,
-          acoustics->o_LRLambda,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          1);
-  }
-  if(mesh->NERPoints){
-    acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
-					mesh->NLRPoints,
-					acoustics->LRNpoles,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          acoustics->ERNpoles,
-          acoustics->ERNRealPoles,
-          mesh->o_mapAccToQ,
-          acoustics->o_ERAlpha,
-          acoustics->o_ERBeta,
-          acoustics->o_ERLambda,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          1);
-  }
-          
-  //----------------------------------------- STAGE 2 -----------------------------------------
-  
-  currentTime = time + mesh->erkc[1]*mesh->dt;
-  // extract q halo on DEVICE
-  if(mesh->totalHaloPairs>0){
-    int Nentries = mesh->Np*acoustics->Nfields;
-      
-    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, acoustics->o_resq, acoustics->o_haloBuffer);
-      
-    // copy extracted halo to HOST 
-    acoustics->o_haloBuffer.copyTo(acoustics->sendBuffer);      
-      
-    // start halo exchange
-    meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
-  }
-  acoustics->volumeKernel(mesh->Nelements, 
-	     mesh->o_vgeo, 
-	     mesh->o_Dmatrices,
-	     acoustics->o_resq, 
-	     acoustics->o_k2rhsq);
-  if(mesh->totalHaloPairs>0){
-    meshHaloExchangeFinish(mesh);
-      
-    // copy halo data to DEVICE
-    size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    acoustics->o_resq.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
-  }
-  acoustics->surfaceKernel(mesh->Nelements, 
-		       mesh->o_sgeo, 
-		       mesh->o_LIFTT, 
-		       mesh->o_vmapM, 
-		       mesh->o_vmapP, 
-		       mesh->o_EToB,
-		       currentTime, 
-		       mesh->o_x, 
-		       mesh->o_y,
-		       mesh->o_z, 
-		       acoustics->o_resq, 
-		       acoustics->o_k2rhsq,
-           acoustics->o_Xacc,
-           acoustics->o_k2acc,
-           mesh->o_mapAcc,
-           acoustics->o_LRA,
-           acoustics->o_LRB,
-           acoustics->o_LRC,
-           acoustics->o_LRLambda,
-           acoustics->o_LRAlpha,
-           acoustics->o_LRBeta,
-           acoustics->LRYinf,
-           acoustics->LRNpoles,
-           acoustics->LRNRealPoles,
-           acoustics->LRNImagPoles,
-           mesh->NLRPoints,
-           acoustics->o_anglei,
-           acoustics->o_ERYinf,
-           acoustics->ERNRealPoles,
-           acoustics->ERNImagPoles,
-           acoustics->ERNpoles,
-           acoustics->o_ERLambda,
-           acoustics->o_ERA,
-           acoustics->o_ERAlpha,
-           acoustics->o_ERBeta,
-           acoustics->o_ERB,
-           acoustics->o_ERC);
-  acoustics->acousticsUpdateEIRK4(mesh->Nelements,
-		      mesh->dt,  
-		      mesh->o_erka,
-		      mesh->o_erkb,
-		      acoustics->o_k1rhsq,
-          acoustics->o_k2rhsq,
-          acoustics->o_k3rhsq,
-          acoustics->o_k4rhsq,
-          acoustics->o_k5rhsq,
-          acoustics->o_k6rhsq,
-		      acoustics->o_resq,
-		      acoustics->o_q,
-          2);
-  if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          acoustics->LRNpoles,
-          acoustics->LRNRealPoles,
-          mesh->o_mapAccToQ,
-          acoustics->o_LRAlpha,
-          acoustics->o_LRBeta,
-          acoustics->o_LRLambda,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          2);
-  }
-    if(mesh->NERPoints){
-    acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
-					mesh->NLRPoints,
-					acoustics->LRNpoles,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          acoustics->ERNpoles,
-          acoustics->ERNRealPoles,
-          mesh->o_mapAccToQ,
-          acoustics->o_ERAlpha,
-          acoustics->o_ERBeta,
-          acoustics->o_ERLambda,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          2);
-  }
-  //----------------------------------------- STAGE 3 -----------------------------------------
-  
-  currentTime = time + mesh->erkc[2]*mesh->dt;
-
-  // extract q halo on DEVICE
-  if(mesh->totalHaloPairs>0){
-    int Nentries = mesh->Np*acoustics->Nfields;
-      
-    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, acoustics->o_resq, acoustics->o_haloBuffer);
-      
-    // copy extracted halo to HOST 
-    acoustics->o_haloBuffer.copyTo(acoustics->sendBuffer);      
-      
-    // start halo exchange
-    meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
-  }
-  acoustics->volumeKernel(mesh->Nelements, 
-	     mesh->o_vgeo, 
-	     mesh->o_Dmatrices,
-	     acoustics->o_resq, 
-	     acoustics->o_k3rhsq);
-
-  if(mesh->totalHaloPairs>0){
-    meshHaloExchangeFinish(mesh);
-      
-    // copy halo data to DEVICE
-    size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    acoustics->o_resq.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
-  }
-  acoustics->surfaceKernel(mesh->Nelements, 
-		       mesh->o_sgeo, 
-		       mesh->o_LIFTT, 
-		       mesh->o_vmapM, 
-		       mesh->o_vmapP, 
-		       mesh->o_EToB,
-		       currentTime, 
-		       mesh->o_x, 
-		       mesh->o_y,
-		       mesh->o_z, 
-		       acoustics->o_resq, 
-		       acoustics->o_k3rhsq,
-           acoustics->o_Xacc,
-           acoustics->o_k3acc,
-           mesh->o_mapAcc,
-           acoustics->o_LRA,
-           acoustics->o_LRB,
-           acoustics->o_LRC,
-           acoustics->o_LRLambda,
-           acoustics->o_LRAlpha,
-           acoustics->o_LRBeta,
-           acoustics->LRYinf,
-           acoustics->LRNpoles,
-           acoustics->LRNRealPoles,
-           acoustics->LRNImagPoles,
-           mesh->NLRPoints,
-           acoustics->o_anglei,
-           acoustics->o_ERYinf,
-           acoustics->ERNRealPoles,
-           acoustics->ERNImagPoles,
-           acoustics->ERNpoles,
-           acoustics->o_ERLambda,
-           acoustics->o_ERA,
-           acoustics->o_ERAlpha,
-           acoustics->o_ERBeta,
-           acoustics->o_ERB,
-           acoustics->o_ERC);
-
-  acoustics->acousticsUpdateEIRK4(mesh->Nelements,
-		      mesh->dt,  
-		      mesh->o_erka,
-		      mesh->o_erkb,
-		      acoustics->o_k1rhsq,
-          acoustics->o_k2rhsq,
-          acoustics->o_k3rhsq,
-          acoustics->o_k4rhsq,
-          acoustics->o_k5rhsq,
-          acoustics->o_k6rhsq,
-		      acoustics->o_resq,
-		      acoustics->o_q,
-          3);
-  if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          acoustics->LRNpoles,
-          acoustics->LRNRealPoles,
-          mesh->o_mapAccToQ,
-          acoustics->o_LRAlpha,
-          acoustics->o_LRBeta,
-          acoustics->o_LRLambda,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          3);
-  }
-  if(mesh->NERPoints){
-  acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
-        mesh->NLRPoints,
-        acoustics->LRNpoles,
-        mesh->dt,  
-        mesh->o_esdirka,
-        mesh->o_esdirkb,
-        acoustics->ERNpoles,
-        acoustics->ERNRealPoles,
-        mesh->o_mapAccToQ,
-        acoustics->o_ERAlpha,
-        acoustics->o_ERBeta,
-        acoustics->o_ERLambda,
-        acoustics->o_k1acc,
-        acoustics->o_k2acc,
-        acoustics->o_k3acc,
-        acoustics->o_k4acc,
-        acoustics->o_k5acc,
-        acoustics->o_k6acc,
-        acoustics->o_resq,
-        acoustics->o_acc,
-        acoustics->o_Xacc,
-        3);
-  }
-  //----------------------------------------- STAGE 4 -----------------------------------------
-  
-  currentTime = time + mesh->erkc[3]*mesh->dt;
-
-  // extract q halo on DEVICE
-  if(mesh->totalHaloPairs>0){
-    int Nentries = mesh->Np*acoustics->Nfields;
-      
-    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, acoustics->o_resq, acoustics->o_haloBuffer);
-      
-    // copy extracted halo to HOST 
-    acoustics->o_haloBuffer.copyTo(acoustics->sendBuffer);      
-      
-    // start halo exchange
-    meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
-  }
-  acoustics->volumeKernel(mesh->Nelements, 
-	     mesh->o_vgeo, 
-	     mesh->o_Dmatrices,
-	     acoustics->o_resq, 
-	     acoustics->o_k4rhsq);
-
-  if(mesh->totalHaloPairs>0){
-    meshHaloExchangeFinish(mesh);
-      
-    // copy halo data to DEVICE
-    size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    acoustics->o_resq.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
-  }
-  acoustics->surfaceKernel(mesh->Nelements, 
-		       mesh->o_sgeo, 
-		       mesh->o_LIFTT, 
-		       mesh->o_vmapM, 
-		       mesh->o_vmapP, 
-		       mesh->o_EToB,
-		       currentTime, 
-		       mesh->o_x, 
-		       mesh->o_y,
-		       mesh->o_z, 
-		       acoustics->o_resq, 
-		       acoustics->o_k4rhsq,
-           acoustics->o_Xacc,
-           acoustics->o_k4acc,
-           mesh->o_mapAcc,
-           acoustics->o_LRA,
-           acoustics->o_LRB,
-           acoustics->o_LRC,
-           acoustics->o_LRLambda,
-           acoustics->o_LRAlpha,
-           acoustics->o_LRBeta,
-           acoustics->LRYinf,
-           acoustics->LRNpoles,
-           acoustics->LRNRealPoles,
-           acoustics->LRNImagPoles,
-           mesh->NLRPoints,
-           acoustics->o_anglei,
-           acoustics->o_ERYinf,
-           acoustics->ERNRealPoles,
-           acoustics->ERNImagPoles,
-           acoustics->ERNpoles,
-           acoustics->o_ERLambda,
-           acoustics->o_ERA,
-           acoustics->o_ERAlpha,
-           acoustics->o_ERBeta,
-           acoustics->o_ERB,
-           acoustics->o_ERC);
-
-  acoustics->acousticsUpdateEIRK4(mesh->Nelements,
-		      mesh->dt,  
-		      mesh->o_erka,
-		      mesh->o_erkb,
-		      acoustics->o_k1rhsq,
-          acoustics->o_k2rhsq,
-          acoustics->o_k3rhsq,
-          acoustics->o_k4rhsq,
-          acoustics->o_k5rhsq,
-          acoustics->o_k6rhsq,
-		      acoustics->o_resq,
-		      acoustics->o_q,
-          4);
-  if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          acoustics->LRNpoles,
-          acoustics->LRNRealPoles,
-          mesh->o_mapAccToQ,
-          acoustics->o_LRAlpha,
-          acoustics->o_LRBeta,
-          acoustics->o_LRLambda,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          4);
-  }
-  if(mesh->NERPoints){
-  acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
-        mesh->NLRPoints,
-        acoustics->LRNpoles,
-        mesh->dt,  
-        mesh->o_esdirka,
-        mesh->o_esdirkb,
-        acoustics->ERNpoles,
-        acoustics->ERNRealPoles,
-        mesh->o_mapAccToQ,
-        acoustics->o_ERAlpha,
-        acoustics->o_ERBeta,
-        acoustics->o_ERLambda,
-        acoustics->o_k1acc,
-        acoustics->o_k2acc,
-        acoustics->o_k3acc,
-        acoustics->o_k4acc,
-        acoustics->o_k5acc,
-        acoustics->o_k6acc,
-        acoustics->o_resq,
-        acoustics->o_acc,
-        acoustics->o_Xacc,
-        4);
-  }
-  //----------------------------------------- STAGE 5 -----------------------------------------
-  
-  currentTime = time + mesh->erkc[4]*mesh->dt;
-
-  // extract q halo on DEVICE
-  if(mesh->totalHaloPairs>0){
-    int Nentries = mesh->Np*acoustics->Nfields;
-      
-    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, acoustics->o_resq, acoustics->o_haloBuffer);
-      
-    // copy extracted halo to HOST 
-    acoustics->o_haloBuffer.copyTo(acoustics->sendBuffer);      
-      
-    // start halo exchange
-    meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
-  }
-  acoustics->volumeKernel(mesh->Nelements, 
-	     mesh->o_vgeo, 
-	     mesh->o_Dmatrices,
-	     acoustics->o_resq, 
-	     acoustics->o_k5rhsq);
-
-  if(mesh->totalHaloPairs>0){
-    meshHaloExchangeFinish(mesh);
-      
-    // copy halo data to DEVICE
-    size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    acoustics->o_resq.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
-  }
-  acoustics->surfaceKernel(mesh->Nelements, 
-		       mesh->o_sgeo, 
-		       mesh->o_LIFTT, 
-		       mesh->o_vmapM, 
-		       mesh->o_vmapP, 
-		       mesh->o_EToB,
-		       currentTime, 
-		       mesh->o_x, 
-		       mesh->o_y,
-		       mesh->o_z, 
-		       acoustics->o_resq, 
-		       acoustics->o_k5rhsq,
-           acoustics->o_Xacc,
-           acoustics->o_k5acc,
-           mesh->o_mapAcc,
-           acoustics->o_LRA,
-           acoustics->o_LRB,
-           acoustics->o_LRC,
-           acoustics->o_LRLambda,
-           acoustics->o_LRAlpha,
-           acoustics->o_LRBeta,
-           acoustics->LRYinf,
-           acoustics->LRNpoles,
-           acoustics->LRNRealPoles,
-           acoustics->LRNImagPoles,
-           mesh->NLRPoints,
-           acoustics->o_anglei,
-           acoustics->o_ERYinf,
-           acoustics->ERNRealPoles,
-           acoustics->ERNImagPoles,
-           acoustics->ERNpoles,
-           acoustics->o_ERLambda,
-           acoustics->o_ERA,
-           acoustics->o_ERAlpha,
-           acoustics->o_ERBeta,
-           acoustics->o_ERB,
-           acoustics->o_ERC);
-
-  acoustics->acousticsUpdateEIRK4(mesh->Nelements,
-		      mesh->dt,  
-		      mesh->o_erka,
-		      mesh->o_erkb,
-		      acoustics->o_k1rhsq,
-          acoustics->o_k2rhsq,
-          acoustics->o_k3rhsq,
-          acoustics->o_k4rhsq,
-          acoustics->o_k5rhsq,
-          acoustics->o_k6rhsq,
-		      acoustics->o_resq,
-		      acoustics->o_q,
-          5);
-  if(mesh->NLRPoints){
-  acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          acoustics->LRNpoles,
-          acoustics->LRNRealPoles,
-          mesh->o_mapAccToQ,
-          acoustics->o_LRAlpha,
-          acoustics->o_LRBeta,
-          acoustics->o_LRLambda,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          5);
-  }
-  if(mesh->NERPoints){
-  acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
-        mesh->NLRPoints,
-        acoustics->LRNpoles,
-        mesh->dt,  
-        mesh->o_esdirka,
-        mesh->o_esdirkb,
-        acoustics->ERNpoles,
-        acoustics->ERNRealPoles,
-        mesh->o_mapAccToQ,
-        acoustics->o_ERAlpha,
-        acoustics->o_ERBeta,
-        acoustics->o_ERLambda,
-        acoustics->o_k1acc,
-        acoustics->o_k2acc,
-        acoustics->o_k3acc,
-        acoustics->o_k4acc,
-        acoustics->o_k5acc,
-        acoustics->o_k6acc,
-        acoustics->o_resq,
-        acoustics->o_acc,
-        acoustics->o_Xacc,
-        5);
-  }
-  //----------------------------------------- STAGE 6 -----------------------------------------
-  
-  currentTime = time + mesh->erkc[5]*mesh->dt;
-
-  // extract q halo on DEVICE
-  if(mesh->totalHaloPairs>0){
-    int Nentries = mesh->Np*acoustics->Nfields;
-      
-    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, acoustics->o_resq, acoustics->o_haloBuffer);
-      
-    // copy extracted halo to HOST 
-    acoustics->o_haloBuffer.copyTo(acoustics->sendBuffer);      
-      
-    // start halo exchange
-    meshHaloExchangeStart(mesh, mesh->Np*acoustics->Nfields*sizeof(dfloat), acoustics->sendBuffer, acoustics->recvBuffer);
-  }
-  acoustics->volumeKernel(mesh->Nelements, 
-	     mesh->o_vgeo, 
-	     mesh->o_Dmatrices,
-	     acoustics->o_resq, 
-	     acoustics->o_k6rhsq);
-
-  if(mesh->totalHaloPairs>0){
-    meshHaloExchangeFinish(mesh);
-      
-    // copy halo data to DEVICE
-    size_t offset = mesh->Np*acoustics->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    acoustics->o_resq.copyFrom(acoustics->recvBuffer, acoustics->haloBytes, offset);
-  }
-  acoustics->surfaceKernel(mesh->Nelements, 
-		       mesh->o_sgeo, 
-		       mesh->o_LIFTT, 
-		       mesh->o_vmapM, 
-		       mesh->o_vmapP, 
-		       mesh->o_EToB,
-		       currentTime, 
-		       mesh->o_x, 
-		       mesh->o_y,
-		       mesh->o_z, 
-		       acoustics->o_resq, 
-		       acoustics->o_k6rhsq,
-           acoustics->o_Xacc,
-           acoustics->o_k6acc,
-           mesh->o_mapAcc,
-           acoustics->o_LRA,
-           acoustics->o_LRB,
-           acoustics->o_LRC,
-           acoustics->o_LRLambda,
-           acoustics->o_LRAlpha,
-           acoustics->o_LRBeta,
-           acoustics->LRYinf,
-           acoustics->LRNpoles,
-           acoustics->LRNRealPoles,
-           acoustics->LRNImagPoles,
-           mesh->NLRPoints,
-           acoustics->o_anglei,
-           acoustics->o_ERYinf,
-           acoustics->ERNRealPoles,
-           acoustics->ERNImagPoles,
-           acoustics->ERNpoles,
-           acoustics->o_ERLambda,
-           acoustics->o_ERA,
-           acoustics->o_ERAlpha,
-           acoustics->o_ERBeta,
-           acoustics->o_ERB,
-           acoustics->o_ERC);
-
-  acoustics->acousticsUpdateEIRK4(mesh->Nelements,
-		      mesh->dt,  
-		      mesh->o_erka,
-		      mesh->o_erkb,
-		      acoustics->o_k1rhsq,
-          acoustics->o_k2rhsq,
-          acoustics->o_k3rhsq,
-          acoustics->o_k4rhsq,
-          acoustics->o_k5rhsq,
-          acoustics->o_k6rhsq,
-		      acoustics->o_resq,
-		      acoustics->o_q,
-          6);
-  if(mesh->NLRPoints){
-    acoustics->acousticsUpdateEIRK4AccLR(mesh->NLRPoints,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          acoustics->LRNpoles,
-          acoustics->LRNRealPoles,
-          mesh->o_mapAccToQ,
-          acoustics->o_LRAlpha,
-          acoustics->o_LRBeta,
-          acoustics->o_LRLambda,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          6);
-    }
-    if(mesh->NERPoints){
-      acoustics->acousticsUpdateEIRK4AccER(mesh->NERPoints,
-					mesh->NLRPoints,
-					acoustics->LRNpoles,
-		      mesh->dt,  
-		      mesh->o_esdirka,
-		      mesh->o_esdirkb,
-          acoustics->ERNpoles,
-          acoustics->ERNRealPoles,
-          mesh->o_mapAccToQ,
-          acoustics->o_ERAlpha,
-          acoustics->o_ERBeta,
-          acoustics->o_ERLambda,
-		      acoustics->o_k1acc,
-          acoustics->o_k2acc,
-          acoustics->o_k3acc,
-          acoustics->o_k4acc,
-          acoustics->o_k5acc,
-          acoustics->o_k6acc,
-		      acoustics->o_resq,
-          acoustics->o_acc,
-          acoustics->o_Xacc,
-          6);
-  }
-  //---------RECEIVER---------
-  if(acoustics->NReceiversLocal){
-    acoustics->acousticsReceiverInterpolation(acoustics->NReceiversLocal,
-                                      acoustics->o_qRecv,
-                                      acoustics->o_recvElements,
-                                      acoustics->o_recvElementsIdx,
-                                      acoustics->o_recvintpol,
-                                      acoustics->o_q,
-                                      acoustics->qRecvCounter);
-    acoustics->qRecvCounter++;
-    if(acoustics->qRecvCounter == recvCopyRate){
-      for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
-        dlong offset = recvCopyRate*acoustics->qRecvCopyCounter + mesh->NtimeSteps*iRecv;
-
-        acoustics->o_qRecv.copyTo(acoustics->qRecv+offset,
-              acoustics->qRecvCounter*sizeof(dfloat), 
-              recvCopyRate*iRecv*sizeof(dfloat));  
-      }
-      acoustics->qRecvCounter = 0;
-      acoustics->qRecvCopyCounter++;  
-    } 
-  }
-  //---------RECEIVER---------
-  
-}
-*/
-
-
-
-
-

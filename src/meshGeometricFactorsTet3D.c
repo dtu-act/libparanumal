@@ -64,7 +64,7 @@ void meshGeometricFactorsTet3D(mesh3D *mesh){
     dfloat sx = -(yr*zt - zr*yt)/J, sy =  (xr*zt - zr*xt)/J, sz = -(xr*yt - yr*xt)/J;
     dfloat tx =  (yr*zs - zr*ys)/J, ty = -(xr*zs - zr*xs)/J, tz =  (xr*ys - yr*xs)/J;
 
-    if(J<0) printf("bugger: got negative geofac\n");
+    if(J<0) printf("bugger: got negative geofac1\n");
     minJ = mymin(minJ,J);
     maxJ = mymax(maxJ,J);
     

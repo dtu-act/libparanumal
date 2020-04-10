@@ -72,6 +72,25 @@ typedef struct {
 
   int *elementInfo; //type of element
 
+
+  //[EA] Curvilinear
+  hlong *EToVCurv;
+  dfloat *EXCurv;
+  dfloat *EYCurv;
+  dfloat *EZCurv;
+  dfloat *GLIntpolCurv;
+  occa::memory o_GLIntpolCurv;
+  dlong Ncurv;
+  dlong *mapCurv;
+  dlong NvgeoCurv;
+  dfloat *vgeoCurv;
+  dlong NsgeoCurv;
+  dfloat *sgeoCurv;
+  occa::memory o_mapCurv;
+  occa::memory o_vgeoCurv;
+  occa::memory o_sgeoCurv;
+  
+
   // boundary faces
   hlong NboundaryFaces; // number of boundary faces
   hlong *boundaryInfo; // list of boundary faces (type, vertex-1, vertex-2, vertex-3)

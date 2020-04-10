@@ -146,6 +146,15 @@ void meshMRABWeightedPartition3D(mesh3D *mesh, dfloat *weights,
 
 void interpolateHex3D(dfloat *Inter, dfloat *x, int N, dfloat *Ix, int M);
 
+// [EA] Curvilinear 
+mesh3D *meshSetupTet3DCurv(char *filename, int N);
+mesh3D *meshParallelReaderTet3DCurv(char *fileName, int N);
+void meshGeometricPartition3DCurv(mesh3D *mesh);
+void meshLoadInterpolationCurv(mesh3D *mesh, int N);
+void meshGeometricFactorsTet3DCurv(mesh3D *mesh);
+void meshSurfaceGeometricFactorsTet3DCurv(mesh3D *mesh);
+
+
 #define norm3(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
 
 /* offsets for geometric factors */
@@ -161,6 +170,25 @@ void interpolateHex3D(dfloat *Inter, dfloat *x, int N, dfloat *Ix, int M);
 #define TXID 9  
 #define TYID 10  
 #define TZID 11  
+
+// [EA]
+/* offsets for curved geometric factors */
+#define	RXIDC 0
+#define RYIDC 1
+#define RZIDC 2
+#define SXIDC 3
+#define SYIDC 4
+#define SZIDC 5
+#define TXIDC 6
+#define TYIDC 7
+#define TZIDC 8
+#define  JIDC 9
+
+#define NXIDC 0
+#define NYIDC 1
+#define NZIDC 2
+#define SJIDC 3
+#define IJIDC 4
 
 
 

@@ -124,8 +124,9 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       dlong qbase = e*mesh->Np*mesh->Nfields + n;
 
       dfloat u = 0, v = 0, w = 0, r = 0;
-      
+
       acousticsGaussianPulse(x, y, z, t, &r, &u, &v, &w, sloc, sxyz);
+
       acoustics->q[qbase+0*mesh->Np] = r;
       acoustics->q[qbase+1*mesh->Np] = u;
       acoustics->q[qbase+2*mesh->Np] = v;
@@ -161,16 +162,17 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   dfloat cfl;
   newOptions.getArgs("CFL", cfl);
 
+  dfloat dtConstant = 5.0; // [EA] Empirical constant we found to be suitable
   dfloat dtAdv  = hmin/(343.0*(mesh->N+1.)*(mesh->N+1.));
   //dfloat dtAdv  = hmin/(343.0);
-  dfloat dt = cfl*dtAdv;
+  dfloat dt = dtConstant*cfl*dtAdv;
   
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
   
   //
   newOptions.getArgs("FINAL TIME", mesh->finalTime);
-
+  
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
     mesh->dt = mesh->finalTime/mesh->NtimeSteps;
@@ -423,7 +425,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       if(mesh->mapAcc[id] == -2){ // The point id is a domain boundary point
         int face = n/mesh->Nfp;
         int bc = mesh->EToB[face+mesh->Nfaces*e];
-        if(bc == 3){
+        if(bc == 3 || bc == 7){
           mesh->mapAcc[id] = counter;
 
 
@@ -433,7 +435,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
           mesh->mapAccToQ[counter] = qbaseM;
           counter++;
         }
-        if(bc == 4){
+        if(bc == 4 || bc == 8){
           mesh->mapAcc[id] = counter2;
 
           dlong idM = mesh->vmapM[id];
@@ -1002,6 +1004,15 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     acoustics->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, acoustics->haloBytes, NULL, acoustics->o_recvBuffer);    
   }
 
+  if(mesh->Ncurv){
+    mesh->o_vgeoCurv =
+        mesh->device.malloc(mesh->Ncurv*mesh->NvgeoCurv*mesh->Np*sizeof(dfloat), mesh->vgeoCurv);
+    mesh->o_sgeoCurv =
+        mesh->device.malloc(mesh->Ncurv*mesh->NsgeoCurv*mesh->Nfaces*mesh->Nfp*sizeof(dfloat), mesh->sgeoCurv);
+    mesh->o_mapCurv =
+        mesh->device.malloc(mesh->Nelements*sizeof(dlong), mesh->mapCurv);
+  }
+
   //  p_RT, p_rbar, p_ubar, p_vbar
   // p_half, p_two, p_third, p_Nstresses
   
@@ -1184,64 +1195,19 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
                 "acousticsErrorEIRK4Accr",
                 kernelInfo);
 
+  acoustics->volumeKernelCurv = 
+    mesh->device.buildKernel(DACOUSTICS "/okl/acousticsVolumeTet3D.okl",
+                "acousticsVolumeTet3DCurv",
+                kernelInfo);
+  acoustics->surfaceKernelCurv = 
+    mesh->device.buildKernel(DACOUSTICS "/okl/acousticsSurfaceTet3D.okl",
+                "acousticsSurfaceTet3DCurv",
+                kernelInfo);
   // fix this later
   mesh->haloExtractKernel =
     mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl",
 				       "meshHaloExtract3D",
 				       kernelInfo);
-
-
-  #if 0
-  // MAX TEST!
-  printf("hejsa1\n");
-  occa::kernel maxArray = 
-          mesh->device.buildKernel(DACOUSTICS "/okl/acousticsERKernel.okl",
-		      "maxarray",
-		      kernelInfo);
-
-printf("hejsa2\n");
-  dlong goddagLen = 100000000;
-  dlong *goddag;
-  goddag = (dlong*) calloc(goddagLen, sizeof(dlong));
-  printf("hejsa3\n");
-  for(int itt = 0; itt < goddagLen; itt++){
-    goddag[itt] = itt;
-  }
-  printf("hejsa4\n");
-  goddag[70] = 123123123;
-  
-  occa::memory o_goddag;
-  o_goddag = mesh->device.malloc(goddagLen*sizeof(dlong),goddag);
-
-  double start, end;
-  start = MPI_Wtime();
-  dlong *out;
-  dlong outLen = (goddagLen+blockSize-1)/blockSize;
-  out = (dlong*) calloc(outLen, sizeof(dlong));
-  occa::memory o_out = mesh->device.malloc(outLen*sizeof(dlong),out);
-
-  maxArray(goddagLen, o_goddag, o_out);
-
-  o_out.copyTo(out);
-
-  dlong outmax = -5000;
-  for(int itt = 0; itt < outLen; itt++){
-    outmax = (outmax < out[itt]) ? out[itt] : outmax;
-  }
-  printf("time taken for max gpu : %f, outmax = %d\n", MPI_Wtime() - start,outmax);
-
-  start = MPI_Wtime();
-  o_goddag.copyTo(goddag);
-  outmax = -5000;
-  for(int itt = 0; itt < goddagLen; itt++){
-    outmax = (outmax < goddag[itt]) ? goddag[itt] : outmax;
-  }
-  printf("time taken for max cpu : %f, outmax = %d\n", MPI_Wtime() - start,outmax);
-
-  printf("outLen = %d\n",outLen);
-  printf("MAX SKAL VÆRE 123123123:  DEN ER %d\n",outmax);
-
-  #endif
 
 
   

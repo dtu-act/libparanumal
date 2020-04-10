@@ -51,6 +51,12 @@ OBJS    = \
 ./src/acousticsGaussianPulse.o \
 ./src/acousticsPlotVTU.o \
 ./src/acousticsReport.o \
+../../src/meshParallelReaderTet3DCurv.o \
+../../src/meshSetupTet3DCurv.o \
+../../src/meshGeometricPartition3DCurv.o \
+../../src/meshLoadInterpolationCurv.o \
+../../src/meshGeometricFactorsTet3DCurv.o \
+../../src/meshSurfaceGeometricFactorsTet3DCurv.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \

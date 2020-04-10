@@ -657,6 +657,7 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
   kernelInfo["defines/" "p_Nvgeo"]= mesh->Nvgeo;
   kernelInfo["defines/" "p_Nsgeo"]= mesh->Nsgeo;
   kernelInfo["defines/" "p_Nggeo"]= mesh->Nggeo;
+  
 
   kernelInfo["defines/" "p_max_EL_nnz"]= mesh->max_EL_nnz; // for Bernstein Bezier lift
 
@@ -677,6 +678,26 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
+
+  // [EA] Curv
+  kernelInfo["defines/" "p_NvgeoCurv"]= mesh->NvgeoCurv;
+  kernelInfo["defines/" "p_RXIDC"]= RXIDC;
+  kernelInfo["defines/" "p_RYIDC"]= RYIDC;
+  kernelInfo["defines/" "p_RZIDC"]= RZIDC;
+  kernelInfo["defines/" "p_SXIDC"]= SXIDC;
+  kernelInfo["defines/" "p_SYIDC"]= SYIDC;
+  kernelInfo["defines/" "p_SZIDC"]= SZIDC;
+  kernelInfo["defines/" "p_TXIDC"]= TXIDC;
+  kernelInfo["defines/" "p_TYIDC"]= TYIDC;
+  kernelInfo["defines/" "p_TZIDC"]= TZIDC;
+  kernelInfo["defines/" "p_JIDC"]=   JIDC;
+  
+  kernelInfo["defines/" "p_NsgeoCurv"]= mesh->NsgeoCurv;
+  kernelInfo["defines/" "p_NXIDC"]= NXIDC;
+  kernelInfo["defines/" "p_NYIDC"]= NYIDC;
+  kernelInfo["defines/" "p_NZIDC"]= NZIDC;
+  kernelInfo["defines/" "p_SJIDC"]= SJIDC;
+  kernelInfo["defines/" "p_IJIDC"]= IJIDC;
 
 #if 0
   // TW: these should be defined at the solver setup

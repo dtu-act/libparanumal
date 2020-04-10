@@ -188,6 +188,8 @@ typedef struct{
   occa::kernel ERInsertComVT;
   occa::kernel acousticsWSComInterpolation;
   occa::kernel acousticsReceiverInterpolation;
+  occa::kernel volumeKernelCurv;
+  occa::kernel surfaceKernelCurv;
 
   occa::memory o_q;
   occa::memory o_rhsq;

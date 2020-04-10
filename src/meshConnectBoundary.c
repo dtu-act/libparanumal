@@ -140,6 +140,8 @@ void meshConnectBoundary(mesh_t *mesh){
   qsort(boundaryFaces, bcnt, sizeof(boundaryFace_t), compareBoundaryFaces);
   /* scan through sorted face lists looking for element-boundary matches */
   mesh->EToB = (int*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(int));
+
+
   for(dlong n=0;n<mesh->Nelements*mesh->Nfaces;++n) mesh->EToB[n] = -1;
 
 
@@ -168,6 +170,7 @@ void meshConnectBoundary(mesh_t *mesh){
     }
   }
 #endif
+
 
   free(boundaryFaces);
 }

@@ -42,12 +42,13 @@ int main(int argc, char **argv){
   
   // set up mesh stuff
   string fileName;
-  int N, dim, elementType;
-
+  int N, dim, elementType, curv;
+  
   newOptions.getArgs("MESH FILE", fileName);
   newOptions.getArgs("POLYNOMIAL DEGREE", N);
   newOptions.getArgs("ELEMENT TYPE", elementType);
   newOptions.getArgs("MESH DIMENSION", dim);
+  newOptions.getArgs("CURVILINEAR MESH", curv);
   // set up mesh
   mesh_t *mesh;
   switch(elementType){
@@ -56,7 +57,11 @@ int main(int argc, char **argv){
   case QUADRILATERALS:
     mesh = meshSetupQuad2D((char*)fileName.c_str(), N); break;
   case TETRAHEDRA:
-    mesh = meshSetupTet3D((char*)fileName.c_str(), N); break;
+    if(!curv){
+      mesh = meshSetupTet3D((char*)fileName.c_str(), N); break;
+    } else {
+      mesh = meshSetupTet3DCurv((char*)fileName.c_str(), N); break;
+    }
   case HEXAHEDRA:
     mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
   }
@@ -88,6 +93,7 @@ int main(int argc, char **argv){
   endTime = MPI_Wtime();
   if(!mesh->rank){printf("Execution time: %lf\n",endTime-startTime);}
   acousticsReport(acoustics, mesh->finalTime, newOptions);
+
 
   //---------RECEIVER---------
   acousticsPrintReceiversToFile(acoustics, newOptions);

@@ -26,6 +26,7 @@ SOFTWARE.
 
 #include "acoustics.h"
 
+#define report 0
 
 void acousticsBCChange(acoustics_t *acoustics, dfloat time){
 
@@ -58,8 +59,6 @@ void acousticsBCChange(acoustics_t *acoustics, dfloat time){
 void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 
   mesh_t *mesh = acoustics->mesh;
-
-  //acousticsReport(acoustics, 0, newOptions);
 
   //occa::timer timer; // OCCA TIMER CAUSES CRASHES
   
@@ -177,6 +176,10 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
     dlong snapshotFlag = 1;
     dlong snapshotTotal = 0;
     for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+	#if report
+        if(tstep % 500 == 0)
+	  acousticsReport(acoustics, time, newOptions);
+	#endif
 
       // [EA] Snapshot solution
       if(acoustics->snapshot){

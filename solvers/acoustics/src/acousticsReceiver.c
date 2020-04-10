@@ -9,7 +9,7 @@ dlong factorial(dlong x){
   return res;
 }
 
-
+// OLD - From when interpolation was done on host.
 void acousticsReceiverInterpolation(acoustics_t *acoustics){
 	
   mesh_t *mesh = acoustics->mesh;
@@ -66,7 +66,7 @@ void acousticsReceiverInterpolation(acoustics_t *acoustics){
         intpol[i] += VB_rec[j]*mesh->invVB[i+j*mesh->Np];
       }
     }
-    #if 1
+    #if 0
     printf("Original, irecv = %d, ele = %d\n",iRecv,recvElement);
     for(int i = 0; i < mesh->Np; i++){
       printf("%.15lf \n",intpol[i]);
@@ -106,6 +106,7 @@ void acousticsReceiverInterpolation(acoustics_t *acoustics){
   }
 }
 
+// Create interpolation operators
 void acousticsRecvIntpolOperators(acoustics_t *acoustics){
 	
   mesh_t *mesh = acoustics->mesh;
@@ -156,9 +157,7 @@ void acousticsRecvIntpolOperators(acoustics_t *acoustics){
         }
       }
     }
-    // interpolation
-
-    
+    // interpolation   
     for(int j = 0; j < mesh->Np; j++){
       for(int i = 0; i < mesh->Np; i++){
         intpol[iRecv*mesh->Np+i] += VB_rec[j]*mesh->invVB[i+j*mesh->Np];
@@ -184,8 +183,7 @@ void acousticsRecvIntpolOperators(acoustics_t *acoustics){
 
 void acousticsFindReceiverElement(acoustics_t *acoustics){
   // Only works for tets!
-  // Current only works on one receiver.
-  // [TODO] FIX: If receiver point is on the boundary of two cores both will find it! Do some mpi stuff to fix!
+  // [TODO] If receiver point is on the boundary of two cores both will find it! Do some mpi stuff to fix!
   mesh_t *mesh = acoustics->mesh;
 
   for(dlong k = 0; k < acoustics->NReceivers; k++){
@@ -250,11 +248,9 @@ void acousticsFindReceiverElement(acoustics_t *acoustics){
         acoustics->NReceiversLocal++;
         break;
       } else if(i == mesh->Nelements-1){
-          // [EA] Currently prints if the receiver is not on this core!!!! Even if found by other core!
+          // [EA] Currently prints if the receiver is not on this core! Even if found by another core!
           //printf("RECEIVER LOCATION NOT FOUND!!,(x,y,z) = (%f,%f,%f)\n", recvLoc[0],recvLoc[1],recvLoc[2]);
       }
-        
-      
     }
   }
 }
@@ -262,6 +258,12 @@ void acousticsFindReceiverElement(acoustics_t *acoustics){
 
 void acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions){
   mesh_t *mesh = acoustics->mesh;
+    dfloat sloc[3];
+    dfloat sxyz;
+    newOptions.getArgs("SX", sloc[0]);
+    newOptions.getArgs("SY", sloc[1]);
+    newOptions.getArgs("SZ", sloc[2]);
+    newOptions.getArgs("SXYZ", sxyz);
 
   string PREFIX;
   newOptions.getArgs("RECEIVERPREFIX", PREFIX);
@@ -272,8 +274,19 @@ void acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions
 
     sprintf(fname, "data/%s_RecvPoint_%02d.txt", (char*)PREFIX.c_str(), acoustics->recvElementsIdx[iRecv]);
     iFP = fopen(fname,"w");
+
+    dfloat time = 0;
+    dfloat u = 0, v = 0, w = 0, r = 0;
+
+    dlong rIdx = acoustics->recvElementsIdx[iRecv];
+    dfloat x = acoustics->recvXYZ[rIdx*3+0];
+    dfloat y = acoustics->recvXYZ[rIdx*3+1];
+    dfloat z = acoustics->recvXYZ[rIdx*3+2];
+    acousticsGaussianPulse(x, y, z, 0, &r, &u, &v, &w, sloc, sxyz);
+    fprintf(iFP, "%.15lf %.15lf\n", time, r);
     for(int i = 0; i < mesh->NtimeSteps; i++){
-      fprintf(iFP, "%.15lf\n", acoustics->qRecv[i+iRecv*mesh->NtimeSteps]);
+      time += mesh->dt;
+      fprintf(iFP, "%.15lf %.15lf\n", time, acoustics->qRecv[i+iRecv*mesh->NtimeSteps]);
     }
     fclose(iFP);
   }
