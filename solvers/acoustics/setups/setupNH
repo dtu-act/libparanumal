@@ -1,0 +1,148 @@
+[FORMAT]
+1.0
+
+[MESH FILE]
+#../../meshes/cubeTet_02_1ER5FI_res02.msh
+../../meshes/333_rigidbox_res05.msh
+#../../meshes/cubeTet_02_FreqIndep_res01.msh
+#../../meshes/cubeTet_02_1LR5FI_res02.msh
+#../../meshes/cubeTet_FL_room_full_size.msh
+#../../meshes/cubeTet_02_PerfRefl_res01.msh
+#../../meshes/cubeTet_02_PerfRefl_res007.msh
+#../../meshes/rectTet_0204_PerfRefl.msh
+
+[POLYNOMIAL DEGREE]
+4
+
+[TIME INTEGRATOR]
+#DOPRI5 # Currently broken
+LSERK4
+#EIRK4
+
+[FINAL TIME]
+0.02
+
+[RECEIVER]
+setups/setupdata/ReceiverNH.dat
+
+[RECEIVERPREFIX] # Prefix for data/PREFIX_RecvPoints_xx.txt
+Rigidbox
+
+[CFL]
+5
+
+[RHO] # Density of the medium
+1.2
+
+[C] # Speed of sound in the medium
+343.0
+
+[Z_IND] # Z value for frequency independent boundary condition
+411.6   			# rho*c 		   - ~100% absorption
+#2399.628 		# 5.83*rho*c   - ~50% absorption
+#4116000.0    # 10000*rho*c  - ~rigid boundary
+#142780.0    # 346.88*rho*c      - ~ alpha = 0.0115
+#15630 # alpha = 0.1
+
+[LRVECTFIT] # Vectorfit filename from vectorfitDriverLR.m
+setups/setupdata/LRtestNH.dat
+#setups/setupdata/FIData16.dat
+#setups/setupdata/ER_100mm_rigid_2_2_TIL_LR.dat
+
+[ERVECTFIT] # Vectorfit filename from vectorfitDriverER.m
+setups/setupdata/ERDATA30.dat
+#setups/setupdata/ERDATA14_d0.dat
+#setups/setupdata/ER_100mm_rigid_2.dat
+
+[SXYZ] # Width of initial pulse
+0.1
+
+[SX] # x coordinate of initial pulse
+1.4
+
+[SY] # y coordinate of initial pulse
+1.5
+
+[SZ] # z coordinate of initial pulse
+1.6
+
+[SNAPSHOT] # Take a snapshot of solution every X timesteps, 0 to turn off
+0
+
+[SNAPSHOTPREFIX] # Prefix of snapshot output file, data/PREFIX_Snapshot.txt
+snap1
+
+[SNAPSHOTMAX] # Maximum number of snapshots to take during a run. Ignore everyone after.
+100
+
+[BCCHANGETIME] # Switch from ER to LR BCs at time = BCCHANGETIME, 0 to turn off
+0
+
+### DON'T CHANGE BELOW ###
+[MESH DIMENSION]
+3
+
+[ELEMENT TYPE] # number of edges
+6
+
+[THREAD MODEL]
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+[ADVECTION TYPE]
+NODAL
+
+[VISCOSITY]
+5.e-3
+
+[MACH NUMBER]
+.2
+
+[RBAR]
+1.0
+
+[UBAR]
+1.0
+
+[VBAR]
+0.0
+
+[WBAR]
+0.0
+
+[COMPUTE ERROR FLAG]
+1
+
+[TSTEPS FOR ERROR COMPUTE]
+1000
+
+[TSTEPS FOR SOLUTION OUTPUT]
+1000
+
+[REPORT FREQUENCY]
+1000
+
+[START TIME]
+0
+
+[OUTPUT INTERVAL]
+.14
+
+[MAX MRAB LEVELS]
+1
+
+[RESTART FROM FILE]
+0
+
+[OUTPUT FILE NAME]
+vtkOut/tshape
+
+[VERBOSE]
+FALSE
+
+
