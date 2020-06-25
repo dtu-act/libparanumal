@@ -2,7 +2,7 @@
 1.0
 
 [MESH FILE]
-../../meshes/cubeTet_02_PerfRefl_res01.msh
+../../meshes/examples/cubeTet_02_PerfRefl_res01.msh
 
 
 [POLYNOMIAL DEGREE]
@@ -20,7 +20,7 @@ LSERK4
 0.01
 
 [RECEIVER]
-setups/setupdata/ReceiverLocations.dat
+setups/setupdata/examples/ReceiverLocations.dat
 
 [RECEIVERPREFIX] # Prefix for data/PREFIX_RecvPoints_xx.txt
 AcousticExample
