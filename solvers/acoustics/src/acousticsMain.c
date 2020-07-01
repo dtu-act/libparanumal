@@ -29,13 +29,13 @@ SOFTWARE.
 
 int main(int argc, char **argv){
 
-  // start up MPI
-  MPI_Init(&argc, &argv);
-
   if(argc!=2){
     printf("usage2: ./acousticsMain setupfile\n");
     exit(-1);
   }
+
+  // start up MPI
+  MPI_Init(&argc, &argv);
 
   // if argv > 2 then should load input data from argv
   setupAide newOptions(argv[1]);

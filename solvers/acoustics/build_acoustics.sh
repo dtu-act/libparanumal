@@ -12,9 +12,9 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 # Build OCCA - OCCA must be build on a system with GPU access for GPU support (on HPC switch to 'voltash')
 cd ../../occa
 make clean
-make -j
+make -j 4
 cd ../solvers/acoustics/
 
 # Build project
 make clean
-make -j
+make -j 4

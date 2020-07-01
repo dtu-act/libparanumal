@@ -95,7 +95,7 @@ void meshConnectFaceModes2D(mesh2D *mesh, int *faceModes, dfloat *V){
             s = -1;
           }
         }
-        if(mindist>1e-3) printf("arggh - bad match: e="dlongFormat",f=%d, mode=%d\n", e,f, m);
+        if(mindist>1e-3) printf("arggh - bad match: e=" dlongFormat",f=%d, mode=%d\n", e,f, m);
 
         dlong id  = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
         dlong idM = faceModes[f*mesh->Nfp+n] + e*mesh->Np;

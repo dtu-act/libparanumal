@@ -145,7 +145,7 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
     sscanf(buf, "%*d%d", &elementType);
 
     if(elementType==3){ // quad boundary face
-      sscanf(buf, "%*d%*d %*d" hlongFormat "%*d "hlongFormat hlongFormat hlongFormat hlongFormat, 
+      sscanf(buf, "%*d%*d %*d" hlongFormat "%*d " hlongFormat hlongFormat hlongFormat hlongFormat, 
              mesh->boundaryInfo+bcnt*5, &v1, &v2, &v3, &v4);
 
       mesh->boundaryInfo[bcnt*5+1] = v1-1;

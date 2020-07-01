@@ -45,7 +45,7 @@ void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, int fld){
 
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
   fprintf(fp, "  <UnstructuredGrid>\n");
-  fprintf(fp, "    <Piece NumberOfPoints=\""dlongFormat"\" NumberOfCells=\""dlongFormat"\">\n", 
+  fprintf(fp, "    <Piece NumberOfPoints=\"" dlongFormat"\" NumberOfCells=\"" dlongFormat"\">\n", 
           mesh->Nelements*mesh->plotNp, 
           mesh->Nelements*mesh->plotNelements);
   

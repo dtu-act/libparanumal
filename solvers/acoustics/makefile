@@ -3,7 +3,8 @@ ERROR:
 	@echo "Error, environment variable [OCCA_DIR] is not set"
 endif
 
-CXXFLAGS = -O3
+#CXXFLAGS = -O0
+CXXFLAGS = -O3 
 
 include ${OCCA_DIR}/scripts/Makefile
 
@@ -19,8 +20,14 @@ LD	= mpic++
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DACOUSTICS='"${CURDIR}"'
 
-# link flags to be used 
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
+OS := $(shell uname)
+ifeq ($(OS),Darwin)
+	# link flags to be used (MacOS)
+	LDFLAGS	= -Xpreprocessor -fopenmp -lomp -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
+else
+	# link flags to be used (Linux)
+	LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
+endif
 
 # libraries to be linked in
 LIBS	=   -L$(OCCA_DIR)/lib $(links)
