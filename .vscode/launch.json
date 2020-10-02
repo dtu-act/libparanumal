@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/solvers/acoustics/acousticsMain",
-            "args": ["${workspaceFolder}/solvers/acoustics/setups/examples/setupTet3D_AcousticExample"],
+            "args": ["${workspaceFolder}/solvers/acoustics/setups/examples/setupCube"],
             "stopAtEntry": true,
             "cwd": "${workspaceFolder}",
             "environment": [
