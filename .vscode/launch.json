@@ -9,9 +9,9 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/solvers/acoustics/acousticsMain",
-            "args": ["${workspaceFolder}/solvers/acoustics/setups/examples/setupCube"],
-            "stopAtEntry": true,
-            "cwd": "${workspaceFolder}",
+            "args": ["${workspaceFolder}/solvers/acoustics/tests/setups/setup_cube"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/solvers/acoustics",
             "environment": [
                 {
                 "name":"OMPI_MCA_rmaps_base_oversubscribe", // https://github.com/microsoft/vscode-cpptools/issues/2995
@@ -22,14 +22,54 @@
             "MIMode": "lldb",
         },
         {
+            "name": "clang++ - Debug acousticsTESTMain (no build)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/solvers/acoustics/acousticsTestMain",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/solvers/acoustics",
+            "environment": [
+                {
+                "name":"OMPI_MCA_rmaps_base_oversubscribe", // https://github.com/microsoft/vscode-cpptools/issues/2995
+                "value": "1"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "lldb",
+        },
+        {
+            "name": "clang++ - Debug active file (no build)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "args": ["${workspaceFolder}/solvers/acoustics/tests/setups/setup_cube"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/solvers/acoustics",
+            "environment": [
+                {
+                "name":"OMPI_MCA_rmaps_base_oversubscribe", // https://github.com/microsoft/vscode-cpptools/issues/2995
+                "value": "1"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask": "clang++ build active file"
+        },
+        {
             "name": "clang++ - Build and debug active file",
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": [],
-            "stopAtEntry": true,
+            "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [],
+            "environment": [
+                {
+                "name":"OMPI_MCA_rmaps_base_oversubscribe", // https://github.com/microsoft/vscode-cpptools/issues/2995
+                "value": "1"
+                }
+            ],
             "externalConsole": false,
             "MIMode": "lldb",
             "preLaunchTask": "clang++ build active file"

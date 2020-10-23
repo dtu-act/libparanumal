@@ -233,6 +233,8 @@ typedef struct{
   
 }acoustics_t;
 
+int acousticsSetupMain(setupAide &newOptions);
+
 void acousticsRun(acoustics_t *acoustics, setupAide &newOptions);
 
 acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileName);

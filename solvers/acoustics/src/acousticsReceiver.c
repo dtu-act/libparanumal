@@ -1,5 +1,5 @@
 #include "acoustics.h"
-
+#include <limits.h>
 
 dlong factorial(dlong x){
   dlong res = 1;
@@ -255,25 +255,46 @@ void acousticsFindReceiverElement(acoustics_t *acoustics){
   }
 }
 
-
 void acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions){
   mesh_t *mesh = acoustics->mesh;
-    dfloat sloc[3];
-    dfloat sxyz;
-    newOptions.getArgs("SX", sloc[0]);
-    newOptions.getArgs("SY", sloc[1]);
-    newOptions.getArgs("SZ", sloc[2]);
-    newOptions.getArgs("SXYZ", sxyz);
+  dfloat sloc[3];
+  dfloat sxyz;
+  string outDir_cppstring;
+
+  newOptions.getArgs("OUTPUT DIRECTORY", outDir_cppstring);
+  newOptions.getArgs("SX", sloc[0]);
+  newOptions.getArgs("SY", sloc[1]);
+  newOptions.getArgs("SZ", sloc[2]);
+  newOptions.getArgs("SXYZ", sxyz);
+
+  char *outDir = (char*)outDir_cppstring.c_str();
 
   string PREFIX;
   newOptions.getArgs("RECEIVERPREFIX", PREFIX);
   for(dlong iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
     // Print interpolated receiver to file
-    FILE *iFP;
+    
     char fname[BUFSIZ];
 
-    sprintf(fname, "data/%s_RecvPoint_%02d.txt", (char*)PREFIX.c_str(), acoustics->recvElementsIdx[iRecv]);
-    iFP = fopen(fname,"w");
+    // create output folder if not existing
+    struct stat st = {0};
+    if (stat(outDir, &st) == -1) {
+      mkdir(outDir, 0700);
+    }
+
+    sprintf(fname, "%s/%s_RecvPoint_%02d.txt", outDir, (char*)PREFIX.c_str(), acoustics->recvElementsIdx[iRecv]);
+
+    char cwd[PATH_MAX];
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+      perror("getcwd() error");
+      return;
+    }
+
+    FILE *iFP = fopen(fname,"w");
+    if (iFP == NULL) {
+      printf("ERROR: receiver output file could not be opened %s/%s)\n", cwd, fname);      
+      return;
+    }
 
     dfloat time = 0;
     dfloat u = 0, v = 0, w = 0, r = 0;
@@ -282,12 +303,18 @@ void acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions
     dfloat x = acoustics->recvXYZ[rIdx*3+0];
     dfloat y = acoustics->recvXYZ[rIdx*3+1];
     dfloat z = acoustics->recvXYZ[rIdx*3+2];
+    
     acousticsGaussianPulse(x, y, z, 0, &r, &u, &v, &w, sloc, sxyz);
-    fprintf(iFP, "%.15lf %.15lf\n", time, r);
+    
+    fprintf(iFP, "%.15lf %.15le\n", time, r);
+    
     for(int i = 0; i < mesh->NtimeSteps; i++){
       time += mesh->dt;
-      fprintf(iFP, "%.15lf %.15lf\n", time, acoustics->qRecv[i+iRecv*mesh->NtimeSteps]);
+      fprintf(iFP, "%.15lf %.15le\n", time, acoustics->qRecv[i+iRecv*mesh->NtimeSteps]);
     }
+
+    printf("Receiver impulse response was written to disk: %s/%s\n", cwd, fname);
+
     fclose(iFP);
   }
 }

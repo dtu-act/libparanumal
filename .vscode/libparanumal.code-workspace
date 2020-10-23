@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"iostream": "cpp",
+			"filesystem": "c",
+			"stdexcept": "c",
+			"string": "c",
+			"*.tpp": "c",
+			"iosfwd": "c"
+		}
+	}
+}

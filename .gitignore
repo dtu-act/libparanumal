@@ -19,7 +19,9 @@
 *.swp
 *.orig
 *.out
+*.dSYM
 acousticsMain
+acousticsTestMain
 
 **/*.o
 **/*.c~

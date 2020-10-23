@@ -1,10 +1,12 @@
+# https://www2.cs.duke.edu/courses/cps108/doc/makefileinfo/sample.html
+
 ifndef OCCA_DIR
 ERROR:
 	@echo "Error, environment variable [OCCA_DIR] is not set"
 endif
 
-CXXFLAGS = -O0
-#CXXFLAGS = -O3 
+#CXXFLAGS = -O0
+CXXFLAGS = -O2
 
 include ${OCCA_DIR}/scripts/Makefile
 
@@ -14,8 +16,8 @@ OGSDIR  = ../../libs/gatherScatter
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
-CC	= mpic++
-LD	= mpic++
+CC	= mpic++ -std=c++17
+LD	= mpic++ -std=c++17
 
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DACOUSTICS='"${CURDIR}"'
@@ -51,10 +53,10 @@ OBJS    = \
 ./src/acousticsReceiver.o \
 ./src/acousticsWaveSplitting.o \
 ./src/acousticsStep.o \
-./src/acousticsMain.o \
 ./src/acousticsError.o \
 ./src/acousticsRun.o \
 ./src/acousticsSetup.o \
+./src/acousticsSetupMain.o \
 ./src/acousticsGaussianPulse.o \
 ./src/acousticsPlotVTU.o \
 ./src/acousticsReport.o \
@@ -119,12 +121,23 @@ OBJS    = \
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 
+OBJS_MAIN    = \
+./src/acousticsMain.o
 
-acousticsMain:$(OBJS) 
-	$(LD)  $(LDFLAGS)  -o acousticsMain $(OBJS) $(paths) $(LIBS) 
+OBJS_TESTS    = \
+./tests/acousticsTestMain.o \
+./tests/utils/compareFiles.o \
+./tests/utils/openFile.o
+
+acousticsMain:$(OBJS) $(OBJS_MAIN)
+	$(LD)  $(LDFLAGS)  -o acousticsMain $(OBJS) $(OBJS_MAIN) $(paths) $(LIBS)
+
+tests:$(OBJS) $(OBJS_TESTS) 
+	$(LD)  $(LDFLAGS)  -o acousticsTestMain $(OBJS) $(OBJS_TESTS) $(paths) $(LIBS)
 
 # what to do if user types "make clean"
 clean :
-	rm -r $(OBJS) acousticsMain
+	rm -r $(OBJS) $(OBJS_MAIN) acousticsMain
+	rm -r $(OBJS) $(OBJS_TESTS) acousticsTestMain
 
 

@@ -44,8 +44,10 @@ void acousticsGaussianPulse(dfloat x, dfloat y, dfloat z, dfloat t,
   dfloat sxyzSQ = sxyz*sxyz;
   dfloat temp = (x - sloc[0])*(x - sloc[0]) + (y - sloc[1])*(y - sloc[1]) + (z - sloc[2])*(z - sloc[2]);
   temp /= sxyzSQ;
+  
+  const dfloat amplitude_mult = 1000;
 
-  *r = exp(-temp);
+  *r = amplitude_mult*exp(-temp);
   *u = 0;
   *v = 0;
   *w = 0;
