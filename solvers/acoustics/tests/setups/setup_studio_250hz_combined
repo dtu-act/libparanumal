@@ -2,7 +2,7 @@
 1.0
 
 [MESH FILE]
-../../meshes/tests/cube_500hz.msh
+../../meshes/tests/studio_250hz_p4_5ppw_combined.msh
 
 [OUTPUT DIRECTORY]
 tests/data/generated
@@ -14,18 +14,18 @@ tests/data/generated
 0
 
 [TIME INTEGRATOR]
-#DOPRI5 # Currently broken
 LSERK4
 #EIRK4
+#DOPRI5 # Currently broken
 
 [FINAL TIME]
 0.1
 
 [RECEIVER]
-tests/setups/receivers_cube.dat
+tests/setups/receiver_studio.dat
 
-[RECEIVERPREFIX] # Prefix for data/PREFIX_RecvPoints_xx.txt
-cube_500hz
+[RECEIVERPREFIX]
+studio_250hz_p4_5ppw_combined
 
 [CFL]
 1
@@ -38,28 +38,24 @@ cube_500hz
 
 [Z_IND] # Z value for frequency independent boundary condition
 7400    # alpha_0 = 0.2
-#411.6   			# rho*c 		   - ~100% absorption
-2399.628 		# 5.83*rho*c   - ~50% absorption
-#4116000.0    # 10000*rho*c  - ~rigid boundary
-#142780.0    # 346.88*rho*c      - ~ alpha = 0.0115
 
 [LRVECTFIT] # Vectorfit filename from vectorfitDriverLR.m
-#solvers/acoustics/setups/setupdata/LRDATA14.dat
+tests/setups/freq_dep_lr.dat
 
 [ERVECTFIT] # Vectorfit filename from vectorfitDriverER.m
-#solvers/acoustics/setups/setupdata/ERDATA14.dat
+#tests/setups/freq_dep_er.dat
 
 [SXYZ] # Width of initial pulse
-0.4
+0.8
 
 [SX] # x coordinate of initial pulse
-0.5
+0.7
 
 [SY] # y coordinate of initial pulse
-0.5
+1.0
 
 [SZ] # z coordinate of initial pulse
-0.5
+1.5 # height
 
 [SNAPSHOT] # Take a snapshot of solution every X timesteps, 0 to turn off
 0

@@ -1,19 +1,19 @@
 #!/bin/bash
 #BSUB -q gpuv100
-#BSUB -n 1
-#BSUB -gpu "num=1:mode=exclusive_process"
+#BSUB -n 2
+#BSUB -gpu "num=2:mode=exclusive_process"
 #BSUB -R "span[hosts=1]"
-#BSUB -W 00:05
 #BSUB -R "rusage[mem=15GB]"
-#BSUB -J "logs/log_bedroom_1000hz"
+#BSUB -W 01:00
+#BSUB -J "logs/testing"
 
 ### -- Notify me by email when execution begins --
 #BSUB -B
 ### -- Notify me by email when execution ends   --
 #BSUB -N
 ### -- Specify the output and error file. %J is the job-id --
-#BSUB -o "logs/gpu_bedroom_1000hz-%J.out"
-#BSUB -e "logs/gpu_bedroom_1000hz-%J.err"
+#BSUB -o "logs/testing-%J.out"
+#BSUB -e "logs/testing-%J.err"
 
 # Load modules
 module purge
@@ -24,4 +24,4 @@ export OCCA_DIR=~/libparanumal/occa
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 
 # Run solver
-mpirun ./acousticsMain setups/examples/setup_bedroom_1000hz
+mpirun ./acousticsTestMain

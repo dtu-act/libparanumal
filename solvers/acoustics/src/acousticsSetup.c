@@ -1064,11 +1064,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   kernelInfo["defines/" "p_ERAlpha"]= acoustics->ERInfo[1]+acoustics->ERInfo[1]*Nangles + 2*acoustics->ERInfo[2]*Nangles;
   kernelInfo["defines/" "p_ERBeta"]= acoustics->ERInfo[1]+acoustics->ERInfo[1]*Nangles + acoustics->ERInfo[2]+2*acoustics->ERInfo[2]*Nangles;
   kernelInfo["defines/" "p_ERYinf"]= acoustics->ERInfo[1]+acoustics->ERInfo[1]*Nangles + 2*acoustics->ERInfo[2]+2*acoustics->ERInfo[2]*Nangles;
-
-
-
-
-
+  
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
   // set kernel name suffix

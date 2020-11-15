@@ -18,7 +18,7 @@ clear
 clc
 close all
 
-fileName = 'LRDATA.dat';
+fileName = 'freq_dep_lr.dat';
 
 %Acoustic constants
 rho = 1.2;
@@ -37,7 +37,7 @@ f_range = [5,2000];
 Npoles = 14;
 
 if(mod(Npoles,2)==1)
-    display('Npoles must be even');
+    print('Npoles must be even');
     return;
 end
 

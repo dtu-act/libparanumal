@@ -11,7 +11,11 @@
 			"stdexcept": "c",
 			"string": "c",
 			"*.tpp": "c",
-			"iosfwd": "c"
+			"iosfwd": "c",
+			"__locale": "c",
+			"__string": "c",
+			"regex": "c",
+			"string_view": "c"
 		}
 	}
 }

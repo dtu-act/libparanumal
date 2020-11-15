@@ -126,6 +126,7 @@ OBJS_MAIN    = \
 
 OBJS_TESTS    = \
 ./tests/acousticsTestMain.o \
+./tests/utils/comparePressureFiles.o \
 ./tests/utils/compareFiles.o \
 ./tests/utils/openFile.o
 
