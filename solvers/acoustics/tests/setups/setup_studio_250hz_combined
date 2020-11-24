@@ -14,12 +14,12 @@ tests/data/generated
 0
 
 [TIME INTEGRATOR]
-LSERK4
-#EIRK4
+#LSERK4
+EIRK4
 #DOPRI5 # Currently broken
 
 [FINAL TIME]
-0.1
+0.5
 
 [RECEIVER]
 tests/setups/receiver_studio.dat

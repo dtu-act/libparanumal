@@ -10,7 +10,6 @@
 .DS_STORE
 .DS_Store
 *.vtu
-*.txt
 *.eps
 *.png
 *.pdf
@@ -20,6 +19,7 @@
 *.orig
 *.out
 *.dSYM
+solvers/acoustics/data/*
 acousticsMain
 acousticsTestMain
 

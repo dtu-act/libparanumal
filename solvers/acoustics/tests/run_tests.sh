@@ -24,4 +24,4 @@ export OCCA_DIR=~/libparanumal/occa
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 
 # Run solver
-mpirun ./acousticsTestMain
+mpirun ./acousticsTestMain # [cylinder][freq_indep]

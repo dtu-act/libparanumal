@@ -255,23 +255,46 @@ void acousticsFindReceiverElement(acoustics_t *acoustics){
   }
 }
 
-void acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions){
+int acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions) {
+  if (acoustics->NReceiversLocal == 0) {
+    printf("ERROR: No receivers defined");
+    return 0;
+  }
+
   mesh_t *mesh = acoustics->mesh;
   dfloat sloc[3];
   dfloat sxyz;
-  string outDir_cppstring;
-
-  newOptions.getArgs("OUTPUT DIRECTORY", outDir_cppstring);
-  newOptions.getArgs("SX", sloc[0]);
-  newOptions.getArgs("SY", sloc[1]);
-  newOptions.getArgs("SZ", sloc[2]);
-  newOptions.getArgs("SXYZ", sxyz);
-
-  char *outDir = (char*)outDir_cppstring.c_str();
-
   string PREFIX;
-  newOptions.getArgs("RECEIVERPREFIX", PREFIX);
-  for(dlong iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
+  string outDir_str;
+
+  if (newOptions.getArgs("OUTPUT DIRECTORY", outDir_str) == 0) {
+    printf("ERROR: [OUTPUT DIRECTORY] tag missing");
+    return 1;
+  }
+  if (newOptions.getArgs("SX", sloc[0]) == 0) {
+    printf("ERROR: [SX] tag missing");
+    return 1;
+  }
+  if (newOptions.getArgs("SY", sloc[1]) == 0) {
+    printf("ERROR: [SY] tag missing");
+    return 1;
+  }
+  if (newOptions.getArgs("SZ", sloc[2]) == 0) {
+    printf("ERROR: [SZ] tag missing");
+    return 1;
+  }
+  if (newOptions.getArgs("SXYZ", sxyz) == 0) {
+    printf("ERROR: [SXYZ] tag missing");
+    return 1;
+  }
+  if (newOptions.getArgs("RECEIVERPREFIX", PREFIX) == 0) {
+    printf("ERROR: [RECEIVERPREFIX] tag missing");
+    return 1;
+  }
+
+  char *outDir = (char*)outDir_str.c_str();
+
+  for (dlong iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
     // Print interpolated receiver to file
     
     char fname[BUFSIZ];
@@ -286,14 +309,14 @@ void acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions
 
     char cwd[PATH_MAX];
     if (getcwd(cwd, sizeof(cwd)) == NULL) {
-      perror("getcwd() error");
-      return;
+      perror("getcwd() error");      
+      return 1;
     }
 
     FILE *iFP = fopen(fname,"w");
     if (iFP == NULL) {
       printf("ERROR: receiver output file could not be opened %s/%s)\n", cwd, fname);      
-      return;
+      return 1;
     }
 
     dfloat time = 0;
@@ -317,6 +340,8 @@ void acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions
 
     fclose(iFP);
   }
+
+  return 0;
 }
 
 

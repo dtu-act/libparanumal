@@ -263,7 +263,7 @@ void acousticsFindReceiverElement(acoustics_t *acoustics);
 
 void acousticsRecvIntpolOperators(acoustics_t *acoustics);
 
-void acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions);
+int acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions);
 
 void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dfloat time);
 
