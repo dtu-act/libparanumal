@@ -2,8 +2,10 @@
 1.0
 
 [MESH FILE]
-meshes/cube.msh
+../../meshes/examples/examples/cube.msh
 
+[OUTPUT DIRECTORY]
+data/
 
 [POLYNOMIAL DEGREE]
 1

@@ -4,6 +4,9 @@
 [MESH FILE]
 ../../meshes/examples/bedroom_pdegree4_1000hz.msh
 
+[OUTPUT DIRECTORY]
+data/
+
 [POLYNOMIAL DEGREE]
 4
 

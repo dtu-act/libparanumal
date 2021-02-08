@@ -2,7 +2,10 @@
 1.0
 
 [MESH FILE]
-../../meshes/cavityQuadH005.msh
+../../meshes/examples/cavityQuadH005.msh
+
+[OUTPUT DIRECTORY]
+data/
 
 [MESH DIMENSION]
 2

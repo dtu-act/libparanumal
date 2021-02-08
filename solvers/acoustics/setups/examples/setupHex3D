@@ -2,7 +2,10 @@
 1.0
 
 [MESH FILE]
-../../meshes/cubeHexH00625.msh
+../../meshes/examples/cubeHexH00625.msh
+
+[OUTPUT DIRECTORY]
+data/
 
 [MESH DIMENSION]
 3

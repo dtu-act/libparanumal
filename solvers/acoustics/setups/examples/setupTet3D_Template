@@ -2,7 +2,10 @@
 1.0
 
 [MESH FILE]
-../../meshes/mesh.msh
+../../meshes/examples/mesh.msh
+
+[OUTPUT DIRECTORY]
+data/
 
 [POLYNOMIAL DEGREE]
 4

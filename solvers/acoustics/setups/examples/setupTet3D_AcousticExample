@@ -4,6 +4,8 @@
 [MESH FILE]
 ../../meshes/examples/cubeTet_02_PerfRefl_res01.msh
 
+[OUTPUT DIRECTORY]
+data/
 
 [POLYNOMIAL DEGREE]
 4

@@ -4,6 +4,7 @@ INSTALLATION
 3) build OCCA and acousticsMain by running 'libparanumal/solvers/acoustics/build_acoustics.sh'
     - NOTE: to exploit the GPU, you should build in an environment with access to GPUs (see section about DTU HPC)
 4) run RUNGPU.bsub for a test example
+5) Several examples including frequency dependent and independent cases can be found inside 'libparanumal/solvers/acoustics/tests/' (defined inside acousticsTestMain.c and all executed running 'run_tests.sh')
 
 HPC system
 1) Login using ssh username@login1.gbar.dtu.dk 

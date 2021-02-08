@@ -2,7 +2,10 @@
 1.0
 
 [MESH FILE]
-../../meshes/cavityH01.msh
+../../meshes/examples/cavityH01.msh
+
+[OUTPUT DIRECTORY]
+data/
 
 [MESH DIMENSION]
 2
