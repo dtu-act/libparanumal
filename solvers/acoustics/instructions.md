@@ -1,11 +1,13 @@
 ## INSTALLATION
 1. If you want to access DTUs HPC system, login using command (see section about HPC system as well) <br>
     `> ssh username@login1.gbar.dtu.dk`
-2. Create a folder `libparanumal` and clone the code from git into the folder using the command <br>
+2. Create a folder `libparanumal` **in the home user directory** (i.e. `~/', otherwise you should modify the build script) and clone the code from git into the folder using the command <br>
     `> git clone https://github.com/dtu-act/libparanumal`
 3. Copy OCCA 1.0 into libparanumal folder. **IMPORTANT**: do not use version from git, ask the acoustic group at DTU (OCCA is a third-party library used for compiling code to various platforms, such as CUDA/GPU)
-4. Build OCCA and libParanumal by running <br>
-    `> ./libparanumal/solvers/acoustics/build_acoustics.sh`. <br>
+4. Build OCCA and libParanumal by first entering the acoustics folder <br>
+    `> cd ~/libparanumal/solvers/acoustics` <br>
+    and then execute the build script <br>
+    `> ./build_acoustics.sh` <br>
     **IMPORTANT**: to exploit the GPU, you should build in an environment with access to GPUs (see section below about DTU HPC)
 5. Now libParanumal should be compiled, For testing the setup, run the following command from location `libparanumal/solvers/acoustics` (output is written into `libparanumal/solvers/acoustics/data`) <br>
     `> ./RUNGPU.bsub` <br>    
