@@ -27,5 +27,3 @@ acousticsTestMain
 **/*.c~
 *.m~
 *.nvprof
-
-occa/

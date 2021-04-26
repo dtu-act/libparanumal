@@ -1,0 +1,22 @@
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project: yes
+    patch: yes
+    changes: no
+
+ignore:
+  - examples
+  - tests
+  - scripts
+
+comment:
+  layout: 'reach, diff, files'
+  behavior: default
+  require_changes: false
+  require_base: no
+  require_head: yes
+  branches: null

@@ -1,0 +1,27 @@
+.gitattributes
+
+bin/
+lib/
+obj/
+/include/occa/defines/compiledDefines.hpp
+/scripts/compilerVendorTest
+.compiledDefines
+
+*.obj
+*.pyc
+main
+
+# Debug
+.DS_Store
+*.dSYM
+
+# Coverage
+*.gcno
+*.gcda
+*.gcov
+
+# Visual Studio
+editorTools/visualStudio/*
+!editorTools/visualStudio/occa.sln
+!editorTools/visualStudio/occa.vcxproj
+!editorTools/visualStudio/occa.vcxproj.filters
