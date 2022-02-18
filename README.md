@@ -15,7 +15,7 @@ Forked from https://github.com/paranumal/libparanumal
 ### INSTALLATION
 1. To access DTUs HPC system, log in using the command (see section about HPC system as well) <br>
     `> ssh username@login1.gbar.dtu.dk`
-2. Clone the code from git **in the home user directory** `~/' <br>
+2. Clone the code from git **in the home user directory** `~/` <br>
     `> git clone https://github.com/dtu-act/libparanumal`
 3. OCCA 1.0 is present in the libparanumal folder. **IMPORTANT**: do not use the version from git since this version of libParanumal is out-of-sync (OCCA is a third-party library used for compiling code to various platforms, such as CUDA/GPU)
 4. Build OCCA and libParanumal. **IMPORTANT**: to exploit the GPU, you should build in an environment with access to GPUs. On DTUs systems, do (see also section below about DTU HPC) <br>
