@@ -15,7 +15,9 @@
 			"__locale": "c",
 			"__string": "c",
 			"regex": "c",
-			"string_view": "c"
+			"string_view": "c",
+			"acoustics.h": "c",
+			"stdio.h": "c"
 		}
 	}
 }

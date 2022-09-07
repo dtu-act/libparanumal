@@ -40,6 +40,10 @@ namespace occa {
   namespace cuda {
     device::device(const occa::properties &properties_) :
       occa::device_v(properties_) {
+      
+      // int nDevices;
+      // cuDeviceGetCount(&nDevices);
+      // printf("num devices: %n\n", nDevices);
 
       if (!properties.has("wrapped")) {
         OCCA_ERROR("[CUDA] device not given a [device_id] integer",

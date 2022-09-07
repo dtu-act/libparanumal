@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+#include <vector>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,11 +37,19 @@ SOFTWARE.
 
 // block size for reduction (hard coded)
 #define blockSize 256
+// include Gaussian random fields
+#define INCLUDE_GRF 0
 
-
+#define TRIANGLES 3
+#define QUADRILATERALS 4
+#define TETRAHEDRA 6
+#define HEXAHEDRA 12
 
 typedef struct{
 
+  dfloat fmax;
+  string outDir;
+  
   int dim;
   int elementType; // number of edges (3=tri, 4=quad, 6=tet, 12=hex)
   
@@ -50,15 +59,6 @@ typedef struct{
   dlong Nblock;
 
   dfloat *q, *rhsq, *resq;
-
-  // Snapshot solution q
-  dlong snapshot;
-  dfloat *qSnapshot;
-  occa::memory o_qSnapshot;
-  dlong writeSnapshotEvery;
-  dfloat *Snapshott;
-  dlong snapshotMax;
-
 
   //---------RECEIVER---------
   dfloat *qRecv; // Saves pres in receiver element in each timestep
@@ -84,7 +84,6 @@ typedef struct{
   dlong ERNpoles;
   dlong ERNRealPoles;
   dlong ERNImagPoles;
-
 
   dfloat BCChangeTime;
   dfloat *LR;
@@ -128,7 +127,6 @@ typedef struct{
   occa::memory o_anglei;
 
 
-
   // EIRK4 storage
   dfloat *k1acc;
   dfloat *k2acc;
@@ -161,7 +159,6 @@ typedef struct{
   occa::memory o_k4rhsq;
   occa::memory o_k5rhsq;
   occa::memory o_k6rhsq;
-
 
   dfloat *Vort;
 
@@ -204,12 +201,6 @@ typedef struct{
   occa::kernel acousticsErrorEIRK4Accr;
   dfloat *rkAcc, *rkerrAcc;
   occa::memory o_rkAcc, o_rkerrAcc;
-
-
-  
-
-  
-
   occa::memory o_rkq, o_rkrhsq, o_rkerr;
   occa::memory o_errtmp;
   
@@ -230,50 +221,42 @@ typedef struct{
   dfloat exp1, facold,  dtMIN, safe, beta;
   dfloat *rkA, *rkC, *rkE;
   occa::memory o_rkA, o_rkC, o_rkE;
-  
-}acoustics_t;
+} acoustics_t;
 
 int acousticsSetupMain(setupAide &newOptions);
 
 void acousticsRun(acoustics_t *acoustics, setupAide &newOptions);
 
 acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileName);
+void sourceSetup(mesh_t *mesh, acoustics_t *acoustics, setupAide &newOptions);
 
 void acousticsError(acoustics_t *acoustics, dfloat time);
 
 void acousticsCavitySolution(dfloat x, dfloat y, dfloat z, dfloat t,
 		       dfloat *u, dfloat *v, dfloat *w, dfloat *p);
 
-void acousticsGaussianPulse(dfloat x, dfloat y, dfloat z, dfloat t,
-		      dfloat *r, dfloat *u, dfloat *v, dfloat *w, dfloat *sloc, dfloat sxyz);
+void gaussianSource(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *r, dfloat *sloc, dfloat sxyz);
+#if INCLUDE_GRF
+void grfWindowed(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d, dfloat xminmax[2], dfloat yminmax[2], dfloat zminmax[2], 
+    dfloat sigma_0, dfloat l_0, dfloat sigma0_window, vector<dfloat> &samples_out);
+#endif
+void acousticsWritePressureField(acoustics_t *acoustics);
+int acousticsWriteIRs(acoustics_t *acoustics, setupAide &newOptions);
+int createDir(string path);
 
-void acousticsReport(acoustics_t *acoustics, dfloat time, setupAide &newOptions);
+void acousticsPlotVTU(acoustics_t *acoustics, char *fileName, bool writeVelocity = false);
 
-void acousticsPlotVTU(acoustics_t *acoustics, char *fileName);
-
-void acousticsDopriStep(acoustics_t *acoustics, setupAide &newOptions, const dfloat time);
-
-void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOoptions, const dfloat time);
+void acousticsDopriStep(acoustics_t *acoustics, const dfloat time);
+void acousticsLserkStep(acoustics_t *acoustics, const dfloat time);
+void acousticsEirkStep(acoustics_t *acoustics, const dfloat time);
 
 dfloat acousticsDopriEstimate(acoustics_t *acoustics);
 
 void acousticsReceiverInterpolation(acoustics_t *acoustics);
-
 void acousticsFindReceiverElement(acoustics_t *acoustics);
-
 void acousticsRecvIntpolOperators(acoustics_t *acoustics);
-
-int acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions);
-
-void acousticsEirkStep(acoustics_t *acoustics, setupAide &newOptions, const dfloat time);
 
 void acousticsWSExchange(acoustics_t *acoustics);
 
-void acousticsSnapshot(acoustics_t *acoustics, dfloat time, setupAide &newOptions, dlong openNewFile, dlong snapshotCounter);
-
-void acousticsSnapshotXYZ(acoustics_t *acoustics, setupAide &newOptions);
-
-#define TRIANGLES 3
-#define QUADRILATERALS 4
-#define TETRAHEDRA 6
-#define HEXAHEDRA 12
+// utils
+std::string generateUUID(int length);

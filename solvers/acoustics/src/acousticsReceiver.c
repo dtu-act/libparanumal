@@ -66,43 +66,9 @@ void acousticsReceiverInterpolation(acoustics_t *acoustics){
         intpol[i] += VB_rec[j]*mesh->invVB[i+j*mesh->Np];
       }
     }
-    #if 0
-    printf("Original, irecv = %d, ele = %d\n",iRecv,recvElement);
-    for(int i = 0; i < mesh->Np; i++){
-      printf("%.15lf \n",intpol[i]);
-    }
-    printf("\n");
-    #endif
 
-
-    #if 0
-    // Interpolated receiver
-    dfloat *intRecv;
-    intRecv = (dfloat*) calloc(mesh->NtimeSteps, sizeof(dfloat)); // DOES NOT HAVE INITIAL CONDITION! Add to qRecv also!
-
-    for(int i = 0; i < mesh->NtimeSteps; i++){
-      dfloat interpolated = 0;
-      dlong qRecvOffset = mesh->Np*i + iRecv*mesh->Np*mesh->NtimeSteps;
-      for(int j = 0; j < mesh->Np;j++){
-        interpolated += intpol[j]*acoustics->qRecv[qRecvOffset+j];
-      }
-      intRecv[i] = interpolated;
-    }
-
-    // Print interpolated receiver to file
-    FILE *iFP;
-    char fname[BUFSIZ];
-
-    sprintf(fname, "data/interpolatedRecvPoint_%02d.txt", acoustics->recvElementsIdx[iRecv]);
-    iFP = fopen(fname,"w");
-    for(int i = 0; i < mesh->NtimeSteps; i++){
-      fprintf(iFP, "%.15lf\n", intRecv[i]);
-    }
-    fclose(iFP);
-    #endif
     free(VB_rec);
     free(intpol);
-    //free(intRecv);
   }
 }
 
@@ -254,94 +220,3 @@ void acousticsFindReceiverElement(acoustics_t *acoustics){
     }
   }
 }
-
-int acousticsPrintReceiversToFile(acoustics_t *acoustics, setupAide &newOptions) {
-  if (acoustics->NReceiversLocal == 0) {
-    printf("ERROR: No receivers defined");
-    return 0;
-  }
-
-  mesh_t *mesh = acoustics->mesh;
-  dfloat sloc[3];
-  dfloat sxyz;
-  string PREFIX;
-  string outDir_str;
-
-  if (newOptions.getArgs("OUTPUT DIRECTORY", outDir_str) == 0) {
-    printf("ERROR: [OUTPUT DIRECTORY] tag missing");
-    return 1;
-  }
-  if (newOptions.getArgs("SX", sloc[0]) == 0) {
-    printf("ERROR: [SX] tag missing");
-    return 1;
-  }
-  if (newOptions.getArgs("SY", sloc[1]) == 0) {
-    printf("ERROR: [SY] tag missing");
-    return 1;
-  }
-  if (newOptions.getArgs("SZ", sloc[2]) == 0) {
-    printf("ERROR: [SZ] tag missing");
-    return 1;
-  }
-  if (newOptions.getArgs("SXYZ", sxyz) == 0) {
-    printf("ERROR: [SXYZ] tag missing");
-    return 1;
-  }
-  if (newOptions.getArgs("RECEIVERPREFIX", PREFIX) == 0) {
-    printf("ERROR: [RECEIVERPREFIX] tag missing");
-    return 1;
-  }
-
-  char *outDir = (char*)outDir_str.c_str();
-
-  for (dlong iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
-    // Print interpolated receiver to file
-    
-    char fname[BUFSIZ];
-
-    // create output folder if not existing
-    struct stat st = {0};
-    if (stat(outDir, &st) == -1) {
-      mkdir(outDir, 0700);
-    }
-
-    sprintf(fname, "%s/%s_RecvPoint_%02d.txt", outDir, (char*)PREFIX.c_str(), acoustics->recvElementsIdx[iRecv]);
-
-    char cwd[PATH_MAX];
-    if (getcwd(cwd, sizeof(cwd)) == NULL) {
-      perror("getcwd() error");      
-      return 1;
-    }
-
-    FILE *iFP = fopen(fname,"w");
-    if (iFP == NULL) {
-      printf("ERROR: receiver output file could not be opened %s/%s)\n", cwd, fname);      
-      return 1;
-    }
-
-    dfloat time = 0;
-    dfloat u = 0, v = 0, w = 0, r = 0;
-
-    dlong rIdx = acoustics->recvElementsIdx[iRecv];
-    dfloat x = acoustics->recvXYZ[rIdx*3+0];
-    dfloat y = acoustics->recvXYZ[rIdx*3+1];
-    dfloat z = acoustics->recvXYZ[rIdx*3+2];
-    
-    acousticsGaussianPulse(x, y, z, 0, &r, &u, &v, &w, sloc, sxyz);
-    
-    fprintf(iFP, "%.15lf %.15le\n", time, r);
-    
-    for(int i = 0; i < mesh->NtimeSteps; i++){
-      time += mesh->dt;
-      fprintf(iFP, "%.15lf %.15le\n", time, acoustics->qRecv[i+iRecv*mesh->NtimeSteps]);
-    }
-
-    printf("Receiver impulse response was written to disk: %s/%s\n", cwd, fname);
-
-    fclose(iFP);
-  }
-
-  return 0;
-}
-
-
