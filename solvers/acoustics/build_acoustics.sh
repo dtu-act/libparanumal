@@ -2,7 +2,8 @@
 
 # Load modules
 module purge
-module load mpi/4.0.3-gcc-8.4.0
+#module load mpi/4.0.3-gcc-8.4.0
+module load mpi/3.1.3-gcc-7.4.0
 module load cuda/10.0
 
 # OCCA environment variables

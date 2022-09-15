@@ -113,49 +113,49 @@ TEST_CASE( "Studio with combined boundaries (freq. indep. + LR + perf. refl)", "
 }
 
 // CURVILINEAR
-TEST_CASE( "Cylinder with freq. indep. boundaries", "[cylinder][freq_indep]" ) {
-    string filepathGen = "tests/data/generated/cylinder_250hz_p8_5ppw_freq_indep_RecvPoint_00.txt";
-    string filepathRef = "tests/data/ref/cylinder_250hz_p8_5ppw_freq_indep_RecvPoint_00_REF.txt";
+//TEST_CASE( "Cylinder with freq. indep. boundaries", "[cylinder][freq_indep]" ) {
+//    string filepathGen = "tests/data/generated/cylinder_250hz_p8_5ppw_freq_indep_RecvPoint_00.txt";
+//    string filepathRef = "tests/data/ref/cylinder_250hz_p8_5ppw_freq_indep_RecvPoint_00_REF.txt";
 
-    setupAide newOptions("tests/setups/setup_cylinder_250hz_freq_indep");
+//    setupAide newOptions("tests/setups/setup_cylinder_250hz_freq_indep");
 
-    REQUIRE( acousticsSetupMain(newOptions) == 0 );
+//    REQUIRE( acousticsSetupMain(newOptions) == 0 );
     
-    compareAndCleanup(filepathGen, filepathRef);
-}
+//    compareAndCleanup(filepathGen, filepathRef);
+//}
 
-TEST_CASE( "Cylinder with freq. dep. LR boundaries", "[cylinder][freq_dep_lr]" ) {
-    string filepathGen = "tests/data/generated/cylinder_250hz_p8_5ppw_freq_dep_lr_RecvPoint_00.txt";
-    string filepathRef = "tests/data/ref/cylinder_250hz_p8_5ppw_freq_dep_lr_RecvPoint_00_REF.txt";
+//TEST_CASE( "Cylinder with freq. dep. LR boundaries", "[cylinder][freq_dep_lr]" ) {
+//    string filepathGen = "tests/data/generated/cylinder_250hz_p8_5ppw_freq_dep_lr_RecvPoint_00.txt";
+//    string filepathRef = "tests/data/ref/cylinder_250hz_p8_5ppw_freq_dep_lr_RecvPoint_00_REF.txt";
 
-    setupAide newOptions("tests/setups/setup_cylinder_250hz_freq_dep_lr");
+//    setupAide newOptions("tests/setups/setup_cylinder_250hz_freq_dep_lr");
 
-    REQUIRE( acousticsSetupMain(newOptions) == 0 );
+//    REQUIRE( acousticsSetupMain(newOptions) == 0 );
     
-    compareAndCleanup(filepathGen, filepathRef);
-}
+//    compareAndCleanup(filepathGen, filepathRef);
+//}
 
-TEST_CASE( "Cylinder with perf. refl. boundaries", "[cylinder][perf_refl]" ) {
-    string filepathGen = "tests/data/generated/cylinder_250hz_p8_5ppw_perf_refl_RecvPoint_00.txt";
-    string filepathRef = "tests/data/ref/cylinder_250hz_p8_5ppw_perf_refl_RecvPoint_00_REF.txt";
+//TEST_CASE( "Cylinder with perf. refl. boundaries", "[cylinder][perf_refl]" ) {
+//    string filepathGen = "tests/data/generated/cylinder_250hz_p8_5ppw_perf_refl_RecvPoint_00.txt";
+//    string filepathRef = "tests/data/ref/cylinder_250hz_p8_5ppw_perf_refl_RecvPoint_00_REF.txt";
 
-    setupAide newOptions("tests/setups/setup_cylinder_250hz_perf_refl");
+//    setupAide newOptions("tests/setups/setup_cylinder_250hz_perf_refl");
 
-    REQUIRE( acousticsSetupMain(newOptions) == 0 );
+//    REQUIRE( acousticsSetupMain(newOptions) == 0 );
     
-    compareAndCleanup(filepathGen, filepathRef);
-}
+//    compareAndCleanup(filepathGen, filepathRef);
+//}
 
-TEST_CASE( "Cylinder with combined boundaries (freq. indep. + LR + perf. refl)", "[cylinder][combined]" ) {
-    string filepathGen = "tests/data/generated/cylinder_250hz_p8_5ppw_combined_RecvPoint_00.txt";
-    string filepathRef = "tests/data/ref/cylinder_250hz_p8_5ppw_combined_RecvPoint_00_REF.txt";
+//TEST_CASE( "Cylinder with combined boundaries (freq. indep. + LR + perf. refl)", "[cylinder][combined]" ) {
+//    string filepathGen = "tests/data/generated/cylinder_250hz_p8_5ppw_combined_RecvPoint_00.txt";
+//    string filepathRef = "tests/data/ref/cylinder_250hz_p8_5ppw_combined_RecvPoint_00_REF.txt";
 
-    setupAide newOptions("tests/setups/setup_cylinder_250hz_combined");
+//    setupAide newOptions("tests/setups/setup_cylinder_250hz_combined");
 
-    REQUIRE( acousticsSetupMain(newOptions) == 0 );
+//    REQUIRE( acousticsSetupMain(newOptions) == 0 );
     
-    compareAndCleanup(filepathGen, filepathRef);
-}
+//    compareAndCleanup(filepathGen, filepathRef);
+//}
 
 // not run by default - testing purposes
 TEST_CASE( "Cube with freq. indep. (quick)", "[!hide][cube]" ) {
