@@ -16,12 +16,13 @@ OGSDIR  = ../../libs/gatherScatter
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
-CC	= mpic++ -std=c++17
-LD	= mpic++ -std=c++17
+CC	= mpic++ -std=c++2a
+LD	= mpic++ -std=c++2a
 
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DACOUSTICS='"${CURDIR}"'
 
+# add -larmadillo if #define INCLUDE_GRF 1 is set in acoustics.h
 OS := $(shell uname)
 ifeq ($(OS),Darwin)
 	# link flags to be used (MacOS)
@@ -51,15 +52,16 @@ $(HDRDIR)/mesh3D.h
 OBJS    = \
 ./src/acousticsEstimate.o \
 ./src/acousticsReceiver.o \
-./src/acousticsWaveSplitting.o \
 ./src/acousticsStep.o \
 ./src/acousticsError.o \
 ./src/acousticsRun.o \
 ./src/acousticsSetup.o \
 ./src/acousticsSetupMain.o \
-./src/acousticsGaussianPulse.o \
+./src/acousticsSources.o \
 ./src/acousticsPlotVTU.o \
-./src/acousticsReport.o \
+./src/acousticsIO.o \
+./src/acousticsUtils.o \
+./src/acousticsWaveSplitting.o \
 ../../src/meshParallelReaderTet3DCurv.o \
 ../../src/meshSetupTet3DCurv.o \
 ../../src/meshGeometricPartition3DCurv.o \
@@ -136,7 +138,6 @@ acousticsMain:$(OBJS) $(OBJS_MAIN)
 tests:$(OBJS) $(OBJS_TESTS) 
 	$(LD)  $(LDFLAGS)  -o acousticsTestMain $(OBJS) $(OBJS_TESTS) $(paths) $(LIBS)
 
-# what to do if user types "make clean"
 clean :
 	rm -r $(OBJS) $(OBJS_MAIN) acousticsMain
 	rm -r $(OBJS) $(OBJS_TESTS) acousticsTestMain

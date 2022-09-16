@@ -1,6 +1,9 @@
 [FORMAT]
 1.0
 
+[SIMULATION_ID]
+cylinder_250hz_p8_5ppw_perf_refl
+
 [MESH FILE]
 ../../meshes/tests/cylinder_250hz_p8_5ppw_perf_refl.msh
 
@@ -13,19 +16,14 @@ tests/data/generated
 [CURVILINEAR MESH] # 0: Off, 1: On. Mesh order MUST match [POLYNOMIAL DEGREE]
 1
 
-[TIME INTEGRATOR]
+[TIME INTEGRATOR] # LSERK4 | EIRK4 | DOPRI5 (broken)
 LSERK4
-#EIRK4
-#DOPRI5 # Currently broken
 
 [FINAL TIME]
 0.5
 
 [RECEIVER]
 tests/setups/receiver_cylinder.dat
-
-[RECEIVERPREFIX]
-cylinder_250hz_p8_5ppw_perf_refl
 
 [CFL]
 1
@@ -45,6 +43,18 @@ cylinder_250hz_p8_5ppw_perf_refl
 [ERVECTFIT] # Vectorfit filename from vectorfitDriverER.m
 #tests/setups/freq_dep_er.dat
 
+[FREQUENCY]
+250 # [Hz]
+
+[WRITE_WAVE_FIELD] # 0 or 1
+0
+
+[TEMPORAL_PPW_OUTPUT] # temporal resolution of the output pressure field
+8
+
+[SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
+GAUSSIAN
+
 [SXYZ] # Width of initial pulse
 0.8
 
@@ -56,18 +66,6 @@ cylinder_250hz_p8_5ppw_perf_refl
 
 [SZ] # z coordinate of initial pulse
 0.5 # height
-
-[SNAPSHOT] # Take a snapshot of solution every X timesteps, 0 to turn off
-0
-
-[SNAPSHOTPREFIX] # Prefix of snapshot output file, data/PREFIX_Snapshot.txt
-snap1
-
-[SNAPSHOTMAX] # Maximum number of snapshots to take during a run. Ignore everyone after.
-100
-
-[BCCHANGETIME] # Switch from ER to LR BCs at time = BCCHANGETIME, 0 to turn off
-0
 
 ### DON'T CHANGE BELOW ###
 [MESH DIMENSION]
@@ -129,9 +127,6 @@ NODAL
 
 [RESTART FROM FILE]
 0
-
-[OUTPUT FILE NAME]
-vtkOut/tshape
 
 [VERBOSE]
 FALSE

@@ -35,12 +35,13 @@ int main(int argc, char **argv){
   printf("%s\n", argv[0]);
   printf("%s\n", argv[1]);
 
-  // start up MPI
+  printf("Initializing MPI...\n");
   MPI_Init(&argc, &argv);
 
   // if argv > 2 then should load input data from argv
   setupAide newOptions(argv[1]);
 
+  printf("Acoustics setup...\n");
   int res = acousticsSetupMain(newOptions);
 
   // close down MPI

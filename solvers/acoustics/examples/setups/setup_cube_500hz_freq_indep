@@ -1,31 +1,29 @@
 [FORMAT]
 1.0
 
+[SIMULATION_ID]
+cube_500hz_p4_5ppw_freq_indep
+
 [MESH FILE]
-../../meshes/tests/cylinder_250hz_p8_5ppw_freq_dep_lr.msh
+../../meshes/tests/cube_500hz_p4_5ppw_freq_indep.msh
 
 [OUTPUT DIRECTORY]
-tests/data/generated
+examples/output
 
 [POLYNOMIAL DEGREE]
-8
+4
 
 [CURVILINEAR MESH] # 0: Off, 1: On. Mesh order MUST match [POLYNOMIAL DEGREE]
-1
+0
 
-[TIME INTEGRATOR]
-#LSERK4
-EIRK4
-#DOPRI5 # Currently broken
+[TIME INTEGRATOR] # LSERK4 | EIRK4 | DOPRI5 (broken)
+LSERK4
 
 [FINAL TIME]
-0.5
+0.1
 
 [RECEIVER]
-tests/setups/receiver_cylinder.dat
-
-[RECEIVERPREFIX]
-cylinder_250hz_p8_5ppw_freq_dep_lr
+examples/setupdata/receivers2_cube.dat
 
 [CFL]
 1
@@ -37,37 +35,40 @@ cylinder_250hz_p8_5ppw_freq_dep_lr
 343.0
 
 [Z_IND] # Z value for frequency independent boundary condition
-#7400    # alpha_0 = 0.2
+7400
 
 [LRVECTFIT] # Vectorfit filename from vectorfitDriverLR.m
-tests/setups/freq_dep_lr.dat
+#solvers/acoustics/setups/setupdata/LRDATA14.dat
 
 [ERVECTFIT] # Vectorfit filename from vectorfitDriverER.m
-#setups/setupdata/ERDATA14.dat
+#tests/setups/freq_dep_er.dat
 
-[SXYZ] # Width of initial pulse
-0.8
+[FREQUENCY]
+500 # [Hz]
 
-[SX] # x coordinate of initial pulse
-0.0
-
-[SY] # y coordinate of initial pulse
-0.0
-
-[SZ] # z coordinate of initial pulse
-0.5 # height
-
-[SNAPSHOT] # Take a snapshot of solution every X timesteps, 0 to turn off
+[WRITE_WAVE_FIELD] # 0 or 1
 0
 
-[SNAPSHOTPREFIX] # Prefix of snapshot output file, data/PREFIX_Snapshot.txt
-snap1
+[TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
+8
 
-[SNAPSHOTMAX] # Maximum number of snapshots to take during a run. Ignore everyone after.
-100
+[SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
+GAUSSIAN
 
-[BCCHANGETIME] # Switch from ER to LR BCs at time = BCCHANGETIME, 0 to turn off
-0
+; [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
+; 0.3
+
+[SXYZ] # OPTIONAL: Width of initial pulse
+0.4
+
+[SX] # x coordinate of initial pulse (ignored for GRF)
+0.5
+
+[SY] # y coordinate of initial pulse (ignored for GRF)
+0.5
+
+[SZ] # z coordinate of initial pulse (ignored for GRF)
+0.5
 
 ### DON'T CHANGE BELOW ###
 [MESH DIMENSION]
@@ -129,9 +130,6 @@ NODAL
 
 [RESTART FROM FILE]
 0
-
-[OUTPUT FILE NAME]
-vtkOut/tshape
 
 [VERBOSE]
 FALSE

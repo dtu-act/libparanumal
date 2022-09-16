@@ -27,12 +27,9 @@ SOFTWARE.
 #include "acoustics.h"
 
 // interpolate data to plot nodes and save to file (one per process
-void acousticsPlotVTU(acoustics_t *acoustics, char *fileName){
+void acousticsPlotVTU(acoustics_t *acoustics, char *fileName, bool writeVelocity /*= false */) {
   mesh_t *mesh = acoustics->mesh;
-
-  FILE *fp;
-  
-  fp = fopen(fileName, "w");
+  FILE *fp = fopen(fileName, "w");
 
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
   fprintf(fp, "  <UnstructuredGrid>\n");
@@ -51,7 +48,7 @@ void acousticsPlotVTU(acoustics_t *acoustics, char *fileName){
       for(int m=0;m<mesh->Np;++m){
         plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
         plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
-	plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np];
+        plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np];
       }
 
       fprintf(fp, "       ");
@@ -59,12 +56,11 @@ void acousticsPlotVTU(acoustics_t *acoustics, char *fileName){
     }
   }
   fprintf(fp, "        </DataArray>\n");
-  fprintf(fp, "      </Points>\n");
-  
+  fprintf(fp, "      </Points>\n");  
 
   // write out pressure
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
-  fprintf(fp, "        <DataArray type=\"Float64\" Name=\"Density\" Format=\"ascii\">\n");
+  fprintf(fp, "        <DataArray type=\"Float64\" Name=\"Pressure\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
@@ -79,34 +75,35 @@ void acousticsPlotVTU(acoustics_t *acoustics, char *fileName){
   }
   fprintf(fp, "       </DataArray>\n");
 
-  // write out velocity
-  fprintf(fp, "        <DataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  for(dlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp;++n){
-      dfloat plotun = 0, plotvn = 0, plotwn = 0;
-      for(int m=0;m<mesh->Np;++m){
-        dfloat rm = acoustics->q[e*mesh->Np*mesh->Nfields+m           ];
-        dfloat um = acoustics->q[e*mesh->Np*mesh->Nfields+m+mesh->Np  ];
-        dfloat vm = acoustics->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*2];
-        //
-        plotun += mesh->plotInterp[n*mesh->Np+m]*um;
-        plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
+  if (writeVelocity) {
+    // write out velocity
+    fprintf(fp, "        <DataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
+    for(dlong e=0;e<mesh->Nelements;++e){
+      for(int n=0;n<mesh->plotNp;++n){
+        dfloat plotun = 0, plotvn = 0, plotwn = 0;
+        for(int m=0;m<mesh->Np;++m){
+          dfloat rm = acoustics->q[e*mesh->Np*mesh->Nfields+m           ];
+          dfloat um = acoustics->q[e*mesh->Np*mesh->Nfields+m+mesh->Np  ];
+          dfloat vm = acoustics->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*2];
+          //
+          plotun += mesh->plotInterp[n*mesh->Np+m]*um;
+          plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
 
-	if(acoustics->dim==3){
-	  dfloat wm = acoustics->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*3];
-	  
-	  plotwn += mesh->plotInterp[n*mesh->Np+m]*wm;
-	}
-      }
-    
-      fprintf(fp, "       ");
-      fprintf(fp, "%g %g %g\n", plotun, plotvn, plotwn);
+    if(acoustics->dim==3){
+      dfloat wm = acoustics->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*3];
+      
+      plotwn += mesh->plotInterp[n*mesh->Np+m]*wm;
     }
+        }
+      
+        fprintf(fp, "       ");
+        fprintf(fp, "%g %g %g\n", plotun, plotvn, plotwn);
+      }
+    }
+    fprintf(fp, "       </DataArray>\n");
   }
-  fprintf(fp, "       </DataArray>\n");
 
   fprintf(fp, "     </PointData>\n");
-  
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
   

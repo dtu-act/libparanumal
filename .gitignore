@@ -21,6 +21,7 @@
 *.dSYM
 solvers/acoustics/data/*
 acousticsMain
+armadillo
 acousticsTestMain
 
 **/*.o

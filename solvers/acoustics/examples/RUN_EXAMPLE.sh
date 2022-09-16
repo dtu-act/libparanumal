@@ -15,14 +15,18 @@
 #BSUB -o "logs/acoustics_example-%J.out"
 #BSUB -e "logs/acoustics_example-%J.err"
 
-# Load modules
-module purge
-module load mpi/3.1.3-gcc-7.4.0
-module load cuda/10.0
+# DTU HPC
+module load mpi/3.1.4-gcc-9.2.0
+module load cuda/11.3
+
+# OSCAR
+# module load gcc/10.2
+# module load mpi/openmpi_3.1.6_gcc
+# module load cuda/11.3.1
+# module load armadillo/9.200.4
 
 export OCCA_DIR=~/libparanumal/occa
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 
 # Run solver
-mpirun ./acousticsMain setups/examples/setupTet3D_AcousticExample
-
+mpirun -n 1 ./acousticsMain examples/setups/setup_cube_500hz_freq_indep 
