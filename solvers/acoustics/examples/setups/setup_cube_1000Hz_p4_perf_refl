@@ -37,17 +37,17 @@ examples/setupdata/receiver_x0_1_y0_5_z0_5.dat
 [Z_IND] # Z value for frequency independent boundary condition
 7400
 
-[LRVECTFIT] # Vectorfit filename from vectorfitDriverLR.m
-#solvers/acoustics/setups/setupdata/LRDATA14.dat
+[LRVECTFIT] # Generated using vectorfitDriverLR.m
+examples/setupdata/LRDATA14.dat
 
-[ERVECTFIT] # Vectorfit filename from vectorfitDriverER.m
-#tests/setups/freq_dep_er.dat
+[ERVECTFIT] # Generated using vectorfitDriverER.m
+examples/setupdata/ERDATA14.dat
 
 [FREQUENCY]
 1000 # [Hz]
 
-[WRITE_WAVE_FIELD] # 0 or 1
-1
+[WRITE_WAVE_FIELD] # NONE | XDMF | VTU | TXT
+NONE
 
 [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
 8
@@ -58,17 +58,17 @@ GRF
 [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
 0.3
 
-; [SXYZ] # OPTIONAL: Width of initial pulse
+; [SXYZ] # OPTIONAL: Width of initial pulse (will be computed automatically if not defined)
 ; 0.4
 
-; [SX] # x coordinate of initial pulse (ignored for GRF)
-; 0.5
+[SX] # x coordinate of initial pulse (ignored for GRF)
+0.5
 
-; [SY] # y coordinate of initial pulse (ignored for GRF)
-; 0.5
+[SY] # y coordinate of initial pulse (ignored for GRF)
+0.5
 
-; [SZ] # z coordinate of initial pulse (ignored for GRF)
-; 0.5
+[SZ] # z coordinate of initial pulse (ignored for GRF)
+0.5
 
 ### DON'T CHANGE BELOW ###
 [MESH DIMENSION]

@@ -30,9 +30,9 @@ SOFTWARE.
 #include <stdexcept>
 
 void dopri5(acoustics_t *acoustics, dfloat outputInterval);
-void lseRK4(acoustics_t *acoustics, int tstepsWrite);
-void eiRK4(acoustics_t *acoustics, int tstepsWrite);
-void eiRK4adap(acoustics_t *acoustics, int tstepsWrite);
+void lseRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, WriteWaveFieldType waveFieldWriteType);
+void eiRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, WriteWaveFieldType waveFieldWriteType);
+void eiRK4adap(acoustics_t *acoustics);
 
 // helper
 void copyReceiverToHost(acoustics_t *acoustics) {
@@ -77,25 +77,43 @@ void acousticsBCChange(acoustics_t *acoustics, dfloat time)
 
 void acousticsRun(acoustics_t *acoustics, setupAide &newOptions)
 {
-  int doWriteWaveField;
+  WriteWaveFieldType waveFieldWriteType;
   int ppwWaveField;
 
-  if (newOptions.getArgs("WRITE_WAVE_FIELD", doWriteWaveField) == 0) {
-    printf("WRITE_WAVE_FIELD attribute not found: defaulting to false\n");
-    doWriteWaveField = 0;
+  if (newOptions.compareArgs("WRITE_WAVE_FIELD", "NONE")) {
+    waveFieldWriteType = None;
+  } 
+  else if (newOptions.compareArgs("WRITE_WAVE_FIELD", "VTU")) {
+    waveFieldWriteType = Vtu;
   }
-  if (doWriteWaveField) {
+  else if (newOptions.compareArgs("WRITE_WAVE_FIELD", "XDMF")) {
+    waveFieldWriteType = Xdmf;
+  }
+  else if (newOptions.compareArgs("WRITE_WAVE_FIELD", "TXT")) {
+    waveFieldWriteType = Txt;
+  }
+  else {
+    printf("WRITE_WAVE_FIELD attribute not found: defaulting to None\n");
+    waveFieldWriteType = Txt;
+  }
+
+  if (waveFieldWriteType != None) {
     if (newOptions.getArgs("TEMPORAL_PPW_OUTPUT", ppwWaveField) == 0) {
-      printf("TEMPORAL_PPW_OUTPUT attribute not found: defaulting to 8\n");
-      ppwWaveField = 8;
+      throw std::invalid_argument("[TEMPORAL_PPW_OUTPUT] tag missing");
     }
   }
 
-  int tstepsWrite = -1;
-  if (doWriteWaveField) {
+  std::vector<dfloat> timeStepsWrite;
+  if (waveFieldWriteType != None) {
     dfloat fmax = acoustics->fmax;
     dfloat dt_write = (1.0/fmax)/ppwWaveField;
-    tstepsWrite = std::max((int)floor(dt_write/acoustics->mesh->dt), 1);
+    int tstepsWrite = std::max((int)floor(dt_write/acoustics->mesh->dt), 1);
+    
+    for (int tstep = 0; tstep < acoustics->mesh->NtimeSteps; tstep++) { // check!  + 1
+      if (tstep % tstepsWrite == 0) {
+        timeStepsWrite.push_back(tstep * acoustics->mesh->dt);
+      }
+    }
   }
 
   //timer.initTimer(mesh->device);
@@ -104,19 +122,19 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions)
   {
     dfloat outputInterval;
     newOptions.getArgs("OUTPUT INTERVAL", outputInterval);
-    dopri5(acoustics, outputInterval);
+    dopri5(acoustics, outputInterval); // NOT WORKING
   }
   else if (newOptions.compareArgs("TIME INTEGRATOR", "LSERK4"))
   {
-    lseRK4(acoustics, tstepsWrite);
+    lseRK4(acoustics, timeStepsWrite, waveFieldWriteType);
   }
   else if (newOptions.compareArgs("TIME INTEGRATOR", "EIRK4"))
   {
-    eiRK4(acoustics, tstepsWrite);
+    eiRK4(acoustics, timeStepsWrite, waveFieldWriteType);
   }
   else if (newOptions.compareArgs("TIME INTEGRATOR", "EIRK4ADAP"))
   {
-    eiRK4adap(acoustics, tstepsWrite);
+    eiRK4adap(acoustics);
   }
   else {
     throw std::invalid_argument("TIME INTEGRATOR type not supported. Supported types: DOPRI5, LSERK4, EIRK4, EIRK4ADAP.");
@@ -148,21 +166,22 @@ void updateReceivers(acoustics_t *acoustics) {
   }
 }
 
-void lseRK4(acoustics_t *acoustics, int tstepsWrite) {
-  dfloat time = 0.0;
-  bool write_pressure = false;
+void lseRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, WriteWaveFieldType waveFieldWriteType) {
   mesh_t *mesh = acoustics->mesh;
   
   updateReceivers(acoustics); // update receivers at t=0 (IC)
 
+  int tstepWrite = 0;
   for (int tstep = 0; tstep < mesh->NtimeSteps; ++tstep)
   {
-    if (tstepsWrite >= 0 && tstep % tstepsWrite == 0) {
+    dfloat time = tstep*mesh->dt;
+
+    if (timeStepsWrite.size() > 0 && abs(timeStepsWrite[tstepWrite] - time) < 1e-10) {
       acoustics->o_q.copyTo(acoustics->q); // copy from GPU to CPU
-      acousticsWritePressureField(acoustics);
+      acousticsWritePressureField(acoustics, waveFieldWriteType, timeStepsWrite, tstepWrite);
+      tstepWrite++;
     }
-    
-    time = tstep * mesh->dt;
+        
     acousticsBCChange(acoustics, time);
     acousticsLserkStep(acoustics, time);
     updateReceivers(acoustics);
@@ -174,19 +193,22 @@ void lseRK4(acoustics_t *acoustics, int tstepsWrite) {
   }
 }
 
-void eiRK4(acoustics_t *acoustics, int tstepsWrite) {
-  dfloat time = 0.0;
+void eiRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, WriteWaveFieldType waveFieldWriteType) {
   mesh_t *mesh = acoustics->mesh;
 
   updateReceivers(acoustics); // update receivers at t=0 (IC)
 
+  int tstepWrite = 0;
   for (int tstep = 0; tstep < mesh->NtimeSteps; ++tstep)
   {
-    if (tstepsWrite >= 0 && tstep % tstepsWrite == 0) {
+    dfloat time = tstep*mesh->dt;
+
+    if (timeStepsWrite.size() > 0 && abs(timeStepsWrite[tstepWrite] - time) < 1e-10) {
       acoustics->o_q.copyTo(acoustics->q); // copy from GPU to CPU
-      acousticsWritePressureField(acoustics);
+      acousticsWritePressureField(acoustics, waveFieldWriteType, timeStepsWrite, tstepWrite);
+      tstepWrite++;
     }
-    time = tstep * mesh->dt;
+
     acousticsBCChange(acoustics, time);
     acousticsEirkStep(acoustics, time);
     updateReceivers(acoustics);    
@@ -198,7 +220,7 @@ void eiRK4(acoustics_t *acoustics, int tstepsWrite) {
   }    
 }
 
-void eiRK4adap(acoustics_t *acoustics, int tstepsWrite) {
+void eiRK4adap(acoustics_t *acoustics) {
   dfloat time = 0.0;
   mesh_t *mesh = acoustics->mesh;
 
@@ -207,12 +229,6 @@ void eiRK4adap(acoustics_t *acoustics, int tstepsWrite) {
   dfloat dt = mesh->dt; // Initial dt
   while (time < mesh->finalTime)
   {
-    int tstep = round(time / mesh->dt);
-    if (tstepsWrite >= 0 && tstep % tstepsWrite == 0) {
-      acoustics->o_q.copyTo(acoustics->q); // copy from GPU to CPU
-      acousticsWritePressureField(acoustics);
-    }
-
     if (time + dt > mesh->finalTime)
     {
       dt = mesh->finalTime - time;

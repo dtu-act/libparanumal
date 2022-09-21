@@ -189,8 +189,6 @@ void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, d
         acoustics->q[qbase + 3 * mesh->Np] = vel_z;
     }
   }
-
-  // acousticsWritePressureField(acoustics, "/users/nborrelj/data/nborrelj/libP/");
 }
 #endif
 
@@ -225,24 +223,31 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
   acoustics_t *acoustics = (acoustics_t *)calloc(1, sizeof(acoustics_t));
 
   string outDir;
+ 
+  if (newOptions.getArgs("SIMULATION_ID", acoustics->simulationID) == 0) {
+    throw std::invalid_argument("[SIMULATION_ID] tag missing"); 
+  }
 
   if (newOptions.getArgs("OUTPUT DIRECTORY", outDir) == 0) {
     throw std::invalid_argument("[OUTPUT DIRECTORY] tag missing");
   }
 
-  if (newOptions.compareArgs("SOURCE_TYPE", "GRF")) 
-  {
-    string caseID;
-    if (newOptions.getArgs("SIMULATION_ID", caseID) == 0) {
-      throw std::invalid_argument("[OUTPUT DIRECTORY] tag missing");
-    }
+  string caseID;
+  if (newOptions.getArgs("SIMULATION_ID", caseID) == 0) {
+    throw std::invalid_argument("[SIMULATION_ID] tag missing");
+  }
+  if (newOptions.compareArgs("SOURCE_TYPE", "GRF"))
+  {        
     acoustics->outDir = outDir+"/"+caseID+"_"+generateUUID(10);
   } 
-  else 
+  else if (newOptions.compareArgs("SOURCE_TYPE", "GAUSSIAN"))
   {
-    acoustics->outDir = outDir;
+    acoustics->outDir = outDir+"/"+caseID;
   }
-  createDir(acoustics->outDir);
+  else {
+    throw std::invalid_argument("[SIMULATION_ID] tag should be: GRF | GAUSSIAN");
+  }
+  createDir(acoustics->outDir, true);
 
   if (newOptions.getArgs("FREQUENCY", acoustics->fmax) == 0)
   {

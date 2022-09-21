@@ -37,22 +37,22 @@ setups/setupdata/examples/Receiver_bedroom.dat
 [Z_IND] # Z value for frequency independent boundary condition
 7400    # alpha_0 = 0.2
 
-[LRVECTFIT] # Vectorfit filename from vectorfitDriverLR.m
-#setups/setupdata/LRtestNH.dat
+[LRVECTFIT] # Generated using vectorfitDriverLR.m
+examples/setupdata/LRDATA14.dat
 
-[ERVECTFIT] # Vectorfit filename from vectorfitDriverER.m
-#tests/setups/freq_dep_er.dat
+[ERVECTFIT] # Generated using vectorfitDriverER.m
+examples/setupdata/ERDATA14.dat
 
 [FREQUENCY]
 1000 # [Hz]
 
-[WRITE_WAVE_FIELD] # 0 or 1
-0
+[WRITE_WAVE_FIELD] # NONE | VTU | XDMF | TXT
+NONE
 
 [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output pressure field
 8
 
-[SXYZ] # Width of initial pulse
+[SXYZ] # Width of initial pulse [Optional: calcuated automatically if not present]
 0.2
 
 [SX] # x coordinate of initial pulse
@@ -127,5 +127,3 @@ NODAL
 
 [VERBOSE]
 FALSE
-
-

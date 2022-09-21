@@ -46,8 +46,8 @@ tests/setups/receiver_studio.dat
 [FREQUENCY]
 250 # [Hz]
 
-[WRITE_WAVE_FIELD] # 0 or 1
-0
+[WRITE_WAVE_FIELD] # NONE | VTU | XDMF | TXT
+NONE
 
 [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output pressure field
 8

@@ -26,42 +26,48 @@ SOFTWARE.
 
 #include "acoustics.h"
 #include <limits.h>
+#include<filesystem>
 
-void acousticsWritePressureField(acoustics_t *acoustics) {  
-  char fname[BUFSIZ];
-  mesh3D *mesh = acoustics->mesh;
+namespace fs = std::filesystem;
 
-  sprintf(fname, "%s/pressure_field_%04d_%04d.vtu", (char*)acoustics->outDir.c_str(), mesh->rank, acoustics->frame++);
-  acousticsPlotVTU(acoustics, fname);
+void acousticsWritePressureField(acoustics_t *acoustics, WriteWaveFieldType waveFieldWriteType, std::vector<dfloat> timeSteps, int iter) {    
+  if (waveFieldWriteType == Vtu) {    
+    acousticsWriteVTU(acoustics);
+  }
+  else if  (waveFieldWriteType == Xdmf) {
+    acousticsWriteXdmf(acoustics, timeSteps, iter);
+  }
+  else if  (waveFieldWriteType == Txt) {
+    dfloat time = timeSteps[iter];
+    acousticsWritePressureFieldTxt(acoustics, time);
+  }
+  else {
+    throw std::exception();
+  }
 }
 
 // Print interpolated receiver to file
 int acousticsWriteIRs(acoustics_t *acoustics, setupAide &newOptions) {  
-  mesh_t *mesh = acoustics->mesh;
-  string PREFIX;  
+  mesh_t *mesh = acoustics->mesh;  
   char fname[BUFSIZ];
   
   if (acoustics->NReceiversLocal == 0) {
     printf("ERROR: No receivers defined\n");
     return 0;
-  }   
-  if (newOptions.getArgs("SIMULATION_ID", PREFIX) == 0) {
-    printf("ERROR: [SIMULATION_ID] tag missing");
-    return 1;
-  }  
+  }     
 
   for (dlong iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){    
-    sprintf(fname, "%s/%s_%02d.txt", (char*)acoustics->outDir.c_str(), (char*)PREFIX.c_str(), acoustics->recvElementsIdx[iRecv]);
+    sprintf(fname, "%s/%s_%02d.txt", (char*)acoustics->outDir.c_str(), (char*)acoustics->simulationID.c_str(), acoustics->recvElementsIdx[iRecv]);
 
-    char cwd[PATH_MAX];
-    if (getcwd(cwd, sizeof(cwd)) == NULL) {
-      perror("getcwd() error");      
-      return 1;
-    }
+    // char cwd[PATH_MAX];
+    // if (getcwd(cwd, sizeof(cwd)) == NULL) {
+    //   perror("getcwd() error");      
+    //   return 1;
+    // }
 
     FILE *iFP = fopen(fname,"w");
     if (iFP == NULL) {
-      printf("ERROR: receiver output file could not be opened %s/%s)\n", cwd, fname);      
+      printf("ERROR: receiver output file could not be opened %s)\n", fname);      
       return 1;
     }
 
@@ -72,29 +78,38 @@ int acousticsWriteIRs(acoustics_t *acoustics, setupAide &newOptions) {
       time += mesh->dt;
     }
 
-    printf("Receiver impulse response was written to disk: %s/%s\n", cwd, fname);
+    printf("Receiver impulse response was written to disk: %s\n", fname);
     fclose(iFP);
   }
 
   return 0;
 }
 
-int createDir(string path) {
-  char *outDir = (char*)path.c_str();
+int createDir(string path, bool deleteIfExists) {
+  if (deleteIfExists) {
+    fs::remove_all(path);
+  }  
 
-  // create output folder if not existing
-  struct stat st = {0};
-  if (stat(outDir, &st) == -1) {
-    return mkdir(outDir, 0700);
+  std::error_code ec;
+  fs::create_directories(path, ec);
+  if (ec) {
+    printf("Creating directory failed!\n"); 
+    return -1;
   }
 
   return 0;
 }
 
-// write acoustic pressure as simple text file instead of VTU (for Matlab?)
-void acousticsWritePressureFieldTxt(acoustics_t *acoustics, dfloat time, setupAide &newOptions)
+// write acoustic pressure as simple text file
+// NOTE: not working properly, overwrites new file for each time step
+void acousticsWritePressureFieldTxt(acoustics_t *acoustics, dfloat time)
 {
   mesh3D *mesh = acoustics->mesh;
+
+  std::string xFN = acoustics->outDir + "/x.txt";
+  std::string yFN = acoustics->outDir + "/y.txt";
+  std::string zFN = acoustics->outDir + "/z.txt";
+  std::string pFN = acoustics->outDir + "/p.txt";
 
   // Print x,y,z, and pressure to txt files
   int nprocs, procid;
@@ -103,39 +118,31 @@ void acousticsWritePressureFieldTxt(acoustics_t *acoustics, dfloat time, setupAi
 
   hlong globalNelements;
   MPI_Reduce(&mesh->Nelements, &globalNelements, 1, MPI_HLONG, MPI_SUM, 0, mesh->comm);
-  string PREFIX;
-  newOptions.getArgs("RECEIVERPREFIX", PREFIX);
+  string PREFIX = acoustics->simulationID;
 
   FILE *xFP, *yFP, *zFP, *pFP;
-  char xFN[BUFSIZ];
-  char yFN[BUFSIZ];
-  char zFN[BUFSIZ];
-  char pFN[BUFSIZ];
-  sprintf(xFN, "data/x_%s.txt", (char *)PREFIX.c_str());
-  sprintf(yFN, "data/y_%s.txt", (char *)PREFIX.c_str());
-  sprintf(zFN, "data/z_%s.txt", (char *)PREFIX.c_str());
-  sprintf(pFN, "data/p_%s.txt", (char *)PREFIX.c_str());
+
   for (int i = 0; i < nprocs; i++)
   {
     if (procid == i)
     {
-      if (procid == 0)
-      {
-        xFP = fopen(xFN, "w");
-        yFP = fopen(yFN, "w");
-        zFP = fopen(zFN, "w");
-        pFP = fopen(pFN, "w");
+      xFP = fopen(xFN.c_str(), "a");
+      yFP = fopen(yFN.c_str(), "a");
+      zFP = fopen(zFN.c_str(), "a");
+      pFP = fopen(pFN.c_str(), "a");
 
-        // Write Np and Nelements as first line in x output
+      if (xFP == NULL || yFP == NULL || zFP == NULL || pFP == NULL) {
+        throw std::invalid_argument("Could not open files for writing wave field [TXT].");
+      }
+
+      if (time < 1e-10) {
+        // Write Np and Nelements as first line
         fprintf(xFP, "%d %d\n", mesh->Np, globalNelements);
+        fprintf(yFP, "%d %d\n", mesh->Np, globalNelements);
+        fprintf(zFP, "%d %d\n", mesh->Np, globalNelements);
+        fprintf(pFP, "%d %d\n", mesh->Np, globalNelements);
       }
-      else
-      {
-        xFP = fopen(xFN, "a");
-        yFP = fopen(yFN, "a");
-        zFP = fopen(zFN, "a");
-        pFP = fopen(pFN, "a");
-      }
+
       for (dlong e = 0; e < mesh->Nelements; ++e)
       {
         for (int n = 0; n < mesh->Np; ++n)
@@ -167,12 +174,8 @@ void acousticsWritePressureFieldTxt(acoustics_t *acoustics, dfloat time, setupAi
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
-  // do error stuff on host
-  acousticsError(acoustics, time);
-  // output field files
-  char fname[BUFSIZ];
-
-  sprintf(fname, "foo_%04d_%04d.vtu", mesh->rank, acoustics->frame++);
+  // caluclate errors on the host
+  // acousticsError(acoustics, time);
 }
 
 // void acousticsSnapshotXYZ(acoustics_t *acoustics, setupAide &newOptions)

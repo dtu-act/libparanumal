@@ -45,10 +45,13 @@ SOFTWARE.
 #define TETRAHEDRA 6
 #define HEXAHEDRA 12
 
+enum WriteWaveFieldType { None, Vtu, Xdmf, Txt };
+
 typedef struct{
 
   dfloat fmax;
   string outDir;
+  string simulationID;
   
   int dim;
   int elementType; // number of edges (3=tri, 4=quad, 6=tet, 12=hex)
@@ -235,28 +238,28 @@ void acousticsError(acoustics_t *acoustics, dfloat time);
 void acousticsCavitySolution(dfloat x, dfloat y, dfloat z, dfloat t,
 		       dfloat *u, dfloat *v, dfloat *w, dfloat *p);
 
-void gaussianSource(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *r, dfloat *sloc, dfloat sxyz);
+void gaussianSource(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *r, dfloat *sloc, dfloat sxyz, dfloat amplitude = 1000);
 #if INCLUDE_GRF
 void grfWindowed(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d, dfloat xminmax[2], dfloat yminmax[2], dfloat zminmax[2], 
-    dfloat sigma_0, dfloat l_0, dfloat sigma0_window, vector<dfloat> &samples_out);
+    dfloat sigma_0, dfloat l_0, dfloat sigma0_window, vector<dfloat> &samples_out, dfloat amplitude = 10);
 #endif
-void acousticsWritePressureField(acoustics_t *acoustics);
-int acousticsWriteIRs(acoustics_t *acoustics, setupAide &newOptions);
-int createDir(string path);
 
-void acousticsPlotVTU(acoustics_t *acoustics, char *fileName, bool writeVelocity = false);
+void acousticsWritePressureField(acoustics_t *acoustics, WriteWaveFieldType waveFieldWriteType, std::vector<dfloat> timeSteps, int iter);
+void acousticsWriteXdmf(acoustics_t *acoustics, std::vector<dfloat> timeSteps, int iter);
+void acousticsWriteVTU(acoustics_t *acoustics, bool writeVelocity = false);
+void acousticsWritePressureFieldTxt(acoustics_t *acoustics, dfloat time);
+int acousticsWriteIRs(acoustics_t *acoustics, setupAide &newOptions);
+
+int createDir(string path, bool deleteIfExists);
 
 void acousticsDopriStep(acoustics_t *acoustics, const dfloat time);
 void acousticsLserkStep(acoustics_t *acoustics, const dfloat time);
 void acousticsEirkStep(acoustics_t *acoustics, const dfloat time);
-
 dfloat acousticsDopriEstimate(acoustics_t *acoustics);
 
 void acousticsReceiverInterpolation(acoustics_t *acoustics);
 void acousticsFindReceiverElement(acoustics_t *acoustics);
 void acousticsRecvIntpolOperators(acoustics_t *acoustics);
-
-void acousticsWSExchange(acoustics_t *acoustics);
 
 // utils
 std::string generateUUID(int length);
