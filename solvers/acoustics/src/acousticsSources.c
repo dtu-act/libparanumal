@@ -35,20 +35,20 @@ using namespace std;
 using namespace arma;
 #endif
 
-void gaussianSource(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *r, dfloat *sloc, dfloat sxyz) {
-  *r = 1000*std::exp(-((x - sloc[0])*(x - sloc[0]) + (y - sloc[1])*(y - sloc[1]) + (z - sloc[2])*(z - sloc[2]))/(sxyz*sxyz));
+void gaussianSource(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *r, dfloat *sloc, dfloat sxyz, dfloat amplitude /*=1000*/) {
+  *r = amplitude*std::exp(-((x - sloc[0])*(x - sloc[0]) + (y - sloc[1])*(y - sloc[1]) + (z - sloc[2])*(z - sloc[2]))/(sxyz*sxyz));
 }
 
 #if INCLUDE_GRF
 void applyWindowFunction(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d, 
-    dfloat xminmax[], dfloat yminmax[], dfloat zminmax[], dfloat sigma0_window, vector<dfloat> &samples_out, dfloat amp=1000);
+    dfloat xminmax[], dfloat yminmax[], dfloat zminmax[], dfloat sigma0_window, vector<dfloat> &samples_out, dfloat amplitude);
 void grf(vector<dfloat> x1d_, vector<dfloat> y1d_, vector<dfloat> z1d_, dfloat sigma_0, dfloat l_0, vector<dfloat> &samples_out);
 
 void grfWindowed(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d, dfloat xminmax[2], dfloat yminmax[2], dfloat zminmax[2], 
-    dfloat sigma_0, dfloat l_0, dfloat sigma0_window, vector<dfloat> &samples_out) {
+    dfloat sigma_0, dfloat l_0, dfloat sigma0_window, vector<dfloat> &samples_out, dfloat amplitude /*=10*/) {
 
     grf(x1d, y1d, z1d, sigma_0, l_0, samples_out);
-    applyWindowFunction(x1d, y1d, z1d, xminmax, yminmax, zminmax, sigma0_window, samples_out);
+    applyWindowFunction(x1d, y1d, z1d, xminmax, yminmax, zminmax, sigma0_window, samples_out, amplitude);
 }
 
 void grf(vector<dfloat> x1d_, vector<dfloat> y1d_, vector<dfloat> z1d_, dfloat sigma_0, dfloat l_0, vector<dfloat> &samples_out) {
@@ -82,7 +82,7 @@ void grf(vector<dfloat> x1d_, vector<dfloat> y1d_, vector<dfloat> z1d_, dfloat s
 }
 
 // HELPER FUNCTIONS
-void normalize(vector<dfloat> &v) {
+void clamp(vector<dfloat> &v) {
     dfloat max = *max_element(v.begin(), v.end());
     dfloat min = *min_element(v.begin(), v.end());
 
@@ -99,7 +99,7 @@ void normalize(vector<dfloat> &v) {
     }
 }
 
-void normalizePerSample(mat &samples) {
+void clampPerSample(mat &samples) {
     samples.each_col(
         [](vec& a) {
             if (a.min() < -1)
@@ -111,7 +111,7 @@ void normalizePerSample(mat &samples) {
 }
 
 void applyWindowFunction(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d, 
-    dfloat xminmax[], dfloat yminmax[], dfloat zminmax[], dfloat sigma0_window, vector<dfloat> &samples_out, dfloat amp /*=1000*/) {
+    dfloat xminmax[], dfloat yminmax[], dfloat zminmax[], dfloat sigma0_window, vector<dfloat> &samples_out, dfloat amplitude) {
 
     dfloat offset = sigma0_window*3;
     dfloat x0 = xminmax[0] + offset;
@@ -203,9 +203,14 @@ void applyWindowFunction(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> 
 
     for (int i=0; i<N; i++) {
         mask[i] = mask_fun(x1d[i],y1d[i], z1d[i]);
-        samples_out[i] *= amp*mask[i];
+        samples_out[i] *= mask[i];
     }
 
-    normalize(samples_out);
+    // clip all samples between -1 and 1
+    clamp(samples_out);
+
+    for (int i=0; i<N; i++) {
+        samples_out[i] *= amplitude;
+    }
 }
 #endif

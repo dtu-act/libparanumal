@@ -20,16 +20,16 @@ CC	= mpic++ -std=c++2a
 LD	= mpic++ -std=c++2a
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DACOUSTICS='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g -D DHOLMES='"${CURDIR}/../.."' -D DACOUSTICS='"${CURDIR}"'
 
-# add -larmadillo if #define INCLUDE_GRF 1 is set in acoustics.h
+# -larmadillo can be removed if Gaussian Random Fields are excluded with #define INCLUDE_GRF 0 in acoustics.h
 OS := $(shell uname)
 ifeq ($(OS),Darwin)
 	# link flags to be used (MacOS)
 	LDFLAGS	= -Xpreprocessor -fopenmp -lomp -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
 else
 	# link flags to be used (Linux)
-	LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
+	LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g -lhdf5
 endif
 
 # libraries to be linked in
@@ -58,10 +58,9 @@ OBJS    = \
 ./src/acousticsSetup.o \
 ./src/acousticsSetupMain.o \
 ./src/acousticsSources.o \
-./src/acousticsPlotVTU.o \
+./src/acousticsWriteVTU.o \
 ./src/acousticsIO.o \
 ./src/acousticsUtils.o \
-./src/acousticsWaveSplitting.o \
 ../../src/meshParallelReaderTet3DCurv.o \
 ../../src/meshSetupTet3DCurv.o \
 ../../src/meshGeometricPartition3DCurv.o \
@@ -141,5 +140,3 @@ tests:$(OBJS) $(OBJS_TESTS)
 clean :
 	rm -r $(OBJS) $(OBJS_MAIN) acousticsMain
 	rm -r $(OBJS) $(OBJS_TESTS) acousticsTestMain
-
-

@@ -195,9 +195,6 @@ void acousticsLserkStep(acoustics_t *acoustics, const dfloat time) {
 																		acoustics->o_vtSend);
       }
       
-      // Communicate wave-splitting points between ranks
-      acousticsWSExchange(acoustics);
-      
       if(acoustics->NERComPoints){
         acoustics->ERInsertComVT(acoustics->NERComPoints,
 													acoustics->o_comPointsIdxAll,
@@ -295,9 +292,6 @@ void acousticsEirkStep(acoustics_t *acoustics, const dfloat time) {
 																		acoustics->o_q,
 																		acoustics->o_vtSend);
       }
-      
-      // Communicate wave-splitting points between ranks
-      acousticsWSExchange(acoustics); 
       
       if(acoustics->NERComPoints){
       acoustics->ERInsertComVT(acoustics->NERComPoints,

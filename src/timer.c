@@ -515,9 +515,8 @@ namespace occa {
 
     return ((double) (ct.QuadPart)) / ((double) (freq.QuadPart));
 #endif
-  }
-
-  
+  return -1;
+  }  
 }
 
 

@@ -1,97 +1,225 @@
-# libParanumal
+# libParanumal - ACOUSTICS MODULE
+---
 Forked from https://github.com/paranumal/libparanumal
 
-## ACOUSTICS MODULE
-> Implemented by
-> * Anders Melander (<s144277@student.dtu.dk>)
-> * Emil Strøm (<s144259@student.dtu.dk>)
+Implemented by [Anders Melander (DTU)](mailto:adame@dtu.dk) and [Emil Strøm (DTU)](mailto:s144259@student.dtu.dk) <br>
+Maintained by [Nikolas Borrel-Jensen (DTU)](mailto:nibor@dtu.dk)
 
-> * Maintained by Nikolas Borrel-Jensen (<nibor@elektro.dtu.dk>)
+Papers
+* Pind, F., Engsig-Karup, A. P., Jeong, C.-H., Hesthaven, J. S., Mejling, M. S., & Strømann-Andersen, J. (2019). Time domain room acoustic simulations using the spectral element method. The Journal of the Acoustical Society of America, 145(6), 3299–3310. [https://doi.org/10.1121/1.5109396](https://doi.org/10.1121/1.5109396)
+* Melander. (2021). Massively Parallel Nodal Discontinous Galerkin Finite Element Method Simulator for Room Acoustics. [https://doi.org/10.1177/ToBeAssigned](https://doi.org/10.1177/ToBeAssigned)
 
-> Papers
-> * Pind, F., Engsig-Karup, A. P., Jeong, C.-H., Hesthaven, J. S., Mejling, M. S., & Strømann-Andersen, J. (2019). Time domain room acoustic simulations using the spectral element method. The Journal of the Acoustical Society of America, 145(6), 3299–3310. https://doi.org/10.1121/1.5109396
-> * Melander. (2021). Massively Parallel Nodal Discontinous Galerkin Finite Element Method Simulator for Room Acoustics. <https://doi.org/10.1177/ToBeAssigned>
+---
 
-### INSTALLATION
-1. To access DTUs HPC system, log in using the command (see section about HPC system as well) <br>
-    `> ssh username@login1.gbar.dtu.dk`
-2. Clone the code from git **in the home user directory** `~/` <br>
+
+## INSTALLATION
+1. Clone the code from git in you home directory <br>
     `> git clone https://github.com/dtu-act/libparanumal`
-3. OCCA 1.0 is present in the libparanumal folder. **IMPORTANT**: do not use the version from git since this version of libParanumal is out-of-sync (OCCA is a third-party library used for compiling code to various platforms, such as CUDA/GPU)
-4. Build OCCA and libParanumal. **IMPORTANT**: to exploit the GPU, you should build in an environment with access to GPUs. On DTUs systems, do (see also section below about DTU HPC) <br>
-    `> voltash`<br>
-    Enter the acoustics folder <br>
+2. Build OCCA and libParanumal. To exploit the GPU, you should build in an environment with access to GPUs (see section DTU HPC) <br>
     `> cd ~/libparanumal/solvers/acoustics` <br>
     and then execute the build script <br>
     `> ./build_acoustics.sh` <br>
+3. To build the tests, run <br>
+    `> tests/build_acoustics_tests.sh` <br>
 
-### RUNNING THE CODE
-5. For testing the setup, run the following command from location `libparanumal/solvers/acoustics` (output is written into `libparanumal/solvers/acoustics/data`). **NOTE:** You might run out of resources on DTU HPC system when running without the queue, resulting in "out of memory" messages. <br>
-    `> ./RUNGPU.bsub` <br>    
-6. Several examples including frequency-dependent and independent cases, can be found inside `libparanumal/solvers/acoustics/tests/`
+**NOTE**:
+* Do not use other versions of OCCA than the one from the root folder, since libParanumal is incompatible with newer versions.
+* If you want to run on CPUs, uncomment the `CUDA` module inside `build_acoustics.sh` and rebuild.
 
-### GMSH
-* use Gmsh (http://gmsh.info) to create meshes (see 'Massively Parallel Nodal Discontinous Galerkin Finite Element Method Simulator for 3D Room Acoustics' thesis for details)
-* Tutorial: https://www.youtube.com/watch?v=xL2LmDsDLYw
+## RUNNING THE CODE
+* Run an example by (output written to `examples/output`)<br>
+    `> examples/RUN_EXAMPLE.sh` <br>
+* Run the tests and make sure all tests pass. Several examples including frequency independent and dependent cases can be found inside the test folder <br>
+    `> tests/run_tests.sh` <br>    
 
-### ONLY FOR USERS OF THE HPC SYSTEM AT THE TECHNICAL UNIVERSITY OF DENMARK
-#### HPC system
-1. Login using <br>
-    `> ssh username@login1.gbar.dtu.dk`
-2. change to GPU capabilities by typing <br> 
-    `> voltash`
-3. you can run interactively by executing (after having compiled OCCA and libParanumal)<br> 
-    `> ./RUNGPU.bsub`
-4. when running long-running tasks, use the queue <br> 
-    `bsub < <the_script>.bsub`
+**NOTE**: You might run out of resources ("out of memory messages) on DTU HPC if the task is not excecuted using the queue. <br>
 
-#### References
-* VPN: https://www.inside.dtu.dk/en/medarbejder/it-og-telefoni/wifi-og-fjernadgang/vpn-cisco-anyconnect
-* HPC: https://www.hpc.dtu.dk/
-* HPC GPU parameters: https://www.hpc.dtu.dk/?page_id=2759
-* LSF job submission system: http://www.cc.dtu.dk/?page_id=1416
-* HPC examples: https://www.hpc.dtu.dk/?page_id=2021
-* Gmsh: http://gmsh.info
-* Tutorial: https://www.youtube.com/watch?v=xL2LmDsDLYw
-* DGFEM simulator: https://github.com/dtu-act/libparanumal
+## Settings file formats
 
-#### Useful UNIX commands
+### Main settings file
+The main settings file contains the parameters for simulations, such as source and source positions, material parameters, path to the mesh etc.
+
+The application is executed by <br>
+    `> mpirun -n 1 ./acousticsMain path/to/settings/file` <br>
+
+where the argument is the path to the settings file containing the following properties:
+```
+    [FORMAT]
+    1.0
+
+    [SIMULATION_ID]
+    cube_500hz_p4_5ppw_freq_indep
+
+    [MESH FILE]
+    ../../meshes/tests/cube_500hz_p4_5ppw_freq_indep.msh
+
+    [OUTPUT DIRECTORY]
+    examples/output
+
+    [POLYNOMIAL DEGREE]
+    4
+
+    [CURVILINEAR MESH] # 0: Off, 1: On. Mesh order MUST match [POLYNOMIAL DEGREE]
+    0
+
+    [TIME INTEGRATOR] # LSERK4 | EIRK4 | DOPRI5 (broken)
+    LSERK4
+
+    [FINAL TIME]
+    0.1
+
+    [RECEIVER]
+    examples/setupdata/receivers2_cube.dat
+
+    [CFL]
+    1
+
+    [RHO] # Density of the medium
+    1.2
+
+    [C] # Speed of sound in the medium
+    343.0
+
+    [Z_IND] # Z value for frequency independent boundary condition
+    7400
+
+    [LRVECTFIT] # Generated using vectorfitDriverLR.m
+    examples/setupdata/LRDATA14.dat
+
+    [ERVECTFIT] # Generated using vectorfitDriverER.m
+    examples/setupdata/ERDATA14.dat
+
+    [FREQUENCY]
+    500 # [Hz]
+
+    [WRITE_WAVE_FIELD] # NONE | XDMF | VTU | TXT
+    NONE
+
+    [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
+    8
+
+    [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
+    GAUSSIAN
+
+    ; [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
+    ; 0.3
+
+    ; [SXYZ] # OPTIONAL: Width of initial pulse (will be computed automatically if not defined)
+    ; 0.4
+
+    [SX] # x coordinate of initial pulse (ignored for GRF)
+    0.5
+
+    [SY] # y coordinate of initial pulse (ignored for GRF)
+    0.5
+
+    [SZ] # z coordinate of initial pulse (ignored for GRF)
+    0.5
+```
+
+Some of the properties are explained below:
+* `[LRVECTFIT]` / `[ERVECTFIT]`: Miki's model is used for modeling frequency dependent boundaries and the fitted parameters are contained in a separate file with the path given here. The scripts for generating the coefficients are located inside `examples/vector_fitting_tools/`.
+* `[WRITE_WAVE_FIELD]`: The full pressure field can be exported for each time step and output format is given here. `XDMF` is by far the most compact format and can be visualized using a wide range of applications, such as ParaView.
+* `[TEMPORAL_PPW_OUTPUT]`: Since saving the wave field for every time step might be unnecessary, the temporal sampling resolution can be set here.
+
+### Receiver positions
+The receiver file set in `[RECEIVER]` includes the receiver position `x,y,z` locations for each receiver. The first line indicates the number of receivers.
+```
+    2
+    0.1 0.1 0.1
+    0.1 0.4 0.3
+```
+
+### Frequency dependent boundaries settings file
+For frequency dependent boundaries, Miki's model is used and the coefficient can be fitted using the Matlab script `examples/vector_fitting_tools/`. The generated file has the format
+
+```
+14 10 2
+0.037628829927
+-0.075844970252
+...
+-3745.107750216643
+-17416.897171651282
+0.002138957511
+-----
+sigma = 47700
+dmat = 0.050000000000
+freqRange = [50,2000]
+```
+
+## Mesh generation with Gmsh
+The mesh file can be created using [Gmsh](http://gmsh.info). For more complicated geometries, Sketchup or similar can be used to create the geometry and then be imported to Gmsh. The steps for generating the mesh with appropriate element size and boundary conditions in Gmsh is shown below. The geometry is defined inside the `.geo` files and a few examples can be found in `meshes/geo/`. <br>
+
+See also [Gmsh](http://gmsh.info) and [Gmsh video tutorial](https://www.youtube.com/watch?v=xL2LmDsDLYw).
+
+### Geometries and materials
+For simple geometries, it is easiest to modify the `.geo` file directly. For more complicated geometries, it can be useful to use Sketchup with the plugin for exporting to Gmsh. 
+
+1. For setting boundary types, open a `.geo` file in Gmsh and choose `Modules->Geometry->Edit Script`. The text file looks like the following, where the dimension can easily be changed:
+```
+    cl__1 = 1.0;
+    xdim = 4;
+    ydim = 2.7;
+    zdim = 3;
+
+    Point(1) = {0, 0, 0, cl__1};
+    Point(2) = {xdim, 0, 0, cl__1};
+    Point(3) = {xdim, ydim, 0, cl__1};
+    Point(4) = {0, ydim, 0, cl__1};
+    Point(5) = {0, 0, zdim, cl__1};
+    Point(6) = {xdim, 0, zdim, cl__1};
+    Point(7) = {xdim, ydim, zdim, cl__1};
+    Point(8) = {0, ydim, zdim, cl__1};
+    Line(9) = {1, 2};
+    Line Loop(22) = {16, 13, 14, 15};
+    Plane Surface(22) = {22};
+    ...
+    Physical Surface("Frequency Independent",2) = {22, 24, 26, 28, 30, 32};
+    Physical Volume(10) = {34};
+```
+2. The field `Physical Surface("Frequency Independent",2)` is defining the type of boundaries for the corresponding plane surfaces, where the number in the tuple is defining the boundary type (the string is just for convenience). The boundary types are
+    * 1: Perfectly reflecting (Neumann) boundaries.
+    * 2: Frequency independent impedance boundaries.
+    * 3: Local-reacting frequency dependent impedance boundaries.
+    * 4: Extended-reaction frequency dependent impedance boundaries.
+
+### Element size
+The input to libParanumal is a mesh discretized in terms of elements. Depending on the polynomial order chosen in libParanumal, the mesh resolution should be chosen accordingly.
+
+<bf>Example:</bf>
+Assume that we have maximun frequency $f_\text{max} = 1000 \text{Hz}$, speed of sound $c = 343$ m/s, points per wavelength $\text{ppw} = 5$ and polynomial order $P = 4$. Then the element resolution $\Delta x$ is calculated as <br>
+$$
+\Delta x = \frac{c}{f_{\text{max}}\times \text{ppw}} \times P
+$$
+The element size can be set as follows:
+
+1. In the top menu, select `Tools->Options` and in the popup window choose `Geometry->General` and set `Global model scaling` to 1.
+2. in the popup window choose `Mesh->General` and set *both* fields in `Min/max element size` to $\Delta x$.
+3. Close the popup window.
+
+### Mesh generation
+Having set the boundary materials and element size, the geometry can now be meshed.
+
+1. Choose `Modules->Mesh->3D` and then optimize the mesh by choosing `Optimize 3D (Netgen)`. Note, that if the element resolution is changes, 1D, 2D and 3D needs to be meshed for the changes to take effect.
+2. Save the file by choosing `File->Export` and save the file with `.msh` extension. Choose `Version 2 (ASCII)` and click ok.
+
+## USING DTU HPC
 * `> ssh username@login1.gbar.dtu.dk`   # login
 * `> voltash`                           # switch to GPU cluster
-* `> bsub < <the_script>.bsub`          # add to the queue system
+* `> bsub < <the_script>.sh`            # add to the queue system (see `examples/run_cube.sh`)
 * `> bstat`                             # job status
 * `> bkill <id>`                        # kill job
 * `> ./the_scripts > logfile.txt`       # run the script and pipe the output to a log file
 
-### Installation on MacOS X
-#### Compiling libparanumal
-
-* Install OCCA (see above). Set `-j ‘numthreads’` accordingly when installing, otherwise installation can stall
-* Install fortran: https://github.com/fxcoudert/gfortran-for-macOS/releases [not sure this is needed - try without and update this doc]
-* Install libomp: https://stackoverflow.com/questions/43555410/enable-openmp-support-in-clang-in-mac-os-x-sierra-mojave
-* Install OpenMPI: https://www.open-mpi.org/faq/?category=building
-	- ./configure --prefix=/usr/local CC=gcc CXX=g++ FC=gfortran [not sure FC=gfortran is needed - try without and update this doc]
-
-If the following error is shown
-
-    ---[ Error ]------------------------------------------------
-        File     : /Users/nikolasborrel/Documents/PhD/libparanumal/occa/src/io/utils.cpp
-        Function : write
-        Line     : 372
-        Message  : Failed to open [c76425872528f884/compilerVendorTest.cpp]
-
-delete folder `~/.occa`. Can also be fixed with chmod 777 (permission is probably messed up)
-
-#### VS CODE
-A few references that might be helpful for setting up VS CODE
-
-* https://code.visualstudio.com/docs/editor/debugging
-* https://code.visualstudio.com/docs/cpp/config-clang-mac
-* https://code.visualstudio.com/docs/cpp/c-cpp-properties-schema-reference
-* https://www2.cs.duke.edu/courses/cps108/doc/makefileinfo/sample.html
+#### Some references
+* [VPN](https://www.inside.dtu.dk/en/medarbejder/it-og-telefoni/wifi-og-fjernadgang/vpn-cisco-anyconnect)
+* [HPC](https://www.hpc.dtu.dk/)
+* [HPC GPU parameters](https://www.hpc.dtu.dk/?page_id=2759)
+* [LSF job submission system](http://www.cc.dtu.dk/?page_id=1416)
+* [HPC examples](https://www.hpc.dtu.dk/?page_id=2021)
 
 ---
-## General
+# General
 An experimental set of finite element flow solvers for heterogeneous (GPU/CPU) systems. The initial development of libParanumal was performed by the [Parallel Numerical Algorithms Group at Virginia Tech](http://paranumal.com).   
 
 libParanumal is funded in part by the US Department of Energy as part of the activities of the [Center for Efficient Exscale Discretizations](http://ceed.exascaleproject.org). 
