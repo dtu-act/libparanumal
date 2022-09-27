@@ -40,7 +40,6 @@ void gaussianSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], d
 
 void sourceSetup(mesh_t *mesh, acoustics_t *acoustics, setupAide &newOptions)
 {
-  dfloat sxyz;
   dfloat fmax;
   dfloat c;
 
@@ -53,40 +52,42 @@ void sourceSetup(mesh_t *mesh, acoustics_t *acoustics, setupAide &newOptions)
     throw std::invalid_argument("[C] tag missing");
   }
 
-  if (newOptions.getArgs("SXYZ", sxyz) == 0)
+  if (newOptions.getArgs("SXYZ", acoustics->sigma0) == 0)
   {
-    sxyz = c / (M_PI * fmax / 2);
-    printf("SXYZ = %f (overwrite by setting optional parameter [SXYZ] in the settings file).\n", sxyz);
+    acoustics->sigma0 = c / (M_PI * fmax / 2);
+    printf("SXYZ = %f (overwrite by setting optional parameter [SXYZ] in the settings file).\n", acoustics->sigma0);
   }
 
   if (newOptions.compareArgs("SOURCE_TYPE", "GAUSSIAN"))
   {
-    dfloat sloc[3];
+    acoustics->sourceType = GaussianFunction;
 
-    if (newOptions.getArgs("SX", sloc[0]) == 0)
+    if (newOptions.getArgs("SX", acoustics->sourcePosition[0]) == 0)
     {
       throw std::invalid_argument("[SZ] tag missing");
     }
-    if (newOptions.getArgs("SY", sloc[1]) == 0)
+    if (newOptions.getArgs("SY", acoustics->sourcePosition[1]) == 0)
     {
       throw std::invalid_argument("[SZ] tag missing");
     }
-    if (newOptions.getArgs("SZ", sloc[2]) == 0)
+    if (newOptions.getArgs("SZ", acoustics->sourcePosition[2]) == 0)
     {
       throw std::invalid_argument("[SZ] tag missing");
     }
 
-    gaussianSourceSetup(mesh, acoustics, sloc, sxyz);
+    gaussianSourceSetup(mesh, acoustics, acoustics->sourcePosition, acoustics->sigma0);
   }
   else if (newOptions.compareArgs("SOURCE_TYPE", "GRF"))
-  {
+  {    
     #if INCLUDE_GRF
+      acoustics->sourceType = GRF;
+      
       dfloat length_scale;
       if (newOptions.getArgs("GRF_LENGTH_SCALE", length_scale) == 0)
       {
         throw std::invalid_argument("[GRF_LENGTH_SCALE] tag missing");
       }
-      grfSourceSetup(mesh, acoustics, length_scale, sxyz);
+      grfSourceSetup(mesh, acoustics, length_scale, acoustics->sigma0);
     #else
       printf("ERROR: [SOURCE_TYPE] set to GRF. To use Gaussian Random Field set INCLUDE_GRF to 1 in acoustics.h. Exiting.\n");
       throw std::exception();
@@ -107,11 +108,9 @@ std::string toString(const T a_value, const int n = 5)
   return out.str();
 }
 
-#if INCLUDE_GRF  
-// ONLY RECTANGULAR DOMAINS ARE SUPPORTED AT THE MOMENT
-// (due to windowing function)
-void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, dfloat sigma0_window)
-{
+void extractUniquePoints(mesh_t *mesh, acoustics_t *acoustics, 
+  std::vector<uint> &conn, std::vector<dfloat> &x1d, std::vector<dfloat> &y1d, std::vector<dfloat> &z1d, std::vector<dfloat> &p1d)
+{  
   struct Coord3D { dfloat x, y, z; };
 
   // https://stackoverflow.com/questions/17016175/c-unordered-map-using-a-custom-class-type-as-the-key
@@ -129,16 +128,12 @@ void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, d
 
   auto comp = [](const Coord3D &c1, const Coord3D &c2)
   {
-    const dfloat eps = 1e-5; // std::numeric_limits<dfloat>::epsilon();
+    const dfloat eps = 1e-5; // std::numeric_limits<float>::epsilon();
     return (std::abs(c1.x - c2.x) < eps) && (std::abs(c1.y - c2.y) < eps) && (std::abs(c1.z - c2.z) < eps);
   };
 
   std::unordered_map<Coord3D, int, Coord3DHasher, decltype(comp)> coordsToIndx;
-  auto conn = std::vector<uint>(mesh->Nelements * mesh->Np);
-
-  auto x1d = std::vector<dfloat>();
-  auto y1d = std::vector<dfloat>();
-  auto z1d = std::vector<dfloat>();
+  conn.resize(mesh->Nelements * mesh->Np);
 
   for (dlong e = 0; e < mesh->Nelements; ++e)
   {
@@ -157,11 +152,28 @@ void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, d
         x1d.push_back(x);
         y1d.push_back(y);
         z1d.push_back(z);
+
+        dlong qbase = e * mesh->Np * mesh->Nfields + n;
+        p1d.push_back(acoustics->q[qbase + 0 * mesh->Np]);
       }
 
       conn[n + mesh->Np * e] = ret.first->second;
     }
   }
+}
+
+#if INCLUDE_GRF  
+// ONLY RECTANGULAR DOMAINS ARE SUPPORTED AT THE MOMENT
+// (due to windowing function)
+void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, dfloat sigma0_window)
+{
+  auto conn = std::vector<uint>();
+  auto x1d = std::vector<dfloat>();
+  auto y1d = std::vector<dfloat>();
+  auto z1d = std::vector<dfloat>();
+  auto p1d = std::vector<dfloat>();
+
+  extractUniquePoints(mesh, acoustics, conn, x1d, y1d, z1d, p1d);
 
   auto samples_out = std::vector<dfloat>(x1d.size());
 
@@ -251,8 +263,18 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
 
   if (newOptions.getArgs("FREQUENCY", acoustics->fmax) == 0)
   {
-    throw std::invalid_argument("Setup file error: FREQUENCY attribute not found.");
-  }  
+    throw std::invalid_argument("Setup file error: [FREQUENCY] attribute not found.");
+  }
+  
+  if (newOptions.getArgs("RHO", mesh->rho) == 0)
+  {
+    throw std::invalid_argument("Setup file error: [RHO] attribute not found.");
+  }
+
+  if (newOptions.getArgs("C", mesh->c) == 0)
+  {
+    throw std::invalid_argument("Setup file error: [C] attribute not found.");
+  }
 
   newOptions.getArgs("MESH DIMENSION", acoustics->dim);
   newOptions.getArgs("ELEMENT TYPE", acoustics->elementType);

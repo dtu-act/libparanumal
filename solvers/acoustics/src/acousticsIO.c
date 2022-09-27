@@ -27,6 +27,8 @@ SOFTWARE.
 #include "acoustics.h"
 #include <limits.h>
 #include<filesystem>
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 namespace fs = std::filesystem;
 
@@ -44,6 +46,24 @@ void acousticsWritePressureField(acoustics_t *acoustics, WriteWaveFieldType wave
   else {
     throw std::exception();
   }
+}
+
+void acousticsWriteSimulationSettings(acoustics_t *acoustics, string filename) {
+  // https://github.com/nlohmann/json
+  std::ofstream file(filename.c_str());
+  json j;
+
+  j["SimulationParameters"]["fmax"] = acoustics->fmax;
+  j["SimulationParameters"]["c"] = acoustics->mesh->c;
+  j["SimulationParameters"]["rho"] = acoustics->mesh->rho;
+  j["SimulationParameters"]["sigma"] = acoustics->sigma0;
+  j["SimulationParameters"]["dt"] = acoustics->mesh->dt;
+
+  if (acoustics->sourceType == GaussianFunction) {
+    j["SimulationParameters"]["SourcePosition"] = acoustics->sourcePosition;
+  }
+
+  file << j.dump(4) << std::endl;
 }
 
 // Print interpolated receiver to file

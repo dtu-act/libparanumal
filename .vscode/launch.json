@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/solvers/acoustics/acousticsMain",
-            "args": ["${workspaceFolder}/solvers/acoustics/examples/setups/setup_cube_1000Hz_p4_perf_refl"],
+            "args": ["${workspaceFolder}/solvers/acoustics/simulationSetups/setups/setup_cube_1000Hz_p4_perf_refl"],
             "stopAtEntry": true,
             "cwd": "${workspaceFolder}/solvers/acoustics",
             // "environment": [
@@ -33,41 +33,6 @@
             // ],
             "externalConsole": false,
             "MIMode": "gdb",
-        },
-        {
-            "name": "clang++ - Debug acousticsMain (no build)",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/solvers/acoustics/acousticsMain",
-            "args": ["${workspaceFolder}/solvers/acoustics/tests/setups/setup_cube_p4_500hz_freq_indep"],
-            "stopAtEntry": true,
-            "cwd": "${workspaceFolder}/solvers/acoustics",
-            "environment": [
-                {
-                "name":"OMPI_MCA_rmaps_base_oversubscribe", // https://github.com/microsoft/vscode-cpptools/issues/2995
-                "value": "1"
-                }
-            ],
-            "externalConsole": false,
-            "MIMode": "lldb",
-        },
-        {
-            "name": "clang++ - Debug acousticsTESTMain (no build)",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/solvers/acoustics/acousticsTestMain",
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/solvers/acoustics",
-            "environment": [
-                {
-                "name":"OMPI_MCA_rmaps_base_oversubscribe", // https://github.com/microsoft/vscode-cpptools/issues/2995
-                "value": "1"
-                }
-            ],
-            "externalConsole": false,
-            "MIMode": "lldb",
-            // "preLaunchTask": "clang++ build active file"
-        },
+        }       
     ]
 }

@@ -768,17 +768,14 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
   kernelInfo["defines/" "p_IJWID"]= IJWID;
 
   // [EA] Kernel defines
-  dfloat rho,c,Z_IND;
-  newOptions.getArgs("RHO", rho);
-  newOptions.getArgs("C", c);
+  dfloat Z_IND;
   newOptions.getArgs("Z_IND", Z_IND);
 
-  kernelInfo["defines/" "p_rho"]= rho;
-  kernelInfo["defines/" "p_c"]= c;
-  kernelInfo["defines/" "p_AcConstant"]= rho*c*c;
+  kernelInfo["defines/" "p_rho"]= mesh->rho;
+  kernelInfo["defines/" "p_c"]= mesh->c;
+  kernelInfo["defines/" "p_AcConstant"]= mesh->rho*mesh->c*mesh->c;
   kernelInfo["defines/" "p_Z_IND"]= Z_IND;
   kernelInfo["defines/" "p_recvCopyRate"] = recvCopyRate;
-
 }
 
 

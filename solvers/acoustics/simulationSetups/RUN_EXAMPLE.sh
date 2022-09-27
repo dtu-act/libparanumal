@@ -32,4 +32,4 @@ export OCCA_DIR=~/libparanumal/occa
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 
 # Run solver
-mpirun -n 1 ./acousticsMain examples/setups/setup_cube_500hz_freq_indep 
+mpirun -n 1 ./acousticsMain simulationSetups/setups/setup_cube_500hz_freq_indep 

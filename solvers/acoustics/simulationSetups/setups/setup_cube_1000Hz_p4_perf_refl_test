@@ -5,7 +5,7 @@
 cube_1000hz_p4_5ppw_perf_refl
 
 [MESH FILE]
-/users/nborrelj/data/nborrelj/libP/meshes/cube_1000hz_p4_5ppw_perf_refl.msh
+/users/nborrelj/data/nborrelj/libP/meshes/cube_1000hz_p4_4ppw_perf_refl.msh
 
 [OUTPUT DIRECTORY]
 /users/nborrelj/data/nborrelj/libP/output
@@ -23,7 +23,7 @@ LSERK4
 0.012
 
 [RECEIVER]
-examples/setupdata/receiver_x0_1_y0_5_z0_5.dat
+simulationSetups/setupdata/receiver_x0_1_y0_5_z0_5.dat
 
 [CFL]
 1
@@ -38,22 +38,22 @@ examples/setupdata/receiver_x0_1_y0_5_z0_5.dat
 7400
 
 [LRVECTFIT] # Generated using vectorfitDriverLR.m
-examples/setupdata/LRDATA14.dat
+simulationSetups/setupdata/LRDATA14.dat
 
 [ERVECTFIT] # Generated using vectorfitDriverER.m
-examples/setupdata/ERDATA14.dat
+simulationSetups/setupdata/ERDATA14.dat
 
 [FREQUENCY]
 1000 # [Hz]
 
 [WRITE_WAVE_FIELD] # NONE | XDMF | VTU | TXT
-NONE
+XDMF
 
 [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
 8
 
 [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
-GRF
+GAUSSIAN
 
 [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
 0.3

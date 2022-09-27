@@ -24,11 +24,11 @@ Papers
 
 **NOTE**:
 * Do not use other versions of OCCA than the one from the root folder, since libParanumal is incompatible with newer versions.
-* If you want to run on CPUs, uncomment the `CUDA` module inside `build_acoustics.sh` and rebuild.
+* If you want to run on CPUs, remove the loading of the `CUDA` module inside `build_acoustics.sh` and rebuild.
 
 ## RUNNING THE CODE
-* Run an example by (output written to `examples/output`)<br>
-    `> examples/RUN_EXAMPLE.sh` <br>
+* Run an example by (output written to `simulationSetups/output`)<br>
+    `> simulationSetups/RUN_EXAMPLE.sh` <br>
 * Run the tests and make sure all tests pass. Several examples including frequency independent and dependent cases can be found inside the test folder <br>
     `> tests/run_tests.sh` <br>    
 
@@ -44,94 +44,95 @@ The application is executed by <br>
 
 where the argument is the path to the settings file containing the following properties:
 ```
-    [FORMAT]
-    1.0
+[FORMAT]
+1.0
 
-    [SIMULATION_ID]
-    cube_500hz_p4_5ppw_freq_indep
+[SIMULATION_ID]
+cube_500hz_p4_5ppw_freq_indep
 
-    [MESH FILE]
-    ../../meshes/tests/cube_500hz_p4_5ppw_freq_indep.msh
+[MESH FILE]
+../../meshes/tests/cube_500hz_p4_5ppw_freq_indep.msh
 
-    [OUTPUT DIRECTORY]
-    examples/output
+[OUTPUT DIRECTORY]
+simulationSetups/output
 
-    [POLYNOMIAL DEGREE]
-    4
+[POLYNOMIAL DEGREE]
+4
 
-    [CURVILINEAR MESH] # 0: Off, 1: On. Mesh order MUST match [POLYNOMIAL DEGREE]
-    0
+[CURVILINEAR MESH] # 0: Off, 1: On. Mesh order MUST match [POLYNOMIAL DEGREE]
+0
 
-    [TIME INTEGRATOR] # LSERK4 | EIRK4 | DOPRI5 (broken)
-    LSERK4
+[TIME INTEGRATOR] # LSERK4 | EIRK4 | DOPRI5 (broken)
+LSERK4
 
-    [FINAL TIME]
-    0.1
+[FINAL TIME]
+0.1
 
-    [RECEIVER]
-    examples/setupdata/receivers2_cube.dat
+[RECEIVER]
+simulationSetups/setupdata/receivers2_cube.dat
 
-    [CFL]
-    1
+[CFL]
+1
 
-    [RHO] # Density of the medium
-    1.2
+[RHO] # Density of the medium
+1.2
 
-    [C] # Speed of sound in the medium
-    343.0
+[C] # Speed of sound in the medium
+343.0
 
-    [Z_IND] # Z value for frequency independent boundary condition
-    7400
+[Z_IND] # Z value for frequency independent boundary condition
+7400
 
-    [LRVECTFIT] # Generated using vectorfitDriverLR.m
-    examples/setupdata/LRDATA14.dat
+[LRVECTFIT] # Generated using vectorfitDriverLR.m
+simulationSetups/setupdata/LRDATA14.dat
 
-    [ERVECTFIT] # Generated using vectorfitDriverER.m
-    examples/setupdata/ERDATA14.dat
+[ERVECTFIT] # Generated using vectorfitDriverER.m
+simulationSetups/setupdata/ERDATA14.dat
 
-    [FREQUENCY]
-    500 # [Hz]
+[FREQUENCY]
+500 # [Hz]
 
-    [WRITE_WAVE_FIELD] # NONE | XDMF | VTU | TXT
-    NONE
+[WRITE_WAVE_FIELD] # NONE | XDMF | VTU | TXT
+NONE
 
-    [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
-    8
+[TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
+8
 
-    [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
-    GAUSSIAN
+[SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
+GAUSSIAN
 
-    ; [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
-    ; 0.3
+; [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
+; 0.3
 
-    ; [SXYZ] # OPTIONAL: Width of initial pulse (will be computed automatically if not defined)
-    ; 0.4
+; [SXYZ] # OPTIONAL: Width of initial pulse (will be computed automatically if not defined)
+; 0.4
 
-    [SX] # x coordinate of initial pulse (ignored for GRF)
-    0.5
+[SX] # x coordinate of initial pulse (ignored for GRF)
+0.5
 
-    [SY] # y coordinate of initial pulse (ignored for GRF)
-    0.5
+[SY] # y coordinate of initial pulse (ignored for GRF)
+0.5
 
-    [SZ] # z coordinate of initial pulse (ignored for GRF)
-    0.5
+[SZ] # z coordinate of initial pulse (ignored for GRF)
+0.5
 ```
 
 Some of the properties are explained below:
-* `[LRVECTFIT]` / `[ERVECTFIT]`: Miki's model is used for modeling frequency dependent boundaries and the fitted parameters are contained in a separate file with the path given here. The scripts for generating the coefficients are located inside `examples/vector_fitting_tools/`.
+* `[LRVECTFIT]` / `[ERVECTFIT]`: Miki's model is used for modeling frequency dependent boundaries and the fitted parameters are contained in a separate file with the path given here. The scripts for generating the coefficients are located inside `simulationSetups/vector_fitting_tools/`.
 * `[WRITE_WAVE_FIELD]`: The full pressure field can be exported for each time step and output format is given here. `XDMF` is by far the most compact format and can be visualized using a wide range of applications, such as ParaView.
 * `[TEMPORAL_PPW_OUTPUT]`: Since saving the wave field for every time step might be unnecessary, the temporal sampling resolution can be set here.
+* If Gaussian Random Fields (GRFs) are to be used as intital source term, set `#define INCLUDE_GRF 1` in `acoustics.h` and link the armadillo library with `-larmadillo` inside the makefile.
 
 ### Receiver positions
 The receiver file set in `[RECEIVER]` includes the receiver position `x,y,z` locations for each receiver. The first line indicates the number of receivers.
 ```
-    2
-    0.1 0.1 0.1
-    0.1 0.4 0.3
+2
+0.1 0.1 0.1
+0.1 0.4 0.3
 ```
 
 ### Frequency dependent boundaries settings file
-For frequency dependent boundaries, Miki's model is used and the coefficient can be fitted using the Matlab script `examples/vector_fitting_tools/`. The generated file has the format
+For frequency dependent boundaries, Miki's model is used and the coefficient can be fitted using the Matlab script `simulationSetups/vector_fitting_tools/`. The generated file has the format
 
 ```
 14 10 2
@@ -157,25 +158,25 @@ For simple geometries, it is easiest to modify the `.geo` file directly. For mor
 
 1. For setting boundary types, open a `.geo` file in Gmsh and choose `Modules->Geometry->Edit Script`. The text file looks like the following, where the dimension can easily be changed:
 ```
-    cl__1 = 1.0;
-    xdim = 4;
-    ydim = 2.7;
-    zdim = 3;
+cl__1 = 1.0;
+xdim = 4;
+ydim = 2.7;
+zdim = 3;
 
-    Point(1) = {0, 0, 0, cl__1};
-    Point(2) = {xdim, 0, 0, cl__1};
-    Point(3) = {xdim, ydim, 0, cl__1};
-    Point(4) = {0, ydim, 0, cl__1};
-    Point(5) = {0, 0, zdim, cl__1};
-    Point(6) = {xdim, 0, zdim, cl__1};
-    Point(7) = {xdim, ydim, zdim, cl__1};
-    Point(8) = {0, ydim, zdim, cl__1};
-    Line(9) = {1, 2};
-    Line Loop(22) = {16, 13, 14, 15};
-    Plane Surface(22) = {22};
-    ...
-    Physical Surface("Frequency Independent",2) = {22, 24, 26, 28, 30, 32};
-    Physical Volume(10) = {34};
+Point(1) = {0, 0, 0, cl__1};
+Point(2) = {xdim, 0, 0, cl__1};
+Point(3) = {xdim, ydim, 0, cl__1};
+Point(4) = {0, ydim, 0, cl__1};
+Point(5) = {0, 0, zdim, cl__1};
+Point(6) = {xdim, 0, zdim, cl__1};
+Point(7) = {xdim, ydim, zdim, cl__1};
+Point(8) = {0, ydim, zdim, cl__1};
+Line(9) = {1, 2};
+Line Loop(22) = {16, 13, 14, 15};
+Plane Surface(22) = {22};
+...
+Physical Surface("Frequency Independent",2) = {22, 24, 26, 28, 30, 32};
+Physical Volume(10) = {34};
 ```
 2. The field `Physical Surface("Frequency Independent",2)` is defining the type of boundaries for the corresponding plane surfaces, where the number in the tuple is defining the boundary type (the string is just for convenience). The boundary types are
     * 1: Perfectly reflecting (Neumann) boundaries.
@@ -189,7 +190,7 @@ The input to libParanumal is a mesh discretized in terms of elements. Depending 
 <bf>Example:</bf>
 Assume that we have maximun frequency $f_\text{max} = 1000 \text{Hz}$, speed of sound $c = 343$ m/s, points per wavelength $\text{ppw} = 5$ and polynomial order $P = 4$. Then the element resolution $\Delta x$ is calculated as <br>
 $$
-\Delta x = \frac{c}{f_{\text{max}}\times \text{ppw}} \times P
+\Delta x = \frac{c}{f_{\text{max}}\times \text{ppw}} \times P = 0.2744 \text{ m}
 $$
 The element size can be set as follows:
 
@@ -206,7 +207,7 @@ Having set the boundary materials and element size, the geometry can now be mesh
 ## USING DTU HPC
 * `> ssh username@login1.gbar.dtu.dk`   # login
 * `> voltash`                           # switch to GPU cluster
-* `> bsub < <the_script>.sh`            # add to the queue system (see `examples/run_cube.sh`)
+* `> bsub < <the_script>.sh`            # add to the queue system (see `simulationSetups/run_cube.sh`)
 * `> bstat`                             # job status
 * `> bkill <id>`                        # kill job
 * `> ./the_scripts > logfile.txt`       # run the script and pipe the output to a log file

@@ -2,13 +2,13 @@
 1.0
 
 [SIMULATION_ID]
-bedroom_1000hz
+cube_1000hz_p4_5ppw_perf_refl_x0.7_y0.7_z0.7
 
 [MESH FILE]
-../../meshes/examples/bedroom_pdegree4_1000hz.msh
+/users/nborrelj/data/nborrelj/libP/meshes/cube_1000hz_p4_4ppw_perf_refl.msh
 
 [OUTPUT DIRECTORY]
-data/
+/users/nborrelj/data/nborrelj/libP/output
 
 [POLYNOMIAL DEGREE]
 4
@@ -20,10 +20,10 @@ data/
 LSERK4
 
 [FINAL TIME]
-1.0
+0.012
 
 [RECEIVER]
-setups/setupdata/examples/Receiver_bedroom.dat
+simulationSetups/setupdata/receiver_x0_1_y0_5_z0_5.dat
 
 [CFL]
 1
@@ -35,34 +35,40 @@ setups/setupdata/examples/Receiver_bedroom.dat
 343.0
 
 [Z_IND] # Z value for frequency independent boundary condition
-7400    # alpha_0 = 0.2
+7400
 
 [LRVECTFIT] # Generated using vectorfitDriverLR.m
-examples/setupdata/LRDATA14.dat
+simulationSetups/setupdata/LRDATA14.dat
 
 [ERVECTFIT] # Generated using vectorfitDriverER.m
-examples/setupdata/ERDATA14.dat
+simulationSetups/setupdata/ERDATA14.dat
 
 [FREQUENCY]
 1000 # [Hz]
 
-[WRITE_WAVE_FIELD] # NONE | VTU | XDMF | TXT
-NONE
+[WRITE_WAVE_FIELD] # NONE | XDMF | VTU | TXT
+XDMF
 
-[TEMPORAL_PPW_OUTPUT] # temporal resolution of the output pressure field
+[TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
 8
 
-[SXYZ] # Width of initial pulse [Optional: calcuated automatically if not present]
-0.2
+[SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
+GAUSSIAN
 
-[SX] # x coordinate of initial pulse
-3.0
+; [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
+; 0.3
 
-[SY] # y coordinate of initial pulse
-1.5
+; [SXYZ] # OPTIONAL: Width of initial pulse (will be computed automatically if not defined)
+; 0.4
 
-[SZ] # z coordinate of initial pulse
-2.0
+[SX] # x coordinate of initial pulse (ignored for GRF)
+0.7
+
+[SY] # y coordinate of initial pulse (ignored for GRF)
+0.7
+
+[SZ] # z coordinate of initial pulse (ignored for GRF)
+0.7
 
 ### DON'T CHANGE BELOW ###
 [MESH DIMENSION]
@@ -127,3 +133,5 @@ NODAL
 
 [VERBOSE]
 FALSE
+
+

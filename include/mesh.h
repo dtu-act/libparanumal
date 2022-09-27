@@ -304,6 +304,10 @@ typedef struct {
   int   *mmapS;
   dfloat *mapSgn;
 
+  // physics settings (TODO: move into acoustics_h struct or similiar)
+  dfloat c;
+  dfloat rho;
+
   // time stepping info
   dfloat dt; // time step
   dfloat startTime ; // Start Time

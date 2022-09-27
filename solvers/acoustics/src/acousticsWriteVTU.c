@@ -26,46 +26,59 @@ SOFTWARE.
 
 #include "acoustics.h"
 #include <fstream>
+#include <vector>
 #include <highfive/H5Easy.hpp>
 #include <highfive/H5File.hpp>
 
 using namespace HighFive;
 
-void acousticsWriteXdmfHeader(acoustics_t *acoustics, string fileNameXdmf, string filenameH5, std::vector<dfloat> timeVector);
-void acousticsWriteMeshH5(acoustics_t *acoustics, string fileName, string fileTag0, string fileTag1);
-void acousticsWriteH5(acoustics_t *acoustics, std::string fileName, std::string fileTag);
+void acousticsWriteXdmfHeader(acoustics_t *acoustics, size_t Nelem, string fileNameXdmf, string filenameH5, std::vector<dfloat> timeVector);
+void acousticsWriteMeshH5(string fileName, string fileTag0, string fileTag1, 
+  std::vector<dfloat> &x1d, std::vector<dfloat> &y1d, std::vector<dfloat> &z1d);
 
 void acousticsWriteXdmf(acoustics_t *acoustics, std::vector<dfloat> timeVector, int iter) {
   string filenameH5 = acoustics->simulationID + ".h5";
   std::string filepathH5 = acoustics->outDir + "/" + filenameH5;  
 
+  auto conn = std::vector<uint>();
+  auto x1d = std::vector<dfloat>();
+  auto y1d = std::vector<dfloat>();
+  auto z1d = std::vector<dfloat>();
+  auto p1d = std::vector<dfloat>();
+
+  extractUniquePoints(acoustics->mesh, acoustics, conn, x1d, y1d, z1d, p1d);
+
   if (iter == 0) {
     // write mesh and Xdmf once
-    std::string filepathXdmf = acoustics->outDir + "/" + acoustics->simulationID + ".xdmf";    
+    std::string filepathXdmf = acoustics->outDir + "/" + acoustics->simulationID + ".xdmf";
     std::string fileTag0 = "/data0";
     std::string fileTag1 = "/data1";
     
-    acousticsWriteXdmfHeader(acoustics, filepathXdmf, filenameH5, timeVector);
-    acousticsWriteMeshH5(acoustics, filepathH5, fileTag0, fileTag1);    
+    acousticsWriteXdmfHeader(acoustics, x1d.size(), filepathXdmf, filenameH5, timeVector);
+    acousticsWriteMeshH5(filepathH5, fileTag0, fileTag1, x1d, y1d, z1d);
+    
+    // write source position
+    File file(filepathH5, File::ReadWrite);
+    auto dataset = file.createDataSet<dfloat>("/source_position",  DataSpace::From(acoustics->sourcePosition));
+    dataset.write(acoustics->sourcePosition);
   }
 
   std::string fileTag = "/data" + std::to_string(iter + 2);
-  acousticsWriteH5(acoustics, filepathH5, fileTag);
+  H5Easy::File file(filepathH5, File::OpenOrCreate);
+  H5Easy::dump(file, fileTag, p1d);
 }
 
-void acousticsWriteXdmfHeader(acoustics_t *acoustics, string fileNameXdmf, string filenameH5, std::vector<dfloat> timeVector)
+void acousticsWriteXdmfHeader(acoustics_t *acoustics, size_t Nelem, string fileNameXdmf, string filenameH5, std::vector<dfloat> timeVector)
 {
-  mesh_t *mesh = acoustics->mesh;  
+  mesh_t *mesh = acoustics-> mesh;
 
   std::ofstream ofs(fileNameXdmf.c_str(), std::ofstream::out);
-
-  size_t N_elem = mesh->Nelements * mesh->plotNp;
   // https://visit-sphinx-github-user-manual.readthedocs.io/en/develop/data_into_visit/XdmfFormat.html#an-example-of-a-point-mesh
   
   // HEADER
   ofs << "<?xml version=\"1.0\" ?>" << std::endl;
   ofs << "<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>" << std::endl;
-  ofs << "<Xdmf Version=\"2.0\">"  << std::endl;
+  ofs << "<Xdmf Version=\"3.0\">"  << std::endl;
 
   // Begin
   ofs << "  <Domain>" << std::endl;
@@ -78,7 +91,7 @@ void acousticsWriteXdmfHeader(acoustics_t *acoustics, string fileNameXdmf, strin
     ofs << "        <include xpointer=\"xpointer(//Grid[@Name=&quot;mesh&quot;]/*[self::Topology or self::Geometry])\" />" << std::endl;
     ofs << "        <Time Value=\"" << timeVector[i] << "\" />" << std::endl;
 		ofs << "        <Attribute Name=\"p\" AttributeType=\"Scalar\" Center=\"Node\">" << std::endl;
-		ofs << "          <DataItem DataType=\"Float\" Dimensions=\"" << N_elem << "\" Format=\"HDF\" Precision=\"8\">" << std::endl;
+		ofs << "          <DataItem DataType=\"Float\" Dimensions=\"" << Nelem << "\" Format=\"HDF\" Precision=\"8\">" << std::endl;
 		ofs << "            " << filenameH5 << ":" << fileTag << std::endl;
 		ofs << "          </DataItem>" << std::endl;
     ofs << "        </Attribute>" << std::endl;
@@ -88,12 +101,12 @@ void acousticsWriteXdmfHeader(acoustics_t *acoustics, string fileNameXdmf, strin
 
   ofs << "    <Grid Name=\"mesh\" GridType=\"Uniform\">" << std::endl;
   ofs << "      <Geometry GeometryType=\"XYZ\">" << std::endl;
-  ofs << "        <DataItem DataType=\"Float\" Dimensions=\"" << N_elem << " " << 3 << "\" Format=\"HDF\" Precision=\"8\">" << std::endl;
+  ofs << "        <DataItem DataType=\"Float\" Dimensions=\"" << Nelem << " " << 3 << "\" Format=\"HDF\" Precision=\"8\">" << std::endl;
   ofs << "          " << filenameH5 << ":/data0" << endl;
   ofs << "        </DataItem>" << std::endl;
   ofs << "      </Geometry>" << std::endl;
-  ofs << "      <Topology TopologyType=\"Polyvertex\" NumberOfElements=\"" << N_elem << "\">" << std::endl;
-  ofs << "        <DataItem DataType=\"Int\" Dimensions=\"" << N_elem << " " << 1 << "\" Format=\"HDF\" Precision=\"8\">" << std::endl;
+  ofs << "      <Topology TopologyType=\"Polyvertex\" NumberOfElements=\"" << Nelem << "\">" << std::endl;
+  ofs << "        <DataItem DataType=\"Int\" Dimensions=\"" << Nelem << " " << 1 << "\" Format=\"HDF\" Precision=\"8\">" << std::endl;
   ofs << "          " << filenameH5 << ":/data1" << endl;
   ofs << "        </DataItem>" << std::endl;
   ofs << "      </Topology>" << std::endl;
@@ -102,40 +115,24 @@ void acousticsWriteXdmfHeader(acoustics_t *acoustics, string fileNameXdmf, strin
   ofs << "</Xdmf>" << std::endl;
 }
 
-void acousticsWriteMeshH5(acoustics_t *acoustics, string fileName, string fileTag0, string fileTag1)
+void acousticsWriteMeshH5(string fileName, string fileTag0, string fileTag1, 
+  std::vector<dfloat> &x1d, std::vector<dfloat> &y1d, std::vector<dfloat> &z1d)
 {  
   File file(fileName, File::Overwrite);
   
-  auto mesh = acoustics->mesh;
-
-  size_t Nelem = mesh->Nelements * mesh->plotNp;
+  size_t Nelem = x1d.size();
   
   std::vector<dfloat> rowVec(3);
   std::vector<std::vector<dfloat>> meshData(Nelem, rowVec);
   std::vector<int> vertexData(Nelem);
 
-  int i = 0;
   // compute plot node coordinates on the fly
-  for (dlong e = 0; e < mesh->Nelements; ++e)
+  for (dlong i = 0; i < x1d.size(); i++)
   {
-    for (int n = 0; n < mesh->plotNp; ++n)
-    {
-      dfloat plotxn = 0, plotyn = 0, plotzn = 0;
-
-      for (int m = 0; m < mesh->Np; ++m)
-      {
-        plotxn += mesh->plotInterp[n * mesh->Np + m] * mesh->x[m + e * mesh->Np];
-        plotyn += mesh->plotInterp[n * mesh->Np + m] * mesh->y[m + e * mesh->Np];
-        plotzn += mesh->plotInterp[n * mesh->Np + m] * mesh->z[m + e * mesh->Np];
-      }
-
-      meshData[i][0] = plotxn;
-      meshData[i][1] = plotyn;
-      meshData[i][2] = plotzn;
+      meshData[i][0] = x1d[i];
+      meshData[i][1] = y1d[i];
+      meshData[i][2] = z1d[i];
       vertexData[i] = i;
-
-      i++; 
-    }
   }
 
   DataSet dataset = file.createDataSet<dfloat>(fileTag0,  DataSpace::From(meshData));
@@ -143,69 +140,6 @@ void acousticsWriteMeshH5(acoustics_t *acoustics, string fileName, string fileTa
 
   dataset = file.createDataSet<int>(fileTag1,  DataSpace::From(vertexData));
   dataset.write(vertexData);
-}
-
-void acousticsWriteH5(acoustics_t *acoustics, std::string fileName, std::string fileTag)
-{
-  H5Easy::File file(fileName, File::OpenOrCreate);
-  mesh_t *mesh = acoustics->mesh;
-  std::vector<dfloat> pressures;
-
-  // write out pressure
-  for (dlong e = 0; e < mesh->Nelements; ++e)
-  {
-    for (int n = 0; n < mesh->plotNp; ++n)
-    {
-      dfloat plotpn = 0;
-      for (int m = 0; m < mesh->Np; ++m)
-      {
-        dfloat pm = acoustics->q[e * mesh->Np * mesh->Nfields + m];
-        plotpn += mesh->plotInterp[n * mesh->Np + m] * pm;
-      }
-      pressures.push_back(plotpn);
-    }    
-  }
-                             
-  H5Easy::dump(file, fileTag, pressures);
-
-  // if (writeVelocity) {
-
-  //   std::vector vel_x = std::vector();
-  //   std::vector vel_y = std::vector();
-  //   std::vector vel_z = std::vector();
-    
-  //   for (dlong e = 0; e < mesh->Nelements; ++e)
-  //   {
-  //     for (int n = 0; n < mesh->plotNp; ++n)
-  //     {
-  //       dfloat plotun = 0, plotvn = 0, plotwn = 0;
-  //       for (int m = 0; m < mesh->Np; ++m)
-  //       {
-  //         dfloat rm = acoustics->q[e * mesh->Np * mesh->Nfields + m];
-  //         dfloat um = acoustics->q[e * mesh->Np * mesh->Nfields + m + mesh->Np];
-  //         dfloat vm = acoustics->q[e * mesh->Np * mesh->Nfields + m + mesh->Np * 2];
-  //         //
-  //         plotun += mesh->plotInterp[n * mesh->Np + m] * um;
-  //         plotvn += mesh->plotInterp[n * mesh->Np + m] * vm;
-
-  //         if (acoustics->dim == 3)
-  //         {
-  //           dfloat wm = acoustics->q[e * mesh->Np * mesh->Nfields + m + mesh->Np * 3];
-
-  //           plotwn += mesh->plotInterp[n * mesh->Np + m] * wm;
-  //         }
-  //       }
-
-  //       vel_x.push_back(plotun);
-  //       vel_y.push_back(plotvn);
-  //       vel_z.push_back(plotwn);
-  //     }
-  //   }
-
-  //   H5Easy::dump(file, fileTag, plotun);
-  //   H5Easy::dump(file, fileTag, plotvn);
-  //   H5Easy::dump(file, fileTag, plotwn);
-  // }
 }
 
 // interpolate data to plot nodes and save to file (one per process

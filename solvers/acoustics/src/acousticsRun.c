@@ -105,11 +105,10 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions)
 
   std::vector<dfloat> timeStepsWrite;
   if (waveFieldWriteType != None) {
-    dfloat fmax = acoustics->fmax;
-    dfloat dt_write = (1.0/fmax)/ppwWaveField;
+    dfloat dt_write = (1.0/acoustics->fmax)/ppwWaveField;
     int tstepsWrite = std::max((int)floor(dt_write/acoustics->mesh->dt), 1);
     
-    for (int tstep = 0; tstep < acoustics->mesh->NtimeSteps; tstep++) { // check!  + 1
+    for (int tstep = 0; tstep < acoustics->mesh->NtimeSteps; tstep++) {
       if (tstep % tstepsWrite == 0) {
         timeStepsWrite.push_back(tstep * acoustics->mesh->dt);
       }

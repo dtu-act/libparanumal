@@ -1,17 +1,17 @@
 #!/bin/bash
 
-#SBATCH -t 05:00:00
-#SBATCH --mem=32gb
+#SBATCH -t 01:00:00
+#SBATCH --mem=16gb
 #SBATCH -p a6000-gcondo
 #SBATCH --gres=gpu:1
 #SBATCH -n 1
 #SBATCH -N 1
-#SBATCH -o /users/nborrelj/data/nborrelj/logs/lipparanumal%j.out
-#SBATCH -e /users/nborrelj/data/nborrelj/logs/lipparanumal%j.err
-#SBATCH --job-name=lipparanumal
+#SBATCH -o /users/nborrelj/data/nborrelj/logs/libparanumal%j.out
+#SBATCH -e /users/nborrelj/data/nborrelj/logs/libparanumal%j.err
+#SBATCH --job-name=libparanumal
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=nikolas_borrel-jensen@brown.edu
-#SBATCH -a 1-20%10
+#SBATCH -a 1-500%50
 
 # OSCAR
 module load gcc/10.2
@@ -24,4 +24,4 @@ export OCCA_DIR=~/libparanumal/occa
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 
 # Run solver
-mpirun -np 1 ./acousticsMain examples/setups/setup_cube_1000Hz_p4_perf_refl
+mpirun -np 1 ./acousticsMain simulationSetups/deeponet/setup_cube_1000Hz_p4_perf_refl_grf

@@ -52,6 +52,8 @@ void grfWindowed(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d, dfl
 }
 
 void grf(vector<dfloat> x1d_, vector<dfloat> y1d_, vector<dfloat> z1d_, dfloat sigma_0, dfloat l_0, vector<dfloat> &samples_out) {
+    arma_rng::set_seed_random();
+    
     int num_samples = 1;
     vec x1d = vec(x1d_);
     vec y1d = vec(y1d_);
@@ -76,9 +78,6 @@ void grf(vector<dfloat> x1d_, vector<dfloat> y1d_, vector<dfloat> z1d_, dfloat s
     for (int i=0; i<samples.n_elem; i++) {
         samples_out[i] = samples(i);
     }
-    
-    // cout << samples << endl;
-    // cout << samples_out << endl;
 }
 
 // HELPER FUNCTIONS

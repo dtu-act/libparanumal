@@ -2,13 +2,13 @@
 1.0
 
 [SIMULATION_ID]
-cube_500hz_p4_5ppw_freq_indep
+cube_1000hz_p4_5ppw_perf_refl_x1.3_y1.3_z1.3
 
 [MESH FILE]
-../../meshes/tests/cube_500hz_p4_5ppw_freq_indep.msh
+/users/nborrelj/data/nborrelj/libP/meshes/cube_1000hz_p4_4ppw_perf_refl.msh
 
 [OUTPUT DIRECTORY]
-examples/output
+/users/nborrelj/data/nborrelj/libP/output
 
 [POLYNOMIAL DEGREE]
 4
@@ -20,10 +20,10 @@ examples/output
 LSERK4
 
 [FINAL TIME]
-0.1
+0.012
 
 [RECEIVER]
-examples/setupdata/receivers2_cube.dat
+simulationSetups/setupdata/receiver_x0_1_y0_5_z0_5.dat
 
 [CFL]
 1
@@ -38,16 +38,16 @@ examples/setupdata/receivers2_cube.dat
 7400
 
 [LRVECTFIT] # Generated using vectorfitDriverLR.m
-examples/setupdata/LRDATA14.dat
+simulationSetups/setupdata/LRDATA14.dat
 
 [ERVECTFIT] # Generated using vectorfitDriverER.m
-examples/setupdata/ERDATA14.dat
+simulationSetups/setupdata/ERDATA14.dat
 
 [FREQUENCY]
-500 # [Hz]
+1000 # [Hz]
 
 [WRITE_WAVE_FIELD] # NONE | XDMF | VTU | TXT
-NONE
+XDMF
 
 [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
 8
@@ -62,13 +62,13 @@ GAUSSIAN
 ; 0.4
 
 [SX] # x coordinate of initial pulse (ignored for GRF)
-0.5
+1.3
 
 [SY] # y coordinate of initial pulse (ignored for GRF)
-0.5
+1.3
 
 [SZ] # z coordinate of initial pulse (ignored for GRF)
-0.5
+1.3
 
 ### DON'T CHANGE BELOW ###
 [MESH DIMENSION]
