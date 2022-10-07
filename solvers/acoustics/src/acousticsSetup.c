@@ -34,6 +34,9 @@ SOFTWARE.
 #include <sstream>
 
 #if INCLUDE_GRF
+#include <armadillo>
+#include <btwxt/griddeddata.h>
+#include <btwxt/btwxt.h>
 void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, dfloat sigma0_window);
 #endif
 void gaussianSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], dfloat sigma0);
@@ -162,51 +165,89 @@ void extractUniquePoints(mesh_t *mesh, acoustics_t *acoustics,
   }
 }
 
-#if INCLUDE_GRF  
-// ONLY RECTANGULAR DOMAINS ARE SUPPORTED AT THE MOMENT
-// (due to windowing function)
-void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, dfloat sigma0_window)
-{
-  auto conn = std::vector<uint>();
-  auto x1d = std::vector<dfloat>();
-  auto y1d = std::vector<dfloat>();
-  auto z1d = std::vector<dfloat>();
-  auto p1d = std::vector<dfloat>();
-
-  extractUniquePoints(mesh, acoustics, conn, x1d, y1d, z1d, p1d);
-
-  auto samples_out = std::vector<dfloat>(x1d.size());
-
-  dfloat xminmax[2] = {*std::min_element(x1d.begin(), x1d.end()), *std::max_element(x1d.begin(), x1d.end())};
-  dfloat yminmax[2] = {*std::min_element(y1d.begin(), y1d.end()), *std::max_element(y1d.begin(), y1d.end())};
-  dfloat zminmax[2] = {*std::min_element(z1d.begin(), z1d.end()), *std::max_element(z1d.begin(), z1d.end())};
-
-  printf("Calculating GRF...\n");  
-  grfWindowed(x1d, y1d, z1d, xminmax, yminmax, zminmax, 1.0, length_scale, sigma0_window, samples_out);
-  printf("... done\n");    
+void meshMinMax(mesh_t *mesh, dfloat xminmax[2], dfloat yminmax[2], dfloat zminmax[2]) {
+  xminmax[0] = std::numeric_limits<float>::max();
+  xminmax[1] = std::numeric_limits<float>::min();
+  yminmax[0] = std::numeric_limits<float>::max();
+  yminmax[1] = std::numeric_limits<float>::min();
+  zminmax[0] = std::numeric_limits<float>::max();
+  zminmax[1] = std::numeric_limits<float>::min();
 
   for (dlong e = 0; e < mesh->Nelements; ++e)
   {
     for (int n = 0; n < mesh->Np; ++n)
     {
-      uint i = conn[n + mesh->Np * e];
-      dlong qbase = e * mesh->Np * mesh->Nfields + n;
+      dfloat x = mesh->x[n + mesh->Np * e];
+      dfloat y = mesh->y[n + mesh->Np * e];
+      dfloat z = mesh->z[n + mesh->Np * e];
 
-      dfloat vel_x = 0, vel_y = 0, vel_z = 0;
-
-      acoustics->q[qbase + 0 * mesh->Np] = samples_out[i];
-      acoustics->q[qbase + 1 * mesh->Np] = vel_x;
-      acoustics->q[qbase + 2 * mesh->Np] = vel_y;
-      if (acoustics->dim == 3)
-        acoustics->q[qbase + 3 * mesh->Np] = vel_z;
+      xminmax[0] = (x < xminmax[0]) ? x : xminmax[0];
+      xminmax[1] = (x > xminmax[1]) ? x : xminmax[1];
+      yminmax[0] = (y < xminmax[0]) ? y : yminmax[0];
+      yminmax[1] = (y > yminmax[1]) ? y : yminmax[1];
+      zminmax[0] = (z < zminmax[0]) ? z : zminmax[0];
+      zminmax[1] = (z > zminmax[1]) ? z : zminmax[1];
     }
   }
 }
-#endif
 
-void gaussianSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], dfloat sigma0)
+#if INCLUDE_GRF
+
+void setupUniformGrid(mesh_t *mesh, vector<dfloat> xaxis, vector<dfloat> yaxis, vector<dfloat> zaxis, int ppw,
+  vector<dfloat> &x1d_uniform, vector<dfloat> &y1d_uniform, vector<dfloat> &z1d_uniform) {
+  int Ntot = xaxis.size()*yaxis.size()*zaxis.size();
+  x1d_uniform.resize(Ntot);
+  y1d_uniform.resize(Ntot);
+  z1d_uniform.resize(Ntot);
+
+  for (arma::uword i=0; i < xaxis.size(); ++i) { 
+    for (arma::uword j=0; j < yaxis.size(); ++j) { 
+      for (arma::uword k=0; k < zaxis.size(); ++k) { 
+        x1d_uniform[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = xaxis[i];
+        y1d_uniform[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = yaxis[j];
+        z1d_uniform[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = zaxis[k];
+      }
+    }
+  }
+}
+
+// ONLY RECTANGULAR DOMAINS ARE SUPPORTED AT THE MOMENT
+// (due to windowing function)
+void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, dfloat sigma0_window)
 {
-  dfloat t = 0;
+  dfloat xminmax[2], yminmax[2], zminmax[2];
+  meshMinMax(mesh, xminmax, yminmax, zminmax);
+
+  // CALCULATE GRF
+  // uniform grid
+  int ppw = 2;
+  int Nx = ceil((xminmax[1]-xminmax[0])/(mesh->c/(acoustics->fmax*ppw)));
+  int Ny = ceil((yminmax[1]-yminmax[0])/(mesh->c/(acoustics->fmax*ppw)));
+  int Nz = ceil((zminmax[1]-zminmax[0])/(mesh->c/(acoustics->fmax*ppw)));
+
+  auto xaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(xminmax[0],xminmax[1], Nx));
+  auto yaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(yminmax[0],yminmax[1], Ny));
+  auto zaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(zminmax[0],zminmax[1], Nz));
+
+  setupUniformGrid(mesh,xaxis,yaxis,zaxis,ppw,
+    acoustics->x1d_uniform,acoustics->y1d_uniform,acoustics->z1d_uniform);
+  
+  printf("Calculating GRF...\n");  
+  grfWindowed(acoustics->x1d_uniform, 
+              acoustics->y1d_uniform, 
+              acoustics->z1d_uniform,
+              xminmax,yminmax,zminmax,
+              1.0, length_scale, sigma0_window, acoustics->ic_uniform);
+  printf("... done\n");
+
+  // INTERPOLATE TO QUADRATURE POINTS
+  Btwxt::GridAxis xaxis_(xaxis, Btwxt::Method::CUBIC);
+  Btwxt::GridAxis yaxis_(yaxis, Btwxt::Method::CUBIC);
+  Btwxt::GridAxis zaxis_(zaxis, Btwxt::Method::CUBIC);
+
+  std::vector<Btwxt::GridAxis> grf_grid{xaxis_, yaxis_, zaxis_};
+  Btwxt::GriddedData gridded_data(grf_grid, {acoustics->ic_uniform});
+  Btwxt::RegularGridInterpolator grf_interpolator(gridded_data);
 
   for (dlong e = 0; e < mesh->Nelements; ++e)
   {
@@ -219,7 +260,75 @@ void gaussianSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], d
       dlong qbase = e * mesh->Np * mesh->Nfields + n;
 
       dfloat vel_x = 0, vel_y = 0, vel_z = 0, pressure = 0;
-      gaussianSource(x, y, z, t, &pressure, sloc, sigma0);
+      
+      auto values = grf_interpolator.get_values_at_target({x, y, z});
+
+      acoustics->q[qbase + 0 * mesh->Np] = values[0];
+      acoustics->q[qbase + 1 * mesh->Np] = vel_x;
+      acoustics->q[qbase + 2 * mesh->Np] = vel_y;
+      if (acoustics->dim == 3)
+        acoustics->q[qbase + 3 * mesh->Np] = vel_z;
+    }
+  }
+}
+#endif
+
+void gaussianSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], dfloat sigma0)
+{
+  std::function<dfloat(dfloat,dfloat,dfloat)> calcPressure;  
+
+  #if INCLUDE_GRF
+    // keep this in function scope, otherwise segmentation error in lambda function
+    Btwxt::RegularGridInterpolator grf_interpolator;
+
+    dfloat xminmax[2], yminmax[2], zminmax[2];
+    meshMinMax(mesh, xminmax, yminmax, zminmax);
+
+    // uniform grid
+    int ppw = 2;
+    int Nx = ceil((xminmax[1]-xminmax[0])/(mesh->c/(acoustics->fmax*ppw)));
+    int Ny = ceil((yminmax[1]-yminmax[0])/(mesh->c/(acoustics->fmax*ppw)));
+    int Nz = ceil((zminmax[1]-zminmax[0])/(mesh->c/(acoustics->fmax*ppw)));
+
+    auto xaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(xminmax[0],xminmax[1], Nx));
+    auto yaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(yminmax[0],yminmax[1], Ny));
+    auto zaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(zminmax[0],zminmax[1], Nz));
+
+    setupUniformGrid(mesh,xaxis,yaxis,zaxis,ppw,
+      acoustics->x1d_uniform,acoustics->y1d_uniform,acoustics->z1d_uniform);
+
+    // INTERPOLATE TO QUADRATURE POINTS
+    Btwxt::GridAxis xaxis_(xaxis, Btwxt::Method::CUBIC);
+    Btwxt::GridAxis yaxis_(yaxis, Btwxt::Method::CUBIC);
+    Btwxt::GridAxis zaxis_(zaxis, Btwxt::Method::CUBIC);
+
+    gaussianSource(acoustics->x1d_uniform,acoustics->y1d_uniform,acoustics->z1d_uniform, sloc, sigma0, acoustics->ic_uniform);
+
+    std::vector<Btwxt::GridAxis> grf_grid{xaxis_, yaxis_, zaxis_};
+    Btwxt::GriddedData gridded_data(grf_grid, {acoustics->ic_uniform});
+    grf_interpolator = Btwxt::RegularGridInterpolator(gridded_data);
+
+    calcPressure = [&](const dfloat x, const dfloat y, const dfloat z) {
+      return grf_interpolator.get_values_at_target({x, y, z})[0];
+    };
+  #else
+    calcPressure = [&sloc,sigma0](const dfloat x, const dfloat y, const dfloat z) {
+      return gaussianSource(x, y, z, 0, sloc, sigma0);
+    };
+  #endif
+
+  for (dlong e = 0; e < mesh->Nelements; ++e)
+  {
+    for (int n = 0; n < mesh->Np; ++n)
+    {
+      dfloat x = mesh->x[n + mesh->Np * e];
+      dfloat y = mesh->y[n + mesh->Np * e];
+      dfloat z = mesh->z[n + mesh->Np * e];
+
+      dlong qbase = e * mesh->Np * mesh->Nfields + n;
+
+      dfloat vel_x = 0, vel_y = 0, vel_z = 0;
+      auto pressure = calcPressure(x, y, z);
 
       acoustics->q[qbase + 0 * mesh->Np] = pressure;
       acoustics->q[qbase + 1 * mesh->Np] = vel_x;

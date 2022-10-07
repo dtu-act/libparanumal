@@ -17,7 +17,12 @@
 			"regex": "c",
 			"string_view": "c",
 			"acoustics.h": "c",
-			"stdio.h": "c"
+			"stdio.h": "c",
+			"h5easy.hpp": "c",
+			"griddeddata.h": "c",
+			"chrono": "c",
+			"ratio": "c",
+			"tuple": "c"
 		}
 	}
 }

@@ -1,4 +1,5 @@
 # https://www2.cs.duke.edu/courses/cps108/doc/makefileinfo/sample.html
+# compiling and linking libraries: https://tldp.org/HOWTO/Program-Library-HOWTO/static-libraries.html
 
 ifndef OCCA_DIR
 ERROR:
@@ -13,6 +14,7 @@ include ${OCCA_DIR}/scripts/Makefile
 # define variables
 HDRDIR  = ../../include
 OGSDIR  = ../../libs/gatherScatter
+LIBSDIR = ../../libs
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
@@ -22,17 +24,19 @@ LD	= mpic++ -std=c++2a
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g -D DHOLMES='"${CURDIR}/../.."' -D DACOUSTICS='"${CURDIR}"'
 
-# -larmadillo can be removed if Gaussian Random Fields are excluded with #define INCLUDE_GRF 0 in acoustics.h
+# -larmadillo should be added to LDFLAGS if Gaussian Random Fields are included #define INCLUDE_GRF 1 in acoustics.h
 OS := $(shell uname)
 ifeq ($(OS),Darwin)
 	# link flags to be used (MacOS)
 	LDFLAGS	= -Xpreprocessor -fopenmp -lomp -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
 else
 	# link flags to be used (Linux)
+	# LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g -lhdf5 -larmadillo
 	LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g -lhdf5
 endif
 
 # libraries to be linked in
+# LIBS	=   -L$(OCCA_DIR)/lib -L$(LIBSDIR) -lbtwxt $(links) # use to sample initial condition on uniform grid (needed for for GRFs)
 LIBS	=   -L$(OCCA_DIR)/lib $(links)
 
 INCLUDES = acoustics.h

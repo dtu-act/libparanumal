@@ -32,9 +32,10 @@ SOFTWARE.
 
 using namespace HighFive;
 
-void acousticsWriteXdmfHeader(acoustics_t *acoustics, size_t Nelem, string fileNameXdmf, string filenameH5, std::vector<dfloat> timeVector);
+void acousticsWriteXdmfHeader(acoustics_t *acoustics, size_t Nelem, string fileNameXdmf, string filenameH5, 
+  string dataTag, std::vector<dfloat> timeVector);
 void acousticsWriteMeshH5(string fileName, string fileTag0, string fileTag1, 
-  std::vector<dfloat> &x1d, std::vector<dfloat> &y1d, std::vector<dfloat> &z1d);
+  std::vector<dfloat> &x1d, std::vector<dfloat> &y1d, std::vector<dfloat> &z1d, uint fileAttr);
 
 void acousticsWriteXdmf(acoustics_t *acoustics, std::vector<dfloat> timeVector, int iter) {
   string filenameH5 = acoustics->simulationID + ".h5";
@@ -51,16 +52,36 @@ void acousticsWriteXdmf(acoustics_t *acoustics, std::vector<dfloat> timeVector, 
   if (iter == 0) {
     // write mesh and Xdmf once
     std::string filepathXdmf = acoustics->outDir + "/" + acoustics->simulationID + ".xdmf";
+    std::string filepathUniformXdmf = acoustics->outDir + "/" + acoustics->simulationID + "_uniform.xdmf";
+    std::string dataTag = "/data";
     std::string fileTag0 = "/data0";
     std::string fileTag1 = "/data1";
+
+    acousticsWriteXdmfHeader(acoustics, x1d.size(), filepathXdmf, filenameH5, dataTag, timeVector);
+    acousticsWriteMeshH5(filepathH5, fileTag0, fileTag1, x1d, y1d, z1d, File::Overwrite);
+
+    H5Easy::File file(filepathH5, File::OpenOrCreate);
     
-    acousticsWriteXdmfHeader(acoustics, x1d.size(), filepathXdmf, filenameH5, timeVector);
-    acousticsWriteMeshH5(filepathH5, fileTag0, fileTag1, x1d, y1d, z1d);
-    
-    // write source position
-    File file(filepathH5, File::ReadWrite);
-    auto dataset = file.createDataSet<dfloat>("/source_position",  DataSpace::From(acoustics->sourcePosition));
-    dataset.write(acoustics->sourcePosition);
+    if (acoustics->x1d_uniform.size() > 0) {
+      dataTag = "/udata";
+      fileTag0 = "/udata0";
+      fileTag1 = "/udata1";    
+      std::string fileTag2 = "/udata2";
+
+      auto x1d_u = acoustics->x1d_uniform;
+      auto y1d_u = acoustics->y1d_uniform;
+      auto z1d_u = acoustics->z1d_uniform;    
+      acousticsWriteXdmfHeader(acoustics, acoustics->z1d_uniform.size(), filepathUniformXdmf, filenameH5, dataTag, {0.0});
+      acousticsWriteMeshH5(filepathH5, fileTag0, fileTag1, x1d_u, y1d_u, z1d_u, File::ReadWrite);
+            
+      H5Easy::dump(file, fileTag2, acoustics->ic_uniform);
+    }    
+
+    if (acoustics->sourceType == GaussianFunction) {
+      // write source position      
+      DataSet dataset = file.createDataSet<dfloat>("/source_position",  DataSpace::From(acoustics->sourcePosition));
+      dataset.write(acoustics->sourcePosition);
+    }
   }
 
   std::string fileTag = "/data" + std::to_string(iter + 2);
@@ -68,10 +89,9 @@ void acousticsWriteXdmf(acoustics_t *acoustics, std::vector<dfloat> timeVector, 
   H5Easy::dump(file, fileTag, p1d);
 }
 
-void acousticsWriteXdmfHeader(acoustics_t *acoustics, size_t Nelem, string fileNameXdmf, string filenameH5, std::vector<dfloat> timeVector)
+void acousticsWriteXdmfHeader(acoustics_t *acoustics, size_t Nelem, 
+  string fileNameXdmf, string filenameH5, string dataTag, std::vector<dfloat> timeVector)
 {
-  mesh_t *mesh = acoustics-> mesh;
-
   std::ofstream ofs(fileNameXdmf.c_str(), std::ofstream::out);
   // https://visit-sphinx-github-user-manual.readthedocs.io/en/develop/data_into_visit/XdmfFormat.html#an-example-of-a-point-mesh
   
@@ -85,7 +105,7 @@ void acousticsWriteXdmfHeader(acoustics_t *acoustics, size_t Nelem, string fileN
   ofs << "    <Grid Name=\"TimeSeries\" GridType=\"Collection\" CollectionType=\"Temporal\">" << std::endl;
 
   for (int i=0; i < timeVector.size(); i++) {
-    std::string fileTag = "/data" + std::to_string(i + 2);
+    std::string fileTag = "/" + dataTag + std::to_string(i + 2);
 
     ofs << "      <Grid>" << std::endl;
     ofs << "        <include xpointer=\"xpointer(//Grid[@Name=&quot;mesh&quot;]/*[self::Topology or self::Geometry])\" />" << std::endl;
@@ -102,12 +122,12 @@ void acousticsWriteXdmfHeader(acoustics_t *acoustics, size_t Nelem, string fileN
   ofs << "    <Grid Name=\"mesh\" GridType=\"Uniform\">" << std::endl;
   ofs << "      <Geometry GeometryType=\"XYZ\">" << std::endl;
   ofs << "        <DataItem DataType=\"Float\" Dimensions=\"" << Nelem << " " << 3 << "\" Format=\"HDF\" Precision=\"8\">" << std::endl;
-  ofs << "          " << filenameH5 << ":/data0" << endl;
+  ofs << "          " << filenameH5 << ":/" + dataTag + "0" << endl;
   ofs << "        </DataItem>" << std::endl;
   ofs << "      </Geometry>" << std::endl;
   ofs << "      <Topology TopologyType=\"Polyvertex\" NumberOfElements=\"" << Nelem << "\">" << std::endl;
   ofs << "        <DataItem DataType=\"Int\" Dimensions=\"" << Nelem << " " << 1 << "\" Format=\"HDF\" Precision=\"8\">" << std::endl;
-  ofs << "          " << filenameH5 << ":/data1" << endl;
+  ofs << "          " << filenameH5 << ":/" + dataTag + "1" << endl;
   ofs << "        </DataItem>" << std::endl;
   ofs << "      </Topology>" << std::endl;
   ofs << "    </Grid>" << std::endl;
@@ -116,9 +136,9 @@ void acousticsWriteXdmfHeader(acoustics_t *acoustics, size_t Nelem, string fileN
 }
 
 void acousticsWriteMeshH5(string fileName, string fileTag0, string fileTag1, 
-  std::vector<dfloat> &x1d, std::vector<dfloat> &y1d, std::vector<dfloat> &z1d)
+  std::vector<dfloat> &x1d, std::vector<dfloat> &y1d, std::vector<dfloat> &z1d, uint fileAttr)
 {  
-  File file(fileName, File::Overwrite);
+  File file(fileName, fileAttr);
   
   size_t Nelem = x1d.size();
   

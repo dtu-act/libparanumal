@@ -35,8 +35,17 @@ using namespace std;
 using namespace arma;
 #endif
 
-void gaussianSource(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *r, dfloat *sloc, dfloat sxyz, dfloat amplitude /*=1000*/) {
-  *r = amplitude*std::exp(-((x - sloc[0])*(x - sloc[0]) + (y - sloc[1])*(y - sloc[1]) + (z - sloc[2])*(z - sloc[2]))/(sxyz*sxyz));
+dfloat gaussianSource(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *sloc, dfloat sxyz, dfloat amplitude) {
+  return amplitude*std::exp(-((x - sloc[0])*(x - sloc[0]) + (y - sloc[1])*(y - sloc[1]) + (z - sloc[2])*(z - sloc[2]))/(sxyz*sxyz));
+}
+
+void gaussianSource(const vector<dfloat> x1d, const vector<dfloat> y1d, const vector<dfloat> z1d, dfloat *sloc, dfloat sxyz, 
+    vector<dfloat> &pressures, dfloat amplitude)
+{
+  pressures.resize(x1d.size());
+  for (uint i=0; i < x1d.size(); ++i) { 
+    pressures[i] = gaussianSource(x1d[i],y1d[i],z1d[i],0,sloc,sxyz,amplitude);
+  }
 }
 
 #if INCLUDE_GRF
@@ -45,7 +54,7 @@ void applyWindowFunction(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> 
 void grf(vector<dfloat> x1d_, vector<dfloat> y1d_, vector<dfloat> z1d_, dfloat sigma_0, dfloat l_0, vector<dfloat> &samples_out);
 
 void grfWindowed(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d, dfloat xminmax[2], dfloat yminmax[2], dfloat zminmax[2], 
-    dfloat sigma_0, dfloat l_0, dfloat sigma0_window, vector<dfloat> &samples_out, dfloat amplitude /*=10*/) {
+    dfloat sigma_0, dfloat l_0, dfloat sigma0_window, vector<dfloat> &samples_out, dfloat amplitude) {
 
     grf(x1d, y1d, z1d, sigma_0, l_0, samples_out);
     applyWindowFunction(x1d, y1d, z1d, xminmax, yminmax, zminmax, sigma0_window, samples_out, amplitude);
@@ -53,7 +62,7 @@ void grfWindowed(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d, dfl
 
 void grf(vector<dfloat> x1d_, vector<dfloat> y1d_, vector<dfloat> z1d_, dfloat sigma_0, dfloat l_0, vector<dfloat> &samples_out) {
     arma_rng::set_seed_random();
-    
+
     int num_samples = 1;
     vec x1d = vec(x1d_);
     vec y1d = vec(y1d_);
@@ -73,6 +82,8 @@ void grf(vector<dfloat> x1d_, vector<dfloat> y1d_, vector<dfloat> z1d_, dfloat s
     vec mu = zeros<vec>(num_nodes);
     
     mat samples = mvnrnd(mu, covariance_matrix, num_samples);    
+
+    samples_out.resize(samples.n_elem);
 
     // copy into output matrix
     for (int i=0; i<samples.n_elem; i++) {

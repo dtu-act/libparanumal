@@ -204,6 +204,28 @@ Having set the boundary materials and element size, the geometry can now be mesh
 1. Choose `Modules->Mesh->3D` and then optimize the mesh by choosing `Optimize 3D (Netgen)`. Note, that if the element resolution is changes, 1D, 2D and 3D needs to be meshed for the changes to take effect.
 2. Save the file by choosing `File->Export` and save the file with `.msh` extension. Choose `Version 2 (ASCII)` and click ok.
 
+## Gaussian Random Fields
+Support for GRFs as initial conditions is not enabled as default. As explained earlier, set the flag `#define INCLUDE_GRF 1` in `acoustics.h` and link the armadillo library with `-larmadillo` inside the makefile. Also, the static library [https://github.com/bigladder/btwxt](https://github.com/bigladder/btwxt) used for interpolating from static grids to Gaussian quadrature points should be linked by assigning `-L$(LIBSDIR) -lbtwxt` to the `LIBS` environment variable . The static library `libbtwxt.a` is located inside `libparanumal/libs/` and the header files are located inside `librapanumal/include/btwxt`. If the library is not compatible with your system, follow the instructions below.
+
+1. Clone the code from git into e.g. `libparanumal/include/` <br>
+    `> git clone https://github.com/bigladder/btwxt`
+2. Setup with cmake <br>
+    `> mkdir build/` <br>
+    `> cd build` <br>
+    `> cmake ../src --install` <br>
+3. A Makefile is generated, build the static library <br>
+    `> cd src/` <br>
+    `> make` <br>
+4. Move the library to the libs folder <br>
+    `> mv libbtwxt.a /path/to/libparanumal/libs/` <br>
+5. Move the header files into the root of the `btwxt` folder <br>
+    `> cd /path/to/libparanumal/include` <br>
+    `> mv btwxt/src/btwxt.h .` <br>
+    `> mv btwxt/src/error.h .` <br>
+    `> mv btwxt/src/griddeddata.h .` <br>
+    `> mv btwxt/src/gridpoint.h .` <br>
+ 5. The remaining files can be cleaned up. <br>
+
 ## USING DTU HPC
 * `> ssh username@login1.gbar.dtu.dk`   # login
 * `> voltash`                           # switch to GPU cluster

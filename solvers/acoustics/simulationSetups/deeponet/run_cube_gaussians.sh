@@ -11,6 +11,7 @@
 #SBATCH --job-name=libparanumal
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=nikolas_borrel-jensen@brown.edu
+#SBATCH -a 0-4
 
 # OSCAR
 module load gcc/10.2
@@ -22,5 +23,10 @@ module load hdf5/1.10.5
 export OCCA_DIR=~/libparanumal/occa
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 
+SAMPLE_LIST=($(<simulationSetups/deeponet/joblist.list))
+SAMPLE=${SAMPLE_LIST[${SLURM_ARRAY_TASK_ID}]}
+
+echo This is task $SLURM_ARRAY_TASK_ID, which will run $SAMPLE
+
 # Run solver
-mpirun -np 1 ./acousticsMain simulationSetups/deeponet/setup_cube_1000Hz_p4_perf_refl_src[0.7,0.7,0.7]
+mpirun -np 1 ./acousticsMain simulationSetups/deeponet/$SAMPLE

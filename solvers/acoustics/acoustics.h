@@ -66,7 +66,12 @@ typedef struct {
   dlong Nblock;
 
   dfloat *q, *rhsq, *resq;
-
+  
+  std::vector<dfloat> ic_uniform;
+  std::vector<dfloat> x1d_uniform;
+  std::vector<dfloat> y1d_uniform;
+  std::vector<dfloat> z1d_uniform;
+  
   //---------RECEIVER---------
   dfloat *qRecv; // Saves pres in receiver element in each timestep
   dlong qRecvCounter; // To keep track of which timestep we are on
@@ -242,10 +247,13 @@ void acousticsError(acoustics_t *acoustics, dfloat time);
 void acousticsCavitySolution(dfloat x, dfloat y, dfloat z, dfloat t,
 		       dfloat *u, dfloat *v, dfloat *w, dfloat *p);
 
-void gaussianSource(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *r, dfloat *sloc, dfloat sxyz, dfloat amplitude = 5);
+dfloat gaussianSource(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *sloc, dfloat sxyz, dfloat amplitude = 1);
+void gaussianSource(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d, dfloat *sloc, dfloat sxyz, 
+    vector<dfloat> &pressures, dfloat ampl = 1);
 #if INCLUDE_GRF
-void grfWindowed(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d, dfloat xminmax[2], dfloat yminmax[2], dfloat zminmax[2], 
-    dfloat sigma_0, dfloat l_0, dfloat sigma0_window, vector<dfloat> &samples_out, dfloat amplitude = 5);
+void grfWindowed(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d, 
+    dfloat xminmax[2], dfloat yminmax[2], dfloat zminmax[2], 
+    dfloat sigma_0, dfloat l_0, dfloat sigma0_window, vector<dfloat> &samples_out, dfloat amplitude = 1);
 #endif
 
 void acousticsWritePressureField(acoustics_t *acoustics, WriteWaveFieldType waveFieldWriteType, std::vector<dfloat> timeSteps, int iter);
