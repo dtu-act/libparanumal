@@ -1,17 +1,17 @@
 #!/bin/bash
 
-#SBATCH -t 00:30:00
-#SBATCH --mem=64gb
+#SBATCH -t 00:05:00
+#SBATCH --mem=8gb
 #SBATCH -p a6000-gcondo
 #SBATCH --gres=gpu:1
 #SBATCH -n 1
 #SBATCH -N 1
 #SBATCH -o /users/nborrelj/data/nborrelj/logs/libparanumal%j.out
 #SBATCH -e /users/nborrelj/data/nborrelj/logs/libparanumal%j.err
-#SBATCH --job-name=libp_gaussians
+#SBATCH --job-name=libp_gaussians_rand_loc
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=nikolas_borrel-jensen@brown.edu
-#SBATCH -a 0-4
+#SBATCH -a 1-1000%10
 
 # OSCAR
 module load gcc/10.2
@@ -23,10 +23,5 @@ module load hdf5/1.10.5
 export OCCA_DIR=~/libparanumal/occa
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 
-SAMPLE_LIST=($(<simulationSetups/deeponet/joblist.list))
-SAMPLE=${SAMPLE_LIST[${SLURM_ARRAY_TASK_ID}]}
-
-echo This is task $SLURM_ARRAY_TASK_ID, which will run $SAMPLE
-
 # Run solver
-mpirun -np 1 ./acousticsMain simulationSetups/deeponet/$SAMPLE
+mpirun -np 1 ./acousticsMain simulationSetups/deeponet/setup_cube_1000Hz_p4_perf_refl_rand_src

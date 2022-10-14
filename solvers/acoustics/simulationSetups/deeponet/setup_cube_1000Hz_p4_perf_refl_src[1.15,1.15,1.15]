@@ -55,6 +55,9 @@ XDMF
 [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
 GAUSSIAN
 
+[INITIAL_UNIFORM_MESH_PPW] # Resolution of the mesh for the initial condition
+3
+
 ; [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
 ; 0.3
 

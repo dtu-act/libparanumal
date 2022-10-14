@@ -73,7 +73,10 @@ void acousticsWriteXdmf(acoustics_t *acoustics, std::vector<dfloat> timeVector, 
       auto z1d_u = acoustics->z1d_uniform;    
       acousticsWriteXdmfHeader(acoustics, acoustics->z1d_uniform.size(), filepathUniformXdmf, filenameH5, dataTag, {0.0});
       acousticsWriteMeshH5(filepathH5, fileTag0, fileTag1, x1d_u, y1d_u, z1d_u, File::ReadWrite);
-            
+      
+      H5Easy::dump(file, "ic_uniform_shape", std::vector<dfloat>({acoustics->ic_uniform_shape[0],
+                                                                  acoustics->ic_uniform_shape[1],
+                                                                  acoustics->ic_uniform_shape[2]}));
       H5Easy::dump(file, fileTag2, acoustics->ic_uniform);
     }    
 

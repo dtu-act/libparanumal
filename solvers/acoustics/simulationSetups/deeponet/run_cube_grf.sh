@@ -1,17 +1,17 @@
 #!/bin/bash
 
-#SBATCH -t 01:00:00
-#SBATCH --mem=16gb
+#SBATCH -t 00:05:00
+#SBATCH --mem=8gb
 #SBATCH -p a6000-gcondo
 #SBATCH --gres=gpu:1
 #SBATCH -n 1
 #SBATCH -N 1
 #SBATCH -o /users/nborrelj/data/nborrelj/logs/libparanumal%j.out
 #SBATCH -e /users/nborrelj/data/nborrelj/logs/libparanumal%j.err
-#SBATCH --job-name=libparanumal
+#SBATCH --job-name=libp_grfs
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=nikolas_borrel-jensen@brown.edu
-#SBATCH -a 1-500%50
+#SBATCH -a 1-1000%10
 
 # OSCAR
 module load gcc/10.2

@@ -123,7 +123,7 @@ void clampPerSample(mat &samples) {
 void applyWindowFunction(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d, 
     dfloat xminmax[], dfloat yminmax[], dfloat zminmax[], dfloat sigma0_window, vector<dfloat> &samples_out, dfloat amplitude) {
 
-    dfloat offset = sigma0_window*3;
+    dfloat offset = OFFSET_BC*sigma0_window;
     dfloat x0 = xminmax[0] + offset;
     dfloat y0 = yminmax[0] + offset;
     dfloat z0 = zminmax[0] + offset;

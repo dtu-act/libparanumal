@@ -58,6 +58,9 @@ GRF
 [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
 0.3
 
+[INITIAL_UNIFORM_MESH_PPW] # Resolution of the mesh for the initial condition
+3
+
 ; [SXYZ] # OPTIONAL: Width of initial pulse (will be computed automatically if not defined)
 ; 0.4
 

@@ -2,7 +2,7 @@
 1.0
 
 [SIMULATION_ID]
-cube_1000hz_p4_5ppw_perf_refl_x1_y1_z1
+cube_1000hz_p4_5ppw_perf_refl_rand_srcs_pos
 
 [MESH FILE]
 /users/nborrelj/data/nborrelj/libP/meshes/cube_1000hz_p4_4ppw_perf_refl.msh
@@ -55,23 +55,14 @@ XDMF
 [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
 GAUSSIAN
 
-[INITIAL_UNIFORM_MESH_PPW] # Resolution of the mesh for the initial condition
-3
-
-; [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
-; 0.3
-
 ; [SXYZ] # OPTIONAL: Width of initial pulse (will be computed automatically if not defined)
 ; 0.4
 
-[SX] # x coordinate of initial pulse (ignored for GRF)
-1.0
+[GAUSSIAN_SOURCE_POS] # RANDOM | FIXED
+RANDOM
 
-[SY] # y coordinate of initial pulse (ignored for GRF)
-1.0
-
-[SZ] # z coordinate of initial pulse (ignored for GRF)
-1.0
+[INITIAL_UNIFORM_MESH_PPW] # Resolution of the mesh for the initial condition
+3
 
 ### DON'T CHANGE BELOW ###
 [MESH DIMENSION]

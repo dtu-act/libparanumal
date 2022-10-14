@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -t 02:00:00
+#SBATCH -t 00:30:00
 #SBATCH --mem=64gb
 #SBATCH -p a6000-gcondo
 #SBATCH --gres=gpu:1
@@ -8,7 +8,7 @@
 #SBATCH -N 1
 #SBATCH -o /users/nborrelj/data/nborrelj/logs/libparanumal%j.out
 #SBATCH -e /users/nborrelj/data/nborrelj/logs/libparanumal%j.err
-#SBATCH --job-name=libparanumal
+#SBATCH --job-name=libp_gaussian
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=nikolas_borrel-jensen@brown.edu
 

@@ -65,18 +65,32 @@ void sourceSetup(mesh_t *mesh, acoustics_t *acoustics, setupAide &newOptions)
   {
     acoustics->sourceType = GaussianFunction;
 
-    if (newOptions.getArgs("SX", acoustics->sourcePosition[0]) == 0)
-    {
-      throw std::invalid_argument("[SZ] tag missing");
+    if (newOptions.compareArgs("GAUSSIAN_SOURCE_POS", "RANDOM")) {
+      arma::arma_rng::set_seed_random();
+      
+      dfloat *xminmax = acoustics->xminmax;
+      dfloat *yminmax = acoustics->yminmax;
+      dfloat *zminmax = acoustics->zminmax;
+      dfloat offs = 3.0*acoustics->sigma0;
+
+      acoustics->sourcePosition[0] = arma::randu<dfloat>( arma::distr_param(xminmax[0]+offs,xminmax[1]-offs) );
+      acoustics->sourcePosition[1] = arma::randu<dfloat>( arma::distr_param(yminmax[0]+offs,yminmax[1]-offs) );
+      acoustics->sourcePosition[2] = arma::randu<dfloat>( arma::distr_param(zminmax[0]+offs,zminmax[1]-offs) );
     }
-    if (newOptions.getArgs("SY", acoustics->sourcePosition[1]) == 0)
-    {
-      throw std::invalid_argument("[SZ] tag missing");
-    }
-    if (newOptions.getArgs("SZ", acoustics->sourcePosition[2]) == 0)
-    {
-      throw std::invalid_argument("[SZ] tag missing");
-    }
+    else {
+      if (newOptions.getArgs("SX", acoustics->sourcePosition[0]) == 0)
+      {
+        throw std::invalid_argument("[SZ] tag missing");
+      }
+      if (newOptions.getArgs("SY", acoustics->sourcePosition[1]) == 0)
+      {
+        throw std::invalid_argument("[SZ] tag missing");
+      }
+      if (newOptions.getArgs("SZ", acoustics->sourcePosition[2]) == 0)
+      {
+        throw std::invalid_argument("[SZ] tag missing");
+      }
+    }  
 
     gaussianSourceSetup(mesh, acoustics, acoustics->sourcePosition, acoustics->sigma0);
   }
@@ -215,8 +229,9 @@ void setupUniformGrid(mesh_t *mesh, vector<dfloat> xaxis, vector<dfloat> yaxis, 
 // (due to windowing function)
 void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, dfloat sigma0_window)
 {
-  dfloat xminmax[2], yminmax[2], zminmax[2];
-  meshMinMax(mesh, xminmax, yminmax, zminmax);
+  dfloat *xminmax = acoustics->xminmax;
+  dfloat *yminmax = acoustics->yminmax;
+  dfloat *zminmax = acoustics->zminmax;
 
   // CALCULATE GRF
   // uniform grid
@@ -228,6 +243,10 @@ void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, d
   auto xaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(xminmax[0],xminmax[1], Nx));
   auto yaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(yminmax[0],yminmax[1], Ny));
   auto zaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(zminmax[0],zminmax[1], Nz));
+
+  acoustics->ic_uniform_shape[0] = xaxis.size();
+  acoustics->ic_uniform_shape[1] = yaxis.size();
+  acoustics->ic_uniform_shape[2] = zaxis.size();
 
   setupUniformGrid(mesh,xaxis,yaxis,zaxis,ppw,
     acoustics->x1d_uniform,acoustics->y1d_uniform,acoustics->z1d_uniform);
@@ -281,8 +300,9 @@ void gaussianSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], d
     // keep this in function scope, otherwise segmentation error in lambda function
     Btwxt::RegularGridInterpolator grf_interpolator;
 
-    dfloat xminmax[2], yminmax[2], zminmax[2];
-    meshMinMax(mesh, xminmax, yminmax, zminmax);
+    dfloat *xminmax = acoustics->xminmax;
+    dfloat *yminmax = acoustics->yminmax;
+    dfloat *zminmax = acoustics->zminmax;
 
     // uniform grid
     int ppw = 2;
@@ -293,6 +313,10 @@ void gaussianSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], d
     auto xaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(xminmax[0],xminmax[1], Nx));
     auto yaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(yminmax[0],yminmax[1], Ny));
     auto zaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(zminmax[0],zminmax[1], Nz));
+
+    acoustics->ic_uniform_shape[0] = xaxis.size();
+    acoustics->ic_uniform_shape[1] = yaxis.size();
+    acoustics->ic_uniform_shape[2] = zaxis.size();
 
     setupUniformGrid(mesh,xaxis,yaxis,zaxis,ppw,
       acoustics->x1d_uniform,acoustics->y1d_uniform,acoustics->z1d_uniform);
@@ -357,8 +381,8 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
   if (newOptions.getArgs("SIMULATION_ID", caseID) == 0) {
     throw std::invalid_argument("[SIMULATION_ID] tag missing");
   }
-  if (newOptions.compareArgs("SOURCE_TYPE", "GRF"))
-  {        
+  if (newOptions.compareArgs("SOURCE_TYPE", "GRF") || (newOptions.compareArgs("GAUSSIAN_SOURCE_POS", "RANDOM")))
+  {
     acoustics->outDir = outDir+"/"+caseID+"_"+generateUUID(10);
   } 
   else if (newOptions.compareArgs("SOURCE_TYPE", "GAUSSIAN"))
@@ -384,6 +408,8 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
   {
     throw std::invalid_argument("Setup file error: [C] attribute not found.");
   }
+
+  meshMinMax(mesh, acoustics->xminmax, acoustics->yminmax, acoustics->zminmax);
 
   newOptions.getArgs("MESH DIMENSION", acoustics->dim);
   newOptions.getArgs("ELEMENT TYPE", acoustics->elementType);

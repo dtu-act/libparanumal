@@ -205,15 +205,15 @@ Having set the boundary materials and element size, the geometry can now be mesh
 2. Save the file by choosing `File->Export` and save the file with `.msh` extension. Choose `Version 2 (ASCII)` and click ok.
 
 ## Gaussian Random Fields
-Support for GRFs as initial conditions is not enabled as default. As explained earlier, set the flag `#define INCLUDE_GRF 1` in `acoustics.h` and link the armadillo library with `-larmadillo` inside the makefile. Also, the static library [https://github.com/bigladder/btwxt](https://github.com/bigladder/btwxt) used for interpolating from static grids to Gaussian quadrature points should be linked by assigning `-L$(LIBSDIR) -lbtwxt` to the `LIBS` environment variable . The static library `libbtwxt.a` is located inside `libparanumal/libs/` and the header files are located inside `librapanumal/include/btwxt`. If the library is not compatible with your system, follow the instructions below.
+Support for GRFs as initial conditions is not enabled as default. As explained earlier, set the flag `#define INCLUDE_GRF 1` in `acoustics.h` and link the armadillo library with `-larmadillo` inside the makefile. Also, the static library [https://github.com/bigladder/btwxt](https://github.com/bigladder/btwxt) used for interpolating from static grids to Gaussian quadrature points should be linked by assigning `-L$(LIBSDIR) -lbtwxt` to the `LIBS` environment variable . The static library `libbtwxt.a` should be located inside `libparanumal/libs/` and the header files located inside `librapanumal/include/btwxt`. To build the library, do the following:
 
 1. Clone the code from git into e.g. `libparanumal/include/` <br>
     `> git clone https://github.com/bigladder/btwxt`
 2. Setup with cmake <br>
     `> mkdir build/` <br>
     `> cd build` <br>
-    `> cmake ../src --install` <br>
-3. A Makefile is generated, build the static library <br>
+    `> cmake --install ../src ` <br>
+3. Build the static library from the generated makefile <br>
     `> cd src/` <br>
     `> make` <br>
 4. Move the library to the libs folder <br>
@@ -224,7 +224,7 @@ Support for GRFs as initial conditions is not enabled as default. As explained e
     `> mv btwxt/src/error.h .` <br>
     `> mv btwxt/src/griddeddata.h .` <br>
     `> mv btwxt/src/gridpoint.h .` <br>
- 5. The remaining files can be cleaned up. <br>
+ 6. The remaining files can be cleaned up. <br>
 
 ## USING DTU HPC
 * `> ssh username@login1.gbar.dtu.dk`   # login
