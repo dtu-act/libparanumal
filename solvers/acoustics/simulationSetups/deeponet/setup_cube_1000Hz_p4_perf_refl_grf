@@ -59,7 +59,7 @@ GRF
 0.3
 
 [INITIAL_UNIFORM_MESH_PPW] # Resolution of the mesh for the initial condition
-3
+2.7
 
 ; [SXYZ] # OPTIONAL: Width of initial pulse (will be computed automatically if not defined)
 ; 0.4

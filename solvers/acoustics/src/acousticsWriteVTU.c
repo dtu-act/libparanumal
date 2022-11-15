@@ -65,12 +65,12 @@ void acousticsWriteXdmf(acoustics_t *acoustics, std::vector<dfloat> timeVector, 
     if (acoustics->x1d_uniform.size() > 0) {
       dataTag = "/udata";
       fileTag0 = "/udata0";
-      fileTag1 = "/udata1";    
+      fileTag1 = "/udata1";
       std::string fileTag2 = "/udata2";
 
       auto x1d_u = acoustics->x1d_uniform;
       auto y1d_u = acoustics->y1d_uniform;
-      auto z1d_u = acoustics->z1d_uniform;    
+      auto z1d_u = acoustics->z1d_uniform;
       acousticsWriteXdmfHeader(acoustics, acoustics->z1d_uniform.size(), filepathUniformXdmf, filenameH5, dataTag, {0.0});
       acousticsWriteMeshH5(filepathH5, fileTag0, fileTag1, x1d_u, y1d_u, z1d_u, File::ReadWrite);
       
@@ -78,7 +78,7 @@ void acousticsWriteXdmf(acoustics_t *acoustics, std::vector<dfloat> timeVector, 
                                                                   acoustics->ic_uniform_shape[1],
                                                                   acoustics->ic_uniform_shape[2]}));
       H5Easy::dump(file, fileTag2, acoustics->ic_uniform);
-    }    
+    }
 
     if (acoustics->sourceType == GaussianFunction) {
       // write source position      

@@ -40,7 +40,7 @@ SOFTWARE.
 // include Gaussian random fields
 #define INCLUDE_GRF 0
 #define AMPLITUDE 2
-#define OFFSET_BC 3.2
+#define OFFSET_BC 2.7
 
 #define TRIANGLES 3
 #define QUADRILATERALS 4

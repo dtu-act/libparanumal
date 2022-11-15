@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SBATCH -t 00:30:00
-#SBATCH --mem=64gb
+#SBATCH -t 00:05:00
+#SBATCH --mem=8gb
 #SBATCH -p a6000-gcondo
 #SBATCH --gres=gpu:1
 #SBATCH -n 1
