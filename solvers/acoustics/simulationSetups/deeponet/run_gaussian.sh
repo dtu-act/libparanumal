@@ -23,4 +23,4 @@ export OCCA_DIR=~/libparanumal/occa
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 
 # Run solver
-mpirun -np 1 ./acousticsMain simulationSetups/deeponet/setup_cube_1000Hz_p4_perf_refl_src[0.7,0.7,0.7]
+mpirun -np 1 ./acousticsMain simulationSetups/deeponet/setup_living_room_1000Hz_p4_src[0.7,0.7,0.7]

@@ -40,7 +40,7 @@ SOFTWARE.
 // include Gaussian random fields
 #define INCLUDE_GRF 0
 #define AMPLITUDE 2
-#define OFFSET_BC 2.7
+#define OFFSET_BC 2.7 // only used when no IC mesh is loaded
 
 #define TRIANGLES 3
 #define QUADRILATERALS 4
@@ -71,11 +71,11 @@ typedef struct {
 
   dfloat xminmax[2], yminmax[2], zminmax[2];
   
-  std::vector<dfloat> ic_uniform;
-  std::vector<dfloat> x1d_uniform;
-  std::vector<dfloat> y1d_uniform;
-  std::vector<dfloat> z1d_uniform;
-  dfloat ic_uniform_shape[3];
+  std::vector<dfloat> ic_rectilinear;
+  std::vector<dfloat> x1d_rectilinear;
+  std::vector<dfloat> y1d_rectilinear;
+  std::vector<dfloat> z1d_rectilinear;
+  dfloat ic_rectilinear_shape[3];
   
   //---------RECEIVER---------
   dfloat *qRecv; // Saves pres in receiver element in each timestep
@@ -268,12 +268,6 @@ void acousticsWritePressureFieldTxt(acoustics_t *acoustics, dfloat time);
 int acousticsWriteIRs(acoustics_t *acoustics, setupAide &newOptions);
 void acousticsWriteSimulationSettings(acoustics_t *acoustics, string filename);
 
-int createDir(string path, bool deleteIfExists);
-
-void extractUniquePoints(mesh_t *mesh, acoustics_t *acoustics, 
-  std::vector<uint> &conn, std::vector<dfloat> &x1d, 
-  std::vector<dfloat> &y1d, std::vector<dfloat> &z1d, std::vector<dfloat> &p1d);
-
 void acousticsDopriStep(acoustics_t *acoustics, const dfloat time);
 void acousticsLserkStep(acoustics_t *acoustics, const dfloat time);
 void acousticsEirkStep(acoustics_t *acoustics, const dfloat time);
@@ -283,5 +277,4 @@ void acousticsReceiverInterpolation(acoustics_t *acoustics);
 void acousticsFindReceiverElement(acoustics_t *acoustics);
 void acousticsRecvIntpolOperators(acoustics_t *acoustics);
 
-// utils
-std::string generateUUID(int length);
+int createDir(string path, bool deleteIfExists);

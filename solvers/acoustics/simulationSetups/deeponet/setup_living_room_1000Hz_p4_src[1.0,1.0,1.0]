@@ -2,10 +2,10 @@
 1.0
 
 [SIMULATION_ID]
-cube_1000hz_p4_5ppw_perf_refl
+living_room_furnished_1000hz_p4_4ppw_x1_y1_z1
 
 [MESH FILE]
-/users/nborrelj/data/nborrelj/libP/meshes/cube_1000hz_p4_4ppw_perf_refl.msh
+/users/nborrelj/data/nborrelj/libP/meshes/living_room_furnished_1000hz_p4_4ppw.msh
 
 [OUTPUT DIRECTORY]
 /users/nborrelj/data/nborrelj/libP/output
@@ -20,13 +20,13 @@ cube_1000hz_p4_5ppw_perf_refl
 LSERK4
 
 [FINAL TIME]
-0.012
+0.1
 
 [RECEIVER]
 simulationSetups/setupdata/receiver_x0_1_y0_5_z0_5.dat
 
 [CFL]
-1
+0.1
 
 [RHO] # Density of the medium
 1.2
@@ -38,7 +38,7 @@ simulationSetups/setupdata/receiver_x0_1_y0_5_z0_5.dat
 7400
 
 [LRVECTFIT] # Generated using vectorfitDriverLR.m
-simulationSetups/setupdata/LRDATA14.dat
+/users/nborrelj/data/nborrelj/libP/setups/freq_dep_lr.dat
 
 [ERVECTFIT] # Generated using vectorfitDriverER.m
 simulationSetups/setupdata/ERDATA14.dat
@@ -50,28 +50,28 @@ simulationSetups/setupdata/ERDATA14.dat
 XDMF
 
 [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
-8
+4
 
 [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
-GRF
+GAUSSIAN
 
-[GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
-0.3
+[INITIAL_RECTILINEAR_MESH_PPW] # Resolution of the mesh for the initial condition
+2
 
-[INITIAL_UNIFORM_MESH_PPW] # Resolution of the mesh for the initial condition
-2.7
+; [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
+; 0.3
 
 ; [SXYZ] # OPTIONAL: Width of initial pulse (will be computed automatically if not defined)
 ; 0.4
 
 [SX] # x coordinate of initial pulse (ignored for GRF)
-0.5
+1.0
 
 [SY] # y coordinate of initial pulse (ignored for GRF)
-0.5
+1.0
 
 [SZ] # z coordinate of initial pulse (ignored for GRF)
-0.5
+1.0
 
 ### DON'T CHANGE BELOW ###
 [MESH DIMENSION]
@@ -136,3 +136,5 @@ NODAL
 
 [VERBOSE]
 FALSE
+
+

@@ -3,13 +3,13 @@
     // Hover to view descriptions of existing attributes.
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
-    "configurations": [        
+    "configurations": [
         {
             "name": "gcc - Debug acousticsMain (no build)",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/solvers/acoustics/acousticsMain",
-            "args": ["${workspaceFolder}/solvers/acoustics/simulationSetups/deeponet/setup_cube_1000Hz_p4_perf_refl_grf"],
+            "args": ["${workspaceFolder}/solvers/acoustics/simulationSetups/deeponet/setup_cube_1000Hz_p4_rand_src"],
             "stopAtEntry": true,
             "cwd": "${workspaceFolder}/solvers/acoustics",
             // "environment": [

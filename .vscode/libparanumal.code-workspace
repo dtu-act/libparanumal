@@ -24,7 +24,8 @@
 			"ratio": "c",
 			"tuple": "c",
 			"mesh2d.h": "c",
-			"mesh.h": "c"
+			"mesh.h": "c",
+			"string.h": "c"
 		}
 	}
 }

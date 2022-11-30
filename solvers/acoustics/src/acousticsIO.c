@@ -97,8 +97,7 @@ int acousticsWriteIRs(acoustics_t *acoustics, setupAide &newOptions) {
       fprintf(iFP, "%.15lf %.15le\n", time, acoustics->qRecv[i+iRecv*mesh->NtimeSteps]);
       time += mesh->dt;
     }
-
-    printf("Receiver impulse response was written to disk: %s\n", fname);
+    
     fclose(iFP);
   }
 

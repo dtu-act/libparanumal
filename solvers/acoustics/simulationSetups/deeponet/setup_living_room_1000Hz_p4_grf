@@ -2,10 +2,10 @@
 1.0
 
 [SIMULATION_ID]
-cube_1000hz_p4_5ppw_perf_refl_rand_srcs_pos
+living_room_unfurnished_1000hz_p4_4ppw
 
 [MESH FILE]
-/users/nborrelj/data/nborrelj/libP/meshes/cube_1000hz_p4_4ppw_perf_refl.msh
+/users/nborrelj/data/nborrelj/libP/meshes/living_room_unfurnished_1000hz_p4_4ppw.msh
 
 [OUTPUT DIRECTORY]
 /users/nborrelj/data/nborrelj/libP/output
@@ -38,7 +38,7 @@ simulationSetups/setupdata/receiver_x0_1_y0_5_z0_5.dat
 7400
 
 [LRVECTFIT] # Generated using vectorfitDriverLR.m
-simulationSetups/setupdata/LRDATA14.dat
+/users/nborrelj/data/nborrelj/libP/setups/freq_dep_lr.dat
 
 [ERVECTFIT] # Generated using vectorfitDriverER.m
 simulationSetups/setupdata/ERDATA14.dat
@@ -53,16 +53,25 @@ XDMF
 8
 
 [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
-GAUSSIAN
+GRF
+
+[GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
+0.3
+
+[INITIAL_RECTILINEAR_MESH_PPW] # Resolution of the mesh for the initial condition
+2.7
 
 ; [SXYZ] # OPTIONAL: Width of initial pulse (will be computed automatically if not defined)
 ; 0.4
 
-[GAUSSIAN_SOURCE_POS] # RANDOM | FIXED
-RANDOM
+[SX] # x coordinate of initial pulse (ignored for GRF)
+0.5
 
-[INITIAL_UNIFORM_MESH_PPW] # Resolution of the mesh for the initial condition
-3
+[SY] # y coordinate of initial pulse (ignored for GRF)
+0.5
+
+[SZ] # z coordinate of initial pulse (ignored for GRF)
+0.5
 
 ### DON'T CHANGE BELOW ###
 [MESH DIMENSION]
@@ -127,5 +136,3 @@ NODAL
 
 [VERBOSE]
 FALSE
-
-

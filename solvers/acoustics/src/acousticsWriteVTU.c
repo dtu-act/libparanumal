@@ -29,6 +29,7 @@ SOFTWARE.
 #include <vector>
 #include <highfive/H5Easy.hpp>
 #include <highfive/H5File.hpp>
+#include "acousticsUtils.h"
 
 using namespace HighFive;
 
@@ -52,7 +53,7 @@ void acousticsWriteXdmf(acoustics_t *acoustics, std::vector<dfloat> timeVector, 
   if (iter == 0) {
     // write mesh and Xdmf once
     std::string filepathXdmf = acoustics->outDir + "/" + acoustics->simulationID + ".xdmf";
-    std::string filepathUniformXdmf = acoustics->outDir + "/" + acoustics->simulationID + "_uniform.xdmf";
+    std::string filepathRectilinearXdmf = acoustics->outDir + "/" + acoustics->simulationID + "_rectilinear.xdmf";
     std::string dataTag = "/data";
     std::string fileTag0 = "/data0";
     std::string fileTag1 = "/data1";
@@ -62,22 +63,22 @@ void acousticsWriteXdmf(acoustics_t *acoustics, std::vector<dfloat> timeVector, 
 
     H5Easy::File file(filepathH5, File::OpenOrCreate);
     
-    if (acoustics->x1d_uniform.size() > 0) {
+    if (acoustics->x1d_rectilinear.size() > 0) {
       dataTag = "/udata";
       fileTag0 = "/udata0";
       fileTag1 = "/udata1";
       std::string fileTag2 = "/udata2";
 
-      auto x1d_u = acoustics->x1d_uniform;
-      auto y1d_u = acoustics->y1d_uniform;
-      auto z1d_u = acoustics->z1d_uniform;
-      acousticsWriteXdmfHeader(acoustics, acoustics->z1d_uniform.size(), filepathUniformXdmf, filenameH5, dataTag, {0.0});
+      auto x1d_u = acoustics->x1d_rectilinear;
+      auto y1d_u = acoustics->y1d_rectilinear;
+      auto z1d_u = acoustics->z1d_rectilinear;
+      acousticsWriteXdmfHeader(acoustics, acoustics->z1d_rectilinear.size(), filepathRectilinearXdmf, filenameH5, dataTag, {0.0});
       acousticsWriteMeshH5(filepathH5, fileTag0, fileTag1, x1d_u, y1d_u, z1d_u, File::ReadWrite);
       
-      H5Easy::dump(file, "ic_uniform_shape", std::vector<dfloat>({acoustics->ic_uniform_shape[0],
-                                                                  acoustics->ic_uniform_shape[1],
-                                                                  acoustics->ic_uniform_shape[2]}));
-      H5Easy::dump(file, fileTag2, acoustics->ic_uniform);
+      H5Easy::dump(file, "ic_rectilinear_shape", std::vector<dfloat>({acoustics->ic_rectilinear_shape[0],
+                                                                  acoustics->ic_rectilinear_shape[1],
+                                                                  acoustics->ic_rectilinear_shape[2]}));
+      H5Easy::dump(file, fileTag2, acoustics->ic_rectilinear);
     }
 
     if (acoustics->sourceType == GaussianFunction) {

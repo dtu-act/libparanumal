@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -t 00:05:00
+#SBATCH -t 00:10:00
 #SBATCH --mem=8gb
 #SBATCH -p a6000-gcondo
 #SBATCH --gres=gpu:1
@@ -24,4 +24,4 @@ export OCCA_DIR=~/libparanumal/occa
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 
 # Run solver
-mpirun -np 1 ./acousticsMain simulationSetups/deeponet/setup_cube_1000Hz_p4_perf_refl_rand_src
+mpirun -np 1 ./acousticsMain simulationSetups/deeponet/setup_1000Hz_p4_rand_src
