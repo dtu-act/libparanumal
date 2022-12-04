@@ -2,13 +2,13 @@
 1.0
 
 [SIMULATION_ID]
-living_room_furnished_1000hz_p4_4ppw_x1.3_y1.3_z1.3
+Lshape_1000hz_p4_4ppw_x0.9_y1.0_z1.0
 
 [MESH FILE]
-/users/nborrelj/data/nborrelj/libP/meshes/living_room_furnished_1000hz_p4_4ppw.msh
+/work3/nibor/data/libP/meshes/Lshape_1000hz_p4_4ppw.msh
 
 [OUTPUT DIRECTORY]
-/users/nborrelj/data/nborrelj/libP/output
+/work3/nibor/data/libP/Lshape_1000hz_p4_4ppw_val
 
 [POLYNOMIAL DEGREE]
 4
@@ -21,9 +21,6 @@ LSERK4
 
 [FINAL TIME]
 0.1
-
-[RECEIVER]
-simulationSetups/setupdata/receiver_x0_1_y0_5_z0_5.dat
 
 [CFL]
 0.1
@@ -38,10 +35,10 @@ simulationSetups/setupdata/receiver_x0_1_y0_5_z0_5.dat
 7400
 
 [LRVECTFIT] # Generated using vectorfitDriverLR.m
-/users/nborrelj/data/nborrelj/libP/setups/freq_dep_lr.dat
+/work3/nibor/data/libP/setups/freq_dep_lr.dat
 
 [ERVECTFIT] # Generated using vectorfitDriverER.m
-simulationSetups/setupdata/ERDATA14.dat
+/work3/nibor/data/libP/setups/ERDATA14.dat
 
 [FREQUENCY]
 1000 # [Hz]
@@ -55,6 +52,9 @@ XDMF
 [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
 GAUSSIAN
 
+[GAUSSIAN_SOURCE_POS] # RANDOM | MESH ([MESH FILE IC] needs to be set) | FIXED
+FIXED
+
 [INITIAL_RECTILINEAR_MESH_PPW] # Resolution of the mesh for the initial condition
 2
 
@@ -65,13 +65,13 @@ GAUSSIAN
 ; 0.4
 
 [SX] # x coordinate of initial pulse (ignored for GRF)
-1.3
+0.9
 
 [SY] # y coordinate of initial pulse (ignored for GRF)
-1.3
+1.0
 
 [SZ] # z coordinate of initial pulse (ignored for GRF)
-1.3
+1.0
 
 ### DON'T CHANGE BELOW ###
 [MESH DIMENSION]

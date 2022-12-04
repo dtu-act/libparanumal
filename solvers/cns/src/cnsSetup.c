@@ -244,8 +244,6 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   // errorStep
   mesh->errorStep = 1000;
 
-  if (mesh->rank ==0) printf("dt = %g\n", mesh->dt);
-
   // OCCA build stuff
   
   occa::properties kernelInfo;

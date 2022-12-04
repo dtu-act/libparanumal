@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/solvers/acoustics/acousticsMain",
-            "args": ["${workspaceFolder}/solvers/acoustics/simulationSetups/deeponet/setup_cube_1000Hz_p4_rand_src"],
+            "args": ["${workspaceFolder}/solvers/acoustics/simulationSetups/deeponet/setup_1000Hz_p4_rand_src", "2"],
             "stopAtEntry": true,
             "cwd": "${workspaceFolder}/solvers/acoustics",
             // "environment": [

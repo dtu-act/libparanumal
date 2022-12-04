@@ -67,7 +67,7 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
 
   if(fp==NULL){
     printf("meshParallelReaderTri3D: could not load file %s\n", fileName);
-    exit(0);
+    exit(1);
   }
 
   char buf[BUFSIZ];

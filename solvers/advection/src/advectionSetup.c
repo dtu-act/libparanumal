@@ -199,8 +199,6 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     newOptions.getArgs("ERROR STEP", mesh->errorStep);
   }
 
-  if (mesh->rank ==0) printf("dt = %g\n", mesh->dt);
-
   // OCCA build stuff
 
   occa::properties kernelInfo;

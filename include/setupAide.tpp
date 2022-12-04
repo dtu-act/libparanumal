@@ -10,7 +10,6 @@ int setupAide::getArgs(string key, T& t){
     return 1;
   }
 
-  printf("Failed to find [%s].\n", key.c_str());
   return 0;
 }
 
@@ -29,7 +28,6 @@ int setupAide::getArgs(string key, vector<T>& m){
   argc = argv.size();
 
   if(!argc){
-    printf("Failed to find [%s].\n", key.c_str());
     return 0;
   }
 

@@ -66,7 +66,7 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
     
   if(fp==NULL){
     printf("meshReaderHex3D: could not load file %s\n", fileName);
-    exit(0);
+    exit(1);
   }
 
   char buf[BUFSIZ];

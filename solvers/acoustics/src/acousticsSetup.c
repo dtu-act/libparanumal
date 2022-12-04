@@ -82,28 +82,45 @@ void sourceSetup(mesh_t *mesh, acoustics_t *acoustics, setupAide &newOptions)
     }
     else if (newOptions.compareArgs("GAUSSIAN_SOURCE_POS", "MESH")) {
       string fileNameIC;
-      
+      int srcIndex;
+
       if (newOptions.getArgs("MESH FILE IC", fileNameIC) == 0)
       {
         throw std::invalid_argument("[MESH FILE IC] tag missing - needed when Gaussian source position is sampled from mesh file.");        
       }
+
       std::vector<dfloat> VX_IC,VY_IC,VZ_IC;
       pointReader3D((char *)fileNameIC.c_str(),VX_IC,VY_IC,VZ_IC);
 
-      auto indx = arma::randu<dfloat>( arma::distr_param(0, VX_IC.size()-1) );
+      if (newOptions.getArgs("SOURCE INDEX") == "") {
+        printf("Randomly sampling source index...\n)"); 
+        // [SOURCE INDEX] not set, pick random source index
+        srcIndex = arma::randi( arma::distr_param(0, VX_IC.size()-1) );
+      }
+      else if (newOptions.getArgs("SOURCE INDEX", srcIndex) == 0)
+      {
+        throw std::invalid_argument("[SOURCE INDEX] could not be parsed. Check the command line argument srcindex is an integer: ./acousticsMain setupfile srcindex");        
+      }
 
-      acoustics->sourcePosition[0] = VX_IC[indx];
-      acoustics->sourcePosition[1] = VY_IC[indx];
-      acoustics->sourcePosition[2] = VZ_IC[indx];
+      if (srcIndex > VX_IC.size()-1) {
+        throw std::invalid_argument("[SOURCE INDEX] exceeds the number of mesh nodes determining the source positions. Check the command line argument srcindex: ./acousticsMain setupfile srcindex.");
+      }
+      
+      acoustics->sourcePosition[0] = VX_IC[srcIndex];
+      acoustics->sourcePosition[1] = VY_IC[srcIndex];
+      acoustics->sourcePosition[2] = VZ_IC[srcIndex];
+
+      printf("Loading source with index %i corresponding to src pos=(%0.2f,%0.2f,%0.2f)\n", 
+        srcIndex, acoustics->sourcePosition[0], acoustics->sourcePosition[1], acoustics->sourcePosition[2]);
     }
     else if (newOptions.compareArgs("GAUSSIAN_SOURCE_POS", "FIXED")) {
       if (newOptions.getArgs("SX", acoustics->sourcePosition[0]) == 0)
       {
-        throw std::invalid_argument("[SZ] tag missing");
+        throw std::invalid_argument("[SX] tag missing");
       }
       if (newOptions.getArgs("SY", acoustics->sourcePosition[1]) == 0)
       {
-        throw std::invalid_argument("[SZ] tag missing");
+        throw std::invalid_argument("[SY] tag missing");
       }
       if (newOptions.getArgs("SZ", acoustics->sourcePosition[2]) == 0)
       {
@@ -516,46 +533,44 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
   //---------RECEIVER---------
   acoustics->qRecvCounter = 0; // Counter needed for later
   acoustics->qRecvCopyCounter = 0;
+  acoustics->NReceivers = 0;
 
   // Read from receiver locations file
   string RecvDATAFileName;
-  newOptions.getArgs("RECEIVER", RecvDATAFileName);
+  if (newOptions.getArgs("RECEIVER", RecvDATAFileName) == 1) {
+    FILE *RecvDATAFILE = fopen((char *)RecvDATAFileName.c_str(), "r");
+    if (RecvDATAFILE == NULL)
+    {
+      printf("Could not find receiver locations file: %s\n", (char *)RecvDATAFileName.c_str());
+      exit(-1);
+    }
 
-  FILE *RecvDATAFILE = fopen((char *)RecvDATAFileName.c_str(), "r");
-  if (RecvDATAFILE == NULL)
-  {
-    printf("Could not find Reciver Locations file: %s\n", (char *)RecvDATAFileName.c_str());
-    exit(-1);
+    fscanf(RecvDATAFILE, "%d", &acoustics->NReceivers);
+    acoustics->recvXYZ = (dfloat *)calloc(acoustics->NReceivers * 3, sizeof(dfloat));
+
+    for (int iRead = 0; iRead < acoustics->NReceivers * 3; iRead += 3)
+    {
+      fscanf(RecvDATAFILE, "%lf %lf %lf", &acoustics->recvXYZ[iRead],
+            &acoustics->recvXYZ[iRead + 1],
+            &acoustics->recvXYZ[iRead + 2]);
+    }
+    fclose(RecvDATAFILE);
+
+    acoustics->recvElements = (dlong *)calloc(acoustics->NReceivers, sizeof(dlong));
+    // Assume that no receivers on this core
+    for (int i = 0; i < acoustics->NReceivers; i++)
+    {
+      acoustics->recvElements[i] = -1;
+    }
+
+    acoustics->NReceiversLocal = 0;
+    acoustics->recvElementsIdx = (dlong *)calloc(acoustics->NReceivers, sizeof(dlong));
   }
-
-  fscanf(RecvDATAFILE, "%d", &acoustics->NReceivers);
-  acoustics->recvXYZ = (dfloat *)calloc(acoustics->NReceivers * 3, sizeof(dfloat));
-
-  for (int iRead = 0; iRead < acoustics->NReceivers * 3; iRead += 3)
-  {
-    fscanf(RecvDATAFILE, "%lf %lf %lf", &acoustics->recvXYZ[iRead],
-           &acoustics->recvXYZ[iRead + 1],
-           &acoustics->recvXYZ[iRead + 2]);
-  }
-  fclose(RecvDATAFILE);
-  acoustics->recvElements = (dlong *)calloc(acoustics->NReceivers, sizeof(dlong));
-  // Assume that no receivers on this core
-  for (int i = 0; i < acoustics->NReceivers; i++)
-  {
-    acoustics->recvElements[i] = -1;
-  }
-  acoustics->NReceiversLocal = 0;
-
-  acoustics->recvElementsIdx = (dlong *)calloc(acoustics->NReceivers, sizeof(dlong));
-
   //---------RECEIVER---------
 
   acoustics->frame = 0;
   // errorStep
   mesh->errorStep = 1000;
-
-  if (mesh->rank == 0)
-    printf("dt = %g\n", mesh->dt);
 
   // OCCA build stuff
 
@@ -1216,10 +1231,6 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
   acoustics->o_resacc =
       mesh->device.malloc((acoustics->LRInfo[0] * mesh->NLRPoints + acoustics->ERInfo[0] * mesh->NERPoints + 1) * sizeof(dfloat), acoustics->resacc);
 
-  if (!mesh->rank)
-  {
-    cout << "TIME INTEGRATOR (" << newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
-  }
   if (newOptions.compareArgs("TIME INTEGRATOR", "LSERK4"))
   {
     acoustics->o_resq =
@@ -1566,29 +1577,37 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
   // Print setup parameters to out file
   if (!mesh->rank)
   {
-    string mshFileName;
-    newOptions.getArgs("MESH FILE", mshFileName);
-    string timeInt;
-    newOptions.getArgs("TIME INTEGRATOR", timeInt);
-    string recvFile;
-    newOptions.getArgs("RECEIVER", recvFile);
-    string LRFile;
-    newOptions.getArgs("LRVECTFIT", LRFile);
-    string ERFile;
-    newOptions.getArgs("ERVECTFIT", ERFile);
     printf("-----SETUP PARAMETERS START-----\n");
-    printf("N = %d\n", mesh->N);
-    printf("Mesh file: %s\n", (char *)mshFileName.c_str());
     printf("Final Time: %g\n", mesh->finalTime);
     printf("CFL = %g\n", cfl);
     printf("dt = %g\n", mesh->dt);
+    printf("N = %d\n", mesh->N);
+    printf("SXYZ = %f (overwrite by setting optional parameter [SXYZ] in the settings file).\n", acoustics->sigma0);
+
+    string mshFileName;
+    newOptions.getArgs("MESH FILE", mshFileName);
+    printf("Mesh file: %s\n", (char *)mshFileName.c_str());
+
+    string timeInt;
+    newOptions.getArgs("TIME INTEGRATOR", timeInt);
     printf("Time integrator: %s\n", (char *)timeInt.c_str());
-    printf("Receiver file: %s\n", (char *)recvFile.c_str());
-    printf("Local Reaction file: %s\n", (char *)LRFile.c_str());
-    printf("Extended Reaction file: %s\n", (char *)ERFile.c_str());
-    printf("BCCHANGETIME = %g\n", acoustics->BCChangeTime);
+
+    string recvFile;
+    if (newOptions.getArgs("RECEIVER", recvFile) == 1) {
+      printf("Receiver file: %s\n", (char *)recvFile.c_str());
+    }
+
+    string LRFile;
+    if (newOptions.getArgs("LRVECTFIT", LRFile) == 1) {
+      printf("Local Reaction file: %s\n", (char *)LRFile.c_str());
+    }
+    string ERFile;
+    if (newOptions.getArgs("ERVECTFIT", ERFile) == 1) {
+      printf("Extended Reaction file: %s\n", (char *)ERFile.c_str());
+    }    
+    
     printf("Boundary conditions on surface indices from .msh file:\n");
-    printf("Rigid = [ ");
+    printf("\tRigid = [ ");
     for (int jj = 1; jj < 1000; jj += 2)
     { // Hardcoded for 500 surfaces, see meshParallelReaderTet3D.c
       if (1 == mesh->mshPrint[jj])
@@ -1596,7 +1615,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
         printf("%d ", mesh->mshPrint[jj - 1]);
       }
     }
-    printf("]\nFrequency Independent = [ ");
+    printf("]\n\tFrequency Independent = [ ");
     for (int jj = 1; jj < 1000; jj += 2)
     { // Hardcoded for 500 surfaces, see meshParallelReaderTet3D.c
       if (2 == mesh->mshPrint[jj])
@@ -1604,7 +1623,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
         printf("%d ", mesh->mshPrint[jj - 1]);
       }
     }
-    printf("]\nLocal Reaction = [ ");
+    printf("]\n\tLocal Reaction = [ ");
     for (int jj = 1; jj < 1000; jj += 2)
     { // Hardcoded for 500 surfaces, see meshParallelReaderTet3D.c
       if (3 == mesh->mshPrint[jj])
@@ -1612,7 +1631,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
         printf("%d ", mesh->mshPrint[jj - 1]);
       }
     }
-    printf("]\nExtended Reaction = [ ");
+    printf("]\n\tExtended Reaction = [ ");
     for (int jj = 1; jj < 1000; jj += 2)
     { // Hardcoded for 500 surfaces, see meshParallelReaderTet3D.c
       if (4 == mesh->mshPrint[jj])

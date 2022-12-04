@@ -72,7 +72,7 @@ int acousticsSetupMain(setupAide &newOptions)
     printf("Execution time: %lf\n", endTime - startTime);
   }
 
-  std::string filepathJson = acoustics->outDir + "/" + acoustics->simulationID + ".json";
+  std::string filepathJson = acoustics->outDir + "/simulation_parameters.json";
   acousticsWriteSimulationSettings(acoustics, filepathJson);
 
   return acousticsWriteIRs(acoustics, newOptions);

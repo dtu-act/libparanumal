@@ -65,7 +65,7 @@ mesh3D* meshParallelReaderTet3DCurv(char *fileName, int N){
     
   if(fp==NULL){
     printf("meshReaderTet3D: could not load file %s\n", fileName);
-    exit(0);
+    exit(1);
   }
 
   char buf[BUFSIZ];

@@ -67,38 +67,29 @@ void acousticsWriteSimulationSettings(acoustics_t *acoustics, string filename) {
 }
 
 // Print interpolated receiver to file
-int acousticsWriteIRs(acoustics_t *acoustics, setupAide &newOptions) {  
-  mesh_t *mesh = acoustics->mesh;  
-  char fname[BUFSIZ];
-  
-  if (acoustics->NReceiversLocal == 0) {
-    printf("ERROR: No receivers defined\n");
-    return 0;
-  }     
-
-  for (dlong iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){    
-    sprintf(fname, "%s/%s_%02d.txt", (char*)acoustics->outDir.c_str(), (char*)acoustics->simulationID.c_str(), acoustics->recvElementsIdx[iRecv]);
-
-    // char cwd[PATH_MAX];
-    // if (getcwd(cwd, sizeof(cwd)) == NULL) {
-    //   perror("getcwd() error");      
-    //   return 1;
-    // }
-
-    FILE *iFP = fopen(fname,"w");
-    if (iFP == NULL) {
-      printf("ERROR: receiver output file could not be opened %s)\n", fname);      
-      return 1;
-    }
-
-    dfloat time = 0;
-
-    for(int i = 0; i < mesh->NtimeSteps + 1; i++) { // +1 for including IC
-      fprintf(iFP, "%.15lf %.15le\n", time, acoustics->qRecv[i+iRecv*mesh->NtimeSteps]);
-      time += mesh->dt;
-    }
+int acousticsWriteIRs(acoustics_t *acoustics, setupAide &newOptions) {      
+  if (acoustics->NReceiversLocal > 0) {
+    mesh_t *mesh = acoustics->mesh;  
+    char fname[BUFSIZ];
     
-    fclose(iFP);
+    for (dlong iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++) {
+      sprintf(fname, "%s/%s_%02d.txt", (char*)acoustics->outDir.c_str(), (char*)acoustics->simulationID.c_str(), acoustics->recvElementsIdx[iRecv]);
+
+      FILE *iFP = fopen(fname,"w");
+      if (iFP == NULL) {
+        printf("ERROR: receiver output file could not be opened %s)\n", fname);      
+        return 1;
+      }
+
+      dfloat time = 0;
+
+      for(int i = 0; i < mesh->NtimeSteps + 1; i++) { // +1 for including IC
+        fprintf(iFP, "%.15lf %.15le\n", time, acoustics->qRecv[i+iRecv*mesh->NtimeSteps]);
+        time += mesh->dt;
+      }
+      
+      fclose(iFP);
+    }
   }
 
   return 0;

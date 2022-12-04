@@ -25,28 +25,26 @@ SOFTWARE.
 */
 #include "acoustics.h"
 
-int main(int argc, char **argv){
+int main(int argc, char **argv)
+{
 
-  if(argc!=2){
-    printf("usage2: ./acousticsMain setupfile\n");
+  if (argc < 2 || argc > 3)
+  {
+    printf("usage2: ./acousticsMain setupfile OR ./acousticsMain setupfile srcindex \n");
     exit(-1);
   }
 
-  printf("%s\n", argv[0]);
-  printf("%s\n", argv[1]);
-
-  printf("Initializing MPI...\n");
   MPI_Init(&argc, &argv);
-
-  // if argv > 2 then should load input data from argv
   setupAide newOptions(argv[1]);
 
-  printf("Acoustics setup...\n");
+  if (argc == 3)
+  {
+    newOptions.setArgs("SOURCE INDEX", argv[2]);
+  }
+
   int res = acousticsSetupMain(newOptions);
 
-  // close down MPI
   MPI_Finalize();
 
-  exit(res);
   return res;
 }

@@ -2,13 +2,13 @@
 1.0
 
 [SIMULATION_ID]
-living_room_unfurnished_1000hz_p4_4ppw
+living_room_unfurnished_1000hz_p4_4ppw_x0.85_y0.85_z0.85
 
 [MESH FILE]
-/users/nborrelj/data/nborrelj/libP/meshes/living_room_unfurnished_1000hz_p4_4ppw.msh
+/work3/nibor/data/libP/meshes/living_room_furnished_1000hz_p4_4ppw.msh
 
 [OUTPUT DIRECTORY]
-/users/nborrelj/data/nborrelj/libP/output
+/work3/nibor/data/libP/living_room_unfurnished_1000hz_p4_4ppw_val
 
 [POLYNOMIAL DEGREE]
 4
@@ -20,10 +20,13 @@ living_room_unfurnished_1000hz_p4_4ppw
 LSERK4
 
 [FINAL TIME]
-0.05
+0.1
+
+[RECEIVER]
+simulationSetups/setupdata/receiver_x0_1_y0_5_z0_5.dat
 
 [CFL]
-1
+0.1
 
 [RHO] # Density of the medium
 1.2
@@ -35,10 +38,10 @@ LSERK4
 7400
 
 [LRVECTFIT] # Generated using vectorfitDriverLR.m
-/users/nborrelj/data/nborrelj/libP/setups/freq_dep_lr.dat
+/work3/nibor/data/libP/setups/freq_dep_lr.dat
 
 [ERVECTFIT] # Generated using vectorfitDriverER.m
-simulationSetups/setupdata/ERDATA14.dat
+/work3/nibor/data/libP/setups/ERDATA14.dat
 
 [FREQUENCY]
 1000 # [Hz]
@@ -47,28 +50,31 @@ simulationSetups/setupdata/ERDATA14.dat
 XDMF
 
 [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
-8
+4
 
 [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
-GRF
+GAUSSIAN
 
-[GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
-0.3
+[GAUSSIAN_SOURCE_POS] # RANDOM | MESH ([MESH FILE IC] needs to be set) | FIXED
+FIXED
 
 [INITIAL_RECTILINEAR_MESH_PPW] # Resolution of the mesh for the initial condition
-2.7
+2
+
+; [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
+; 0.3
 
 ; [SXYZ] # OPTIONAL: Width of initial pulse (will be computed automatically if not defined)
 ; 0.4
 
 [SX] # x coordinate of initial pulse (ignored for GRF)
-0.5
+0.85
 
 [SY] # y coordinate of initial pulse (ignored for GRF)
-0.5
+0.85
 
 [SZ] # z coordinate of initial pulse (ignored for GRF)
-0.5
+0.85
 
 ### DON'T CHANGE BELOW ###
 [MESH DIMENSION]
@@ -133,3 +139,5 @@ NODAL
 
 [VERBOSE]
 FALSE
+
+

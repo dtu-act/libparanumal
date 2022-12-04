@@ -1,9 +1,9 @@
 #!/bin/bash
 #BSUB -q gpuv100
-#BSUB -n 2
-#BSUB -gpu "num=2:mode=exclusive_process"
+#BSUB -n 1
+#BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -R "span[hosts=1]"
-#BSUB -R "rusage[mem=15GB]"
+#BSUB -R "rusage[mem=8GB]"
 #BSUB -W 01:00
 #BSUB -J "logs/testing"
 
@@ -15,18 +15,10 @@
 #BSUB -o "logs/testing-%J.out"
 #BSUB -e "logs/testing-%J.err"
 
-# DTU HPC
-module load mpi/4.0.5-gcc-10.2.0-binutils-2.34
-module load cuda/11.3
+module load mpi/4.1.2-gcc-10.3.0-binutils-2.36.1
+module load cuda/11.6
 module load hdf5/1.12.1-gcc-10.3.0
 module load armadillo/11.2.4
-
-# OSCAR
-# module load gcc/10.2
-# module load mpi/openmpi_4.0.1_gcc
-# module load cuda/11.3.1
-# module load armadillo/11.2.4
-# module load hdf5/1.10.5
 
 export OCCA_DIR=~/libparanumal/occa
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib

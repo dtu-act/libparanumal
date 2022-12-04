@@ -68,7 +68,7 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
 
   if(fp==NULL){
     printf("meshParallelReaderTri2D: could not load file %s\n", fileName);
-    exit(0);
+    exit(1);
   }
 
   char buf[BUFSIZ];

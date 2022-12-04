@@ -175,7 +175,6 @@ string setupAide::getArgs(string key){
     if(!( keyword[i].compare(key) ))
       return data[i];
 
-  printf("Warning: Failed to find [%s].\n", key.c_str());
   return "";
 }
 
@@ -216,7 +215,6 @@ int setupAide::getArgs(string key, vector<string>& m, string delimeter){
   argc = argv.size();
 
   if(!argc){
-    printf("Warning: Failed to find [%s].\n", key.c_str());
     return 0;
   }
 

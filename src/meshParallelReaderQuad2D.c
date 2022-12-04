@@ -67,7 +67,7 @@ mesh2D* meshParallelReaderQuad2D(char *fileName){
   
   if(fp==NULL){
     printf("meshParallelReaderQuad2D: could not load file %s\n", fileName);
-    exit(0);
+    exit(1);
   }
 
   char buf[BUFSIZ];

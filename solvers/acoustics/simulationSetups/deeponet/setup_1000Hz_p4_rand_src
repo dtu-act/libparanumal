@@ -2,16 +2,16 @@
 1.0
 
 [SIMULATION_ID]
-living_room_furnished_1000hz_p4_4ppw
+cube2x2x2_1000hz_p4_4ppw
 
 [MESH FILE]
-/users/nborrelj/data/nborrelj/libP/meshes/living_room_furnished_1000hz_p4_4ppw.msh
+/work3/nibor/data/libP/meshes/living_room_unfurnished_1000hz_p4_4ppw.msh
 
 [MESH FILE IC]
-/users/nborrelj/data/nborrelj/libP/meshes/living_room_furnished_src_pos_1000hz_N11251.msh
+/work3/nibor/data/libP/meshes/living_room_unfurnished_src_pos_1000hz_N853.msh
 
 [OUTPUT DIRECTORY]
-/users/nborrelj/data/nborrelj/libP/output
+/work3/nibor/data/libP/living_room_unfurnished_1000hz_p4_4ppw_train
 
 [POLYNOMIAL DEGREE]
 4
@@ -23,13 +23,10 @@ living_room_furnished_1000hz_p4_4ppw
 LSERK4
 
 [FINAL TIME]
-0.1
-
-[RECEIVER]
-simulationSetups/setupdata/receiver_x0_1_y0_5_z0_5.dat
+0.05
 
 [CFL]
-1.0
+0.1
 
 [RHO] # Density of the medium
 1.2
@@ -41,10 +38,7 @@ simulationSetups/setupdata/receiver_x0_1_y0_5_z0_5.dat
 7400
 
 [LRVECTFIT] # Generated using vectorfitDriverLR.m
-/users/nborrelj/data/nborrelj/libP/setups/freq_dep_lr.dat
-
-[ERVECTFIT] # Generated using vectorfitDriverER.m
-simulationSetups/setupdata/ERDATA14.dat
+/work3/nibor/data/libP/setups/freq_dep_lr.dat
 
 [FREQUENCY]
 1000 # [Hz]
@@ -57,9 +51,6 @@ XDMF
 
 [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
 GAUSSIAN
-
-; [SXYZ] # OPTIONAL: Width of initial pulse (will be computed automatically if not defined)
-; 0.4
 
 [GAUSSIAN_SOURCE_POS] # RANDOM | MESH ([MESH FILE IC] needs to be set) | FIXED
 MESH
