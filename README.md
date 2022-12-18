@@ -53,6 +53,9 @@ cube_500hz_p4_5ppw_freq_indep
 [MESH FILE]
 ../../meshes/tests/cube_500hz_p4_5ppw_freq_indep.msh
 
+; [MESH FILE IC] # OPTIONAL: mesh determining source positions indexed with argument when calling main
+; ../../meshes/tests/cube_500hz_p4_5ppw_freq_indep_src_pos.msh
+
 [OUTPUT DIRECTORY]
 simulationSetups/output
 
@@ -68,7 +71,7 @@ LSERK4
 [FINAL TIME]
 0.1
 
-[RECEIVER]
+[RECEIVER] # OPTIONAL
 simulationSetups/setupdata/receivers2_cube.dat
 
 [CFL]
@@ -92,35 +95,44 @@ simulationSetups/setupdata/ERDATA14.dat
 [FREQUENCY]
 500 # [Hz]
 
-[WRITE_WAVE_FIELD] # NONE | XDMF | VTU | TXT
+[WRITE_WAVE_FIELD] # NONE | XDMF | H5 | H5Compact
 NONE
 
-[TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
-8
+[TEMPORAL_PPW_OUTPUT] # [WRITE_WAVE_FIELD] != NONE: temporal resolution of the output wave field
+4
+
+[MESH_RECTILINEAR_PPW] # [WRITE_WAVE_FIELD] != NONE: Resolution of the mesh for the initial condition
+2
 
 [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
 GAUSSIAN
 
-; [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
+; [GRF_LENGTH_SCALE] # GRF only: length scale, bigger values lead to smoother functions
 ; 0.3
 
 ; [SXYZ] # OPTIONAL: Width of initial pulse (will be computed automatically if not defined)
 ; 0.4
 
-[SX] # x coordinate of initial pulse (ignored for GRF)
+[SX] # x coordinate of initial pulse. Ignored when: [GAUSSIAN_SOURCE_POS] = MESH or [SOURCE_TYPE] = GRF
 0.5
 
-[SY] # y coordinate of initial pulse (ignored for GRF)
+[SY] # y coordinate of initial pulse. Ignored when: [GAUSSIAN_SOURCE_POS] = MESH or [SOURCE_TYPE] = GRF
 0.5
 
-[SZ] # z coordinate of initial pulse (ignored for GRF)
+[SZ] # z coordinate of initial pulse. Ignored when: [GAUSSIAN_SOURCE_POS] = MESH or [SOURCE_TYPE] = GRF
 0.5
 ```
 
-Some of the properties are explained below:
+Some of the settings are explained:
+#### Overall settings
+* `[MESH FILE]`: The mesh (see section "Mesh generation with Gmsh") for the simulation.
+* `[RECEIVER]`: The IRs are written to disk corresponding to the source positions pointed to. Can be skipped if only the wave field output is needed.
 * `[LRVECTFIT]` / `[ERVECTFIT]`: Miki's model is used for modeling frequency dependent boundaries and the fitted parameters are contained in a separate file with the path given here. The scripts for generating the coefficients are located inside `simulationSetups/vector_fitting_tools/`.
-* `[WRITE_WAVE_FIELD]`: The full pressure field can be exported for each time step and output format is given here. `XDMF` is by far the most compact format and can be visualized using a wide range of applications, such as ParaView.
-* `[TEMPORAL_PPW_OUTPUT]`: Since saving the wave field for every time step might be unnecessary, the temporal sampling resolution can be set here.
+
+#### Settings for outputting all mesh pressures for all timestep
+* `[WRITE_WAVE_FIELD]`: The full pressure field can be exported for each time step and output format is given here. `XDMF` is a compact format and can be visualized using a wide range of applications, such as ParaView. `H5Compact` is collabsing all timestep into a single tag in the H5 file for faster loading, but cannot be visualized directly. `H5` is similar to `H5Compact` but also writes the tetrahedral connection matrix.
+* `[TEMPORAL_PPW_OUTPUT]`: The temporal sampling resolution can be set here, skipping some of the oversampled time instances.
+* `[MESH FILE IC]`: Source positions are determined by the mesh nodes in this `.msh` created in Gmsh. The source index is determined by the last argument when invoking the application and multiple simulations can be triggered by using a task array: \verb|./acousticsMain setup_file $src_index|, where \verb|$src_index| is a bash variable triggered by a task array.
 * If Gaussian Random Fields (GRFs) are to be used as intital source term, set `#define INCLUDE_GRF 1` in `acoustics.h` and link the armadillo library with `-larmadillo` inside the makefile.
 
 ### Receiver positions

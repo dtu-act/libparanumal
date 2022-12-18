@@ -24,6 +24,9 @@ SOFTWARE.
 
 */
 
+#ifndef ACOUSTICS_H
+#define ACOUSTICS_H
+
 #include <vector>
 #include <math.h>
 #include <stdlib.h>
@@ -37,17 +40,15 @@ SOFTWARE.
 
 // block size for reduction (hard coded)
 #define blockSize 256
-// include Gaussian random fields
-#define INCLUDE_GRF 0
-#define AMPLITUDE 2
-#define OFFSET_BC 2.7 // only used when no IC mesh is loaded
+#define INCLUDE_GRF 0 // include Gaussian random fields
+#define AMPLITUDE 2   // source multiplication factor
 
 #define TRIANGLES 3
 #define QUADRILATERALS 4
 #define TETRAHEDRA 6
 #define HEXAHEDRA 12
 
-enum WriteWaveFieldType { None, Vtu, Xdmf, Txt };
+enum WriteWaveFieldType { None, Xdmf, H5, H5Compact };
 enum SourceType { GaussianFunction, GRF };
 
 typedef struct {  
@@ -71,11 +72,11 @@ typedef struct {
 
   dfloat xminmax[2], yminmax[2], zminmax[2];
   
-  std::vector<dfloat> ic_rectilinear;
-  std::vector<dfloat> x1d_rectilinear;
-  std::vector<dfloat> y1d_rectilinear;
-  std::vector<dfloat> z1d_rectilinear;
-  dfloat ic_rectilinear_shape[3];
+  std::vector<dfloat> pRectilinearMesh;
+  std::vector<dfloat> x1dRectilinear;
+  std::vector<dfloat> y1dRectilinear;
+  std::vector<dfloat> z1dRectilinear;
+  dfloat rectilinearMeshShape[3];
   
   //---------RECEIVER---------
   dfloat *qRecv; // Saves pres in receiver element in each timestep
@@ -261,10 +262,6 @@ void grfWindowed(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d,
     dfloat sigma_0, dfloat l_0, dfloat sigma0_window, vector<dfloat> &samples_out, dfloat amplitude = AMPLITUDE);
 #endif
 
-void acousticsWritePressureField(acoustics_t *acoustics, WriteWaveFieldType waveFieldWriteType, std::vector<dfloat> timeSteps, int iter);
-void acousticsWriteXdmf(acoustics_t *acoustics, std::vector<dfloat> timeSteps, int iter);
-void acousticsWriteVTU(acoustics_t *acoustics, bool writeVelocity = false);
-void acousticsWritePressureFieldTxt(acoustics_t *acoustics, dfloat time);
 int acousticsWriteIRs(acoustics_t *acoustics, setupAide &newOptions);
 void acousticsWriteSimulationSettings(acoustics_t *acoustics, string filename);
 
@@ -278,3 +275,5 @@ void acousticsFindReceiverElement(acoustics_t *acoustics);
 void acousticsRecvIntpolOperators(acoustics_t *acoustics);
 
 int createDir(string path, bool deleteIfExists);
+
+#endif

@@ -32,17 +32,18 @@ SOFTWARE.
 #include <stdexcept>
 #include <cmath>
 #include <sstream>
+#include <armadillo>
 #include "acousticsUtils.h"
 
 #if INCLUDE_GRF
-#include <armadillo>
+// for interpolation
 #include <btwxt/griddeddata.h>
 #include <btwxt/btwxt.h>
 void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, dfloat sigma0_window, dfloat ppw_initial);
 #endif
 
-void gaussianSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], dfloat sigma0);
-void gaussianRegularGridSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], dfloat sigma0, dfloat ppw_initial);
+void initializeGridWithGaussianSource(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], dfloat sigma0);
+void initializeGridsWithGaussianSource(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], dfloat sigma0, dfloat ppw_initial);
 
 void sourceSetup(mesh_t *mesh, acoustics_t *acoustics, setupAide &newOptions)
 {
@@ -70,17 +71,7 @@ void sourceSetup(mesh_t *mesh, acoustics_t *acoustics, setupAide &newOptions)
 
     arma::arma_rng::set_seed_random();
     
-    if (newOptions.compareArgs("GAUSSIAN_SOURCE_POS", "RANDOM")) {            
-      dfloat *xminmax = acoustics->xminmax;
-      dfloat *yminmax = acoustics->yminmax;
-      dfloat *zminmax = acoustics->zminmax;
-      dfloat offs = OFFSET_BC*acoustics->sigma0;
-
-      acoustics->sourcePosition[0] = arma::randu<dfloat>( arma::distr_param(xminmax[0]+offs,xminmax[1]-offs) );
-      acoustics->sourcePosition[1] = arma::randu<dfloat>( arma::distr_param(yminmax[0]+offs,yminmax[1]-offs) );
-      acoustics->sourcePosition[2] = arma::randu<dfloat>( arma::distr_param(zminmax[0]+offs,zminmax[1]-offs) );
-    }
-    else if (newOptions.compareArgs("GAUSSIAN_SOURCE_POS", "MESH")) {
+    if (newOptions.compareArgs("GAUSSIAN_SOURCE_POS", "MESH")) {
       string fileNameIC;
       int srcIndex;
 
@@ -92,18 +83,13 @@ void sourceSetup(mesh_t *mesh, acoustics_t *acoustics, setupAide &newOptions)
       std::vector<dfloat> VX_IC,VY_IC,VZ_IC;
       pointReader3D((char *)fileNameIC.c_str(),VX_IC,VY_IC,VZ_IC);
 
-      if (newOptions.getArgs("SOURCE INDEX") == "") {
-        printf("Randomly sampling source index...\n)"); 
-        // [SOURCE INDEX] not set, pick random source index
-        srcIndex = arma::randi( arma::distr_param(0, VX_IC.size()-1) );
-      }
-      else if (newOptions.getArgs("SOURCE INDEX", srcIndex) == 0)
+      if (newOptions.getArgs("SOURCE INDEX", srcIndex) == 0)
       {
-        throw std::invalid_argument("[SOURCE INDEX] could not be parsed. Check the command line argument srcindex is an integer: ./acousticsMain setupfile srcindex");        
+        throw std::invalid_argument("Source index not found: [GAUSSIAN_SOURCE_POS] was set to MESH and therefore a source index should be set as the second command line argument as: ./acousticsMain setupfile srcindex");        
       }
 
       if (srcIndex > VX_IC.size()-1) {
-        throw std::invalid_argument("[SOURCE INDEX] exceeds the number of mesh nodes determining the source positions. Check the command line argument srcindex: ./acousticsMain setupfile srcindex.");
+        throw std::invalid_argument("The source index exceeds the number of mesh nodes in the input source mesh file determining the source positions. Check the command line argument srcindex: ./acousticsMain setupfile srcindex.");
       }
       
       acoustics->sourcePosition[0] = VX_IC[srcIndex];
@@ -131,37 +117,35 @@ void sourceSetup(mesh_t *mesh, acoustics_t *acoustics, setupAide &newOptions)
       throw std::invalid_argument("[GAUSSIAN_SOURCE_POS] tag missing or invalid. Supported tags: RANDOM|MESH|FIXED");
     }
     
-    #if INCLUDE_GRF
-      dfloat ppw_initial;
-      if (newOptions.getArgs("INITIAL_RECTILINEAR_MESH_PPW", ppw_initial) == 0) {
-        throw std::invalid_argument("[INITIAL_RECTILINEAR_MESH_PPW] tag missing");
-      }
-      gaussianRegularGridSourceSetup(mesh, acoustics, acoustics->sourcePosition, acoustics->sigma0, ppw_initial);
-    #else
-      gaussianSourceSetup(mesh, acoustics, acoustics->sourcePosition, acoustics->sigma0);
-    #endif
+    dfloat ppw_initial;
+    if (newOptions.getArgs("MESH_RECTILINEAR_PPW", ppw_initial) == 0) {
+      initializeGridWithGaussianSource(mesh, acoustics, acoustics->sourcePosition, acoustics->sigma0);
+    } 
+    else {
+      initializeGridsWithGaussianSource(mesh, acoustics, acoustics->sourcePosition, acoustics->sigma0, ppw_initial);
+    }
   }
   else if (newOptions.compareArgs("SOURCE_TYPE", "GRF"))
   {    
-    #if !INCLUDE_GRF
+    #if INCLUDE_GRF
+      acoustics->sourceType = GRF;
+      
+      dfloat length_scale;
+      if (newOptions.getArgs("GRF_LENGTH_SCALE", length_scale) == 0)
+      {
+        throw std::invalid_argument("[GRF_LENGTH_SCALE] tag missing");
+      }
+
+      dfloat ppw_initial;
+      if (newOptions.getArgs("MESH_RECTILINEAR_PPW", ppw_initial) == 0) {
+        throw std::invalid_argument("[MESH_RECTILINEAR_PPW] tag missing");
+      }
+      
+      grfSourceSetup(mesh, acoustics, length_scale, acoustics->sigma0, ppw_initial);
+    #else
       printf("ERROR: [SOURCE_TYPE] set to GRF. To use Gaussian Random Field set INCLUDE_GRF to 1 in acoustics.h. Exiting.\n");
       throw std::exception();
     #endif
-    
-    acoustics->sourceType = GRF;
-    
-    dfloat length_scale;
-    if (newOptions.getArgs("GRF_LENGTH_SCALE", length_scale) == 0)
-    {
-      throw std::invalid_argument("[GRF_LENGTH_SCALE] tag missing");
-    }
-
-    dfloat ppw_initial;
-    if (newOptions.getArgs("INITIAL_RECTILINEAR_MESH_PPW", ppw_initial) == 0) {
-      throw std::invalid_argument("[INITIAL_RECTILINEAR_MESH_PPW] tag missing");
-    }
-    
-    grfSourceSetup(mesh, acoustics, length_scale, acoustics->sigma0, ppw_initial);
   }
   else
   {
@@ -169,26 +153,25 @@ void sourceSetup(mesh_t *mesh, acoustics_t *acoustics, setupAide &newOptions)
   }
 }
 
-#if INCLUDE_GRF
-
 void setupRectilinearGrid(mesh_t *mesh, vector<dfloat> xaxis, vector<dfloat> yaxis, vector<dfloat> zaxis, int ppw,
-  vector<dfloat> &x1d_rectilinear, vector<dfloat> &y1d_rectilinear, vector<dfloat> &z1d_rectilinear) {
+  vector<dfloat> &x1dRectilinear, vector<dfloat> &y1dRectilinear, vector<dfloat> &z1dRectilinear) {
   int Ntot = xaxis.size()*yaxis.size()*zaxis.size();
-  x1d_rectilinear.resize(Ntot);
-  y1d_rectilinear.resize(Ntot);
-  z1d_rectilinear.resize(Ntot);
+  x1dRectilinear.resize(Ntot);
+  y1dRectilinear.resize(Ntot);
+  z1dRectilinear.resize(Ntot);
 
   for (arma::uword i=0; i < xaxis.size(); ++i) { 
     for (arma::uword j=0; j < yaxis.size(); ++j) { 
       for (arma::uword k=0; k < zaxis.size(); ++k) { 
-        x1d_rectilinear[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = xaxis[i];
-        y1d_rectilinear[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = yaxis[j];
-        z1d_rectilinear[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = zaxis[k];
+        x1dRectilinear[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = xaxis[i];
+        y1dRectilinear[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = yaxis[j];
+        z1dRectilinear[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = zaxis[k];
       }
     }
   }
 }
 
+#if INCLUDE_GRF
 // ONLY RECTANGULAR DOMAINS ARE SUPPORTED AT THE MOMENT
 // (due to windowing function)
 void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, dfloat sigma0_window, dfloat ppw_initial)
@@ -207,19 +190,19 @@ void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, d
   auto yaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(yminmax[0],yminmax[1], Ny));
   auto zaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(zminmax[0],zminmax[1], Nz));
 
-  acoustics->ic_rectilinear_shape[0] = xaxis.size();
-  acoustics->ic_rectilinear_shape[1] = yaxis.size();
-  acoustics->ic_rectilinear_shape[2] = zaxis.size();
+  acoustics->rectilinearMeshShape[0] = xaxis.size();
+  acoustics->rectilinearMeshShape[1] = yaxis.size();
+  acoustics->rectilinearMeshShape[2] = zaxis.size();
 
   setupRectilinearGrid(mesh,xaxis,yaxis,zaxis,ppw_initial,
-    acoustics->x1d_rectilinear,acoustics->y1d_rectilinear,acoustics->z1d_rectilinear);
+    acoustics->x1dRectilinear,acoustics->y1dRectilinear,acoustics->z1dRectilinear);
   
   printf("Calculating GRF...\n");  
-  grfWindowed(acoustics->x1d_rectilinear, 
-              acoustics->y1d_rectilinear, 
-              acoustics->z1d_rectilinear,
+  grfWindowed(acoustics->x1dRectilinear, 
+              acoustics->y1dRectilinear, 
+              acoustics->z1dRectilinear,
               xminmax,yminmax,zminmax,
-              1.0, length_scale, sigma0_window, acoustics->ic_rectilinear);
+              1.0, length_scale, sigma0_window, acoustics->pRectilinearMesh);
   printf("... done\n");
 
   // INTERPOLATE TO QUADRATURE POINTS
@@ -228,7 +211,7 @@ void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, d
   Btwxt::GridAxis zaxis_(zaxis, Btwxt::Method::CUBIC);
 
   std::vector<Btwxt::GridAxis> grf_grid{xaxis_, yaxis_, zaxis_};
-  Btwxt::GriddedData gridded_data(grf_grid, {acoustics->ic_rectilinear});
+  Btwxt::GriddedData gridded_data(grf_grid, {acoustics->pRectilinearMesh});
   Btwxt::RegularGridInterpolator grf_interpolator(gridded_data);
 
   for (dlong e = 0; e < mesh->Nelements; ++e)
@@ -255,12 +238,12 @@ void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, d
 }
 #endif
 
-void gaussianRegularGridSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], dfloat sigma0, dfloat ppw_initial)
+void initializeGridsWithGaussianSource(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], dfloat sigma0, dfloat ppw_initial)
 {
-  std::function<dfloat(dfloat,dfloat,dfloat)> calcPressure;  
+  initializeGridWithGaussianSource(mesh, acoustics, sloc, sigma0);
 
-  // keep this in function scope, otherwise segmentation error in lambda function
-  Btwxt::RegularGridInterpolator grf_interpolator;
+  // initialize rectangular grid with gaussian pulse
+  std::function<dfloat(dfloat,dfloat,dfloat)> calcPressure;  
 
   dfloat *xminmax = acoustics->xminmax;
   dfloat *yminmax = acoustics->yminmax;
@@ -275,57 +258,19 @@ void gaussianRegularGridSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat
   auto yaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(yminmax[0],yminmax[1], Ny));
   auto zaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(zminmax[0],zminmax[1], Nz));
 
-  acoustics->ic_rectilinear_shape[0] = xaxis.size();
-  acoustics->ic_rectilinear_shape[1] = yaxis.size();
-  acoustics->ic_rectilinear_shape[2] = zaxis.size();
+  acoustics->rectilinearMeshShape[0] = xaxis.size();
+  acoustics->rectilinearMeshShape[1] = yaxis.size();
+  acoustics->rectilinearMeshShape[2] = zaxis.size();
 
-  setupRectilinearGrid(mesh,xaxis,yaxis,zaxis,ppw_initial,
-    acoustics->x1d_rectilinear,acoustics->y1d_rectilinear,acoustics->z1d_rectilinear);
+  setupRectilinearGrid(mesh,xaxis,yaxis,zaxis,ppw_initial, 
+    acoustics->x1dRectilinear,acoustics->y1dRectilinear,acoustics->z1dRectilinear);
 
-  // INTERPOLATE TO QUADRATURE POINTS
-  Btwxt::GridAxis xaxis_(xaxis, Btwxt::Method::CUBIC);
-  Btwxt::GridAxis yaxis_(yaxis, Btwxt::Method::CUBIC);
-  Btwxt::GridAxis zaxis_(zaxis, Btwxt::Method::CUBIC);
-
-  gaussianSource(acoustics->x1d_rectilinear,acoustics->y1d_rectilinear,acoustics->z1d_rectilinear, sloc, sigma0, acoustics->ic_rectilinear);
-
-  std::vector<Btwxt::GridAxis> grf_grid{xaxis_, yaxis_, zaxis_};
-  Btwxt::GriddedData gridded_data(grf_grid, {acoustics->ic_rectilinear});
-  grf_interpolator = Btwxt::RegularGridInterpolator(gridded_data);
-
-  calcPressure = [&](const dfloat x, const dfloat y, const dfloat z) {
-    return grf_interpolator.get_values_at_target({x, y, z})[0];
-  };
-
-  for (dlong e = 0; e < mesh->Nelements; ++e)
-  {
-    for (int n = 0; n < mesh->Np; ++n)
-    {
-      dfloat x = mesh->x[n + mesh->Np * e];
-      dfloat y = mesh->y[n + mesh->Np * e];
-      dfloat z = mesh->z[n + mesh->Np * e];
-
-      dlong qbase = e * mesh->Np * mesh->Nfields + n;
-
-      dfloat vel_x = 0, vel_y = 0, vel_z = 0;
-      auto pressure = calcPressure(x, y, z);
-
-      acoustics->q[qbase + 0 * mesh->Np] = pressure;
-      acoustics->q[qbase + 1 * mesh->Np] = vel_x;
-      acoustics->q[qbase + 2 * mesh->Np] = vel_y;
-      if (acoustics->dim == 3)
-        acoustics->q[qbase + 3 * mesh->Np] = vel_z;
-    }
-  }
+  gaussianSource(acoustics->x1dRectilinear,acoustics->y1dRectilinear,acoustics->z1dRectilinear, sloc, sigma0,
+    acoustics->pRectilinearMesh);
 }
 
-void gaussianSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], dfloat sigma0)
+void initializeGridWithGaussianSource(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], dfloat sigma0)
 {
-  std::function<dfloat(dfloat,dfloat,dfloat)> calcPressure;  
-  calcPressure = [&sloc,sigma0](const dfloat x, const dfloat y, const dfloat z) {
-    return gaussianSource(x, y, z, 0, sloc, sigma0);
-  };
-
   for (dlong e = 0; e < mesh->Nelements; ++e)
   {
     for (int n = 0; n < mesh->Np; ++n)
@@ -337,7 +282,7 @@ void gaussianSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat sloc[3], d
       dlong qbase = e * mesh->Np * mesh->Nfields + n;
 
       dfloat vel_x = 0, vel_y = 0, vel_z = 0;
-      auto pressure = calcPressure(x, y, z);
+      auto pressure = gaussianSource(x, y, z, 0, sloc, sigma0);
 
       acoustics->q[qbase + 0 * mesh->Np] = pressure;
       acoustics->q[qbase + 1 * mesh->Np] = vel_x;

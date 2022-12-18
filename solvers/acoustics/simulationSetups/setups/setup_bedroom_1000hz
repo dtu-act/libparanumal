@@ -46,11 +46,11 @@ simulationSetups/setupdata/ERDATA14.dat
 [FREQUENCY]
 1000 # [Hz]
 
-[WRITE_WAVE_FIELD] # NONE | VTU | XDMF | TXT
+[WRITE_WAVE_FIELD] # NONE | XDMF | H5 | H5Compact
 NONE
 
 [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output pressure field
-8
+4
 
 [SXYZ] # Width of initial pulse [Optional: calcuated automatically if not present]
 0.2

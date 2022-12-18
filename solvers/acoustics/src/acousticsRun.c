@@ -24,14 +24,15 @@ SOFTWARE.
 
 */
 
+#include "acousticsWriters.h"
 #include "acoustics.h"
 #include <limits>
 #include <algorithm>
 #include <stdexcept>
 
 void dopri5(acoustics_t *acoustics, dfloat outputInterval);
-void lseRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, WriteWaveFieldType waveFieldWriteType);
-void eiRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, WriteWaveFieldType waveFieldWriteType);
+void lseRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, std::shared_ptr<IAcousticWriter> writer);
+void eiRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, std::shared_ptr<IAcousticWriter> writer);
 void eiRK4adap(acoustics_t *acoustics);
 
 // helper
@@ -83,18 +84,18 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions)
   if (newOptions.compareArgs("WRITE_WAVE_FIELD", "NONE")) {
     waveFieldWriteType = None;
   } 
-  else if (newOptions.compareArgs("WRITE_WAVE_FIELD", "VTU")) {
-    waveFieldWriteType = Vtu;
-  }
   else if (newOptions.compareArgs("WRITE_WAVE_FIELD", "XDMF")) {
     waveFieldWriteType = Xdmf;
   }
-  else if (newOptions.compareArgs("WRITE_WAVE_FIELD", "TXT")) {
-    waveFieldWriteType = Txt;
+  else if (newOptions.compareArgs("WRITE_WAVE_FIELD", "H5")) {
+    waveFieldWriteType = H5;
+  }
+  else if (newOptions.compareArgs("WRITE_WAVE_FIELD", "H5Compact")) {
+    waveFieldWriteType = H5Compact;
   }
   else {
-    printf("WRITE_WAVE_FIELD attribute not found: defaulting to None\n");
-    waveFieldWriteType = Txt;
+    printf("[WRITE_WAVE_FIELD] not valid [NONE | XDMF | H5 | H5Compact]: defaulting to None\n");
+    waveFieldWriteType = None;
   }
 
   if (waveFieldWriteType != None) {
@@ -115,8 +116,27 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions)
     }
   }
 
-  //timer.initTimer(mesh->device);
-  //timer.tic("Run");
+  std::shared_ptr<IAcousticWriter> writer;
+
+  if (waveFieldWriteType == Xdmf) {
+    writer.reset(new AcousticXdmfWriter(acoustics, timeStepsWrite));
+  }
+  else if (waveFieldWriteType == H5Compact || waveFieldWriteType == H5) {
+    auto conn = std::vector<std::vector<uint>>();
+    auto x1d = std::vector<dfloat>();
+    auto y1d = std::vector<dfloat>();
+    auto z1d = std::vector<dfloat>();
+    auto p1d = std::vector<dfloat>();
+
+    auto writeConnTable = waveFieldWriteType == H5;
+    
+    extractUniquePoints(acoustics->mesh, acoustics, conn, x1d, y1d, z1d, p1d);
+    writer.reset(new AcousticH5CompactWriter(acoustics, p1d.size(), timeStepsWrite, writeConnTable));
+  }
+  else {
+    throw std::exception();
+  }
+
   if (newOptions.compareArgs("TIME INTEGRATOR", "DOPRI5"))
   {
     dfloat outputInterval;
@@ -125,11 +145,11 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions)
   }
   else if (newOptions.compareArgs("TIME INTEGRATOR", "LSERK4"))
   {
-    lseRK4(acoustics, timeStepsWrite, waveFieldWriteType);
+    lseRK4(acoustics, timeStepsWrite, writer);
   }
   else if (newOptions.compareArgs("TIME INTEGRATOR", "EIRK4"))
   {
-    eiRK4(acoustics, timeStepsWrite, waveFieldWriteType);
+    eiRK4(acoustics, timeStepsWrite, writer);
   }
   else if (newOptions.compareArgs("TIME INTEGRATOR", "EIRK4ADAP"))
   {
@@ -165,7 +185,7 @@ void updateReceivers(acoustics_t *acoustics) {
   }
 }
 
-void lseRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, WriteWaveFieldType waveFieldWriteType) {
+void lseRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, std::shared_ptr<IAcousticWriter> writer) {
   mesh_t *mesh = acoustics->mesh;
   
   updateReceivers(acoustics); // update receivers at t=0 (IC)
@@ -177,7 +197,7 @@ void lseRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, WriteWav
 
     if (timeStepsWrite.size() > 0 && abs(timeStepsWrite[tstepWrite] - time) < 1e-10) {
       acoustics->o_q.copyTo(acoustics->q); // copy from GPU to CPU
-      acousticsWritePressureField(acoustics, waveFieldWriteType, timeStepsWrite, tstepWrite);
+      writer->write(acoustics, tstepWrite);
       tstepWrite++;
     }
         
@@ -192,7 +212,7 @@ void lseRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, WriteWav
   }
 }
 
-void eiRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, WriteWaveFieldType waveFieldWriteType) {
+void eiRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, std::shared_ptr<IAcousticWriter> writer) {
   mesh_t *mesh = acoustics->mesh;
 
   updateReceivers(acoustics); // update receivers at t=0 (IC)
@@ -204,7 +224,7 @@ void eiRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, WriteWave
 
     if (timeStepsWrite.size() > 0 && abs(timeStepsWrite[tstepWrite] - time) < 1e-10) {
       acoustics->o_q.copyTo(acoustics->q); // copy from GPU to CPU
-      acousticsWritePressureField(acoustics, waveFieldWriteType, timeStepsWrite, tstepWrite);
+      writer->write(acoustics, tstepWrite);
       tstepWrite++;
     }
 

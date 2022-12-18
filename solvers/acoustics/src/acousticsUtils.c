@@ -77,7 +77,8 @@ void pointReader3D(char *fileName, std::vector<dfloat> &VX, std::vector<dfloat> 
 }
 
 void extractUniquePoints(mesh_t *mesh, acoustics_t *acoustics, 
-  std::vector<uint> &conn, std::vector<dfloat> &x1d, std::vector<dfloat> &y1d, std::vector<dfloat> &z1d, std::vector<dfloat> &p1d)
+  std::vector<std::vector<uint>> &conn, 
+  std::vector<dfloat> &x1d, std::vector<dfloat> &y1d, std::vector<dfloat> &z1d, std::vector<dfloat> &p1d)
 {  
   struct Coord3D { dfloat x, y, z; };
 
@@ -101,7 +102,7 @@ void extractUniquePoints(mesh_t *mesh, acoustics_t *acoustics,
   };
 
   std::unordered_map<Coord3D, int, Coord3DHasher, decltype(comp)> coordsToIndx;
-  conn.resize(mesh->Nelements * mesh->Np);
+  conn.resize(mesh->Nelements, std::vector<uint>(mesh->Np));
 
   for (dlong e = 0; e < mesh->Nelements; ++e)
   {
@@ -125,7 +126,7 @@ void extractUniquePoints(mesh_t *mesh, acoustics_t *acoustics,
         p1d.push_back(acoustics->q[qbase + 0 * mesh->Np]);
       }
 
-      conn[n + mesh->Np * e] = ret.first->second;
+      conn[e][n] = ret.first->second;
     }
   }
 }

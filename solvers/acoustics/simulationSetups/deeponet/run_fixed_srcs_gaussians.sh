@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#BSUB -W 00:05
+#BSUB -W 00:10
 #BSUB -q gpuv100
 #BSUB -n 1
 #BSUB -gpu "num=1:mode=exclusive_process"
@@ -24,7 +24,7 @@ module load armadillo/11.2.4
 export OCCA_DIR=~/libparanumal/occa
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 
-SAMPLE_LIST=($(<simulationSetups/deeponet/cube2x2x2/joblist.list))
+SAMPLE_LIST=($(<simulationSetups/deeponet/living_room_furnished/joblist.list))
 SAMPLE=${SAMPLE_LIST[${LSB_JOBINDEX}-1]}
 
 echo This is task $LSB_JOBINDEX, which will run $SAMPLE

@@ -2,16 +2,16 @@
 1.0
 
 [SIMULATION_ID]
-cube2x2x2_1000hz_p4_4ppw
+living_room_furn_1000hz_p4_4ppw
 
 [MESH FILE]
-/work3/nibor/data/libP/meshes/living_room_unfurnished_1000hz_p4_4ppw.msh
+/work3/nibor/data/libP/meshes/living_room_furnished_1000hz_p4_5ppw.msh
 
 [MESH FILE IC]
-/work3/nibor/data/libP/meshes/living_room_unfurnished_src_pos_1000hz_N853.msh
+/work3/nibor/data/libP/meshes/living_room_furnished_src_pos_1000hz_N4799.msh
 
 [OUTPUT DIRECTORY]
-/work3/nibor/data/libP/living_room_unfurnished_1000hz_p4_4ppw_train
+/work3/nibor/1TB/libP/living_room_furn_1000hz_p4_4ppw_ppw5
 
 [POLYNOMIAL DEGREE]
 4
@@ -43,19 +43,19 @@ LSERK4
 [FREQUENCY]
 1000 # [Hz]
 
-[WRITE_WAVE_FIELD] # NONE | XDMF | VTU | TXT
-XDMF
+[WRITE_WAVE_FIELD] # NONE | XDMF | H5 | H5Compact
+H5Compact
 
-[TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
+[TEMPORAL_PPW_OUTPUT] # OPTIONAL: temporal resolution of the output wave field
 4
 
 [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
 GAUSSIAN
 
-[GAUSSIAN_SOURCE_POS] # RANDOM | MESH ([MESH FILE IC] needs to be set) | FIXED
+[GAUSSIAN_SOURCE_POS] # MESH ([MESH FILE IC] needs to be set) | FIXED
 MESH
 
-[INITIAL_RECTILINEAR_MESH_PPW] # Resolution of the mesh for the initial condition
+[MESH_RECTILINEAR_PPW] # Resolution of the mesh for the initial condition
 2
 
 ### DON'T CHANGE BELOW ###

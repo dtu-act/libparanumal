@@ -9,7 +9,8 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/solvers/acoustics/acousticsMain",
-            "args": ["${workspaceFolder}/solvers/acoustics/simulationSetups/deeponet/setup_1000Hz_p4_rand_src", "2"],
+            //"args": ["${workspaceFolder}/solvers/acoustics/simulationSetups/deeponet/setup_1000Hz_p4_rand_src", "2"],
+            "args": ["${workspaceFolder}/solvers/acoustics/simulationSetups/deeponet/Lshape/setup_Lshape_1000Hz_p4_src[0.9,1.0,1.0]"],
             "stopAtEntry": true,
             "cwd": "${workspaceFolder}/solvers/acoustics",
             // "environment": [

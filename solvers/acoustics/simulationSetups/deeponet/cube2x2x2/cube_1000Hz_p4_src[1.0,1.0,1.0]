@@ -8,7 +8,7 @@ cube_1000hz_p4_4ppw_x1.0_y1.0_z1.0
 /work3/nibor/data/libP/meshes/cube2x2x2_1000hz_p4_4ppw.msh
 
 [OUTPUT DIRECTORY]
-/work3/nibor/data/libP/cube2x2x2_1000hz_p4_4ppw_val
+/work3/nibor/data/libP/output
 
 [POLYNOMIAL DEGREE]
 4
@@ -43,8 +43,8 @@ LSERK4
 [FREQUENCY]
 1000 # [Hz]
 
-[WRITE_WAVE_FIELD] # NONE | XDMF | VTU | TXT
-XDMF
+[WRITE_WAVE_FIELD] # NONE | XDMF | H5 | H5Compact
+H5Compact
 
 [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
 4
@@ -52,10 +52,10 @@ XDMF
 [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
 GAUSSIAN
 
-[GAUSSIAN_SOURCE_POS] # RANDOM | MESH ([MESH FILE IC] needs to be set) | FIXED
+[GAUSSIAN_SOURCE_POS] # MESH ([MESH FILE IC] needs to be set) | FIXED
 FIXED
 
-[INITIAL_RECTILINEAR_MESH_PPW] # Resolution of the mesh for the initial condition
+[MESH_RECTILINEAR_PPW] # Resolution of the mesh for the initial condition
 2
 
 ; [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions

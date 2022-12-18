@@ -2,7 +2,7 @@
 1.0
 
 [SIMULATION_ID]
-Lshape_1000hz_p4_4ppw_x1.8_y1.0_z1.0
+Lshape_1000hz_p4_4ppw_x1.8_y0.75_z1.0
 
 [MESH FILE]
 /work3/nibor/data/libP/meshes/Lshape_1000hz_p4_4ppw.msh
@@ -43,8 +43,8 @@ LSERK4
 [FREQUENCY]
 1000 # [Hz]
 
-[WRITE_WAVE_FIELD] # NONE | XDMF | VTU | TXT
-XDMF
+[WRITE_WAVE_FIELD] # NONE | XDMF | H5 | H5Compact
+H5Compact
 
 [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
 4
@@ -52,10 +52,10 @@ XDMF
 [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
 GAUSSIAN
 
-[GAUSSIAN_SOURCE_POS] # RANDOM | MESH ([MESH FILE IC] needs to be set) | FIXED
+[GAUSSIAN_SOURCE_POS] # MESH ([MESH FILE IC] needs to be set) | FIXED
 FIXED
 
-[INITIAL_RECTILINEAR_MESH_PPW] # Resolution of the mesh for the initial condition
+[MESH_RECTILINEAR_PPW] # Resolution of the mesh for the initial condition
 2
 
 ; [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
@@ -68,7 +68,7 @@ FIXED
 1.8
 
 [SY] # y coordinate of initial pulse (ignored for GRF)
-1.0
+0.75
 
 [SZ] # z coordinate of initial pulse (ignored for GRF)
 1.0

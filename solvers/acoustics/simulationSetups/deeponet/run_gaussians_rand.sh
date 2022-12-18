@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#BSUB -W 00:05
+#BSUB -W 00:10
 #BSUB -q gpuv100
 #BSUB -n 1
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -R "span[hosts=1]"
 #BSUB -R "rusage[mem=1GB]"
-#BSUB -J Array_Gaussians[1-853]%5
+#BSUB -J Array_Gaussians[2310-3000]%5
 
 ### -- Notify me by email when execution begins --
 ##BSUB -B

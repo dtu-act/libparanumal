@@ -6,7 +6,7 @@ ERROR:
 	@echo "Error, environment variable [OCCA_DIR] is not set"
 endif
 
-#CXXFLAGS = -O0
+#CXXFLAGS = -O0 # no optimization, for debugging
 CXXFLAGS = -O2
 
 include ${OCCA_DIR}/scripts/Makefile
@@ -24,20 +24,19 @@ LD	= mpic++ -std=c++2a
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g -D DHOLMES='"${CURDIR}/../.."' -D DACOUSTICS='"${CURDIR}"'
 
-# -larmadillo should be added to LDFLAGS if Gaussian Random Fields are included #define INCLUDE_GRF 1 in acoustics.h
+# if Gaussian Random Fields are included with #define INCLUDE_GRF 1 in acoustics.h, remember to add -lbtwxt to LIBS (see README)
 OS := $(shell uname)
 ifeq ($(OS),Darwin)
 	# link flags to be used (MacOS)
 	LDFLAGS	= -Xpreprocessor -fopenmp -lomp -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
 else
 	# link flags to be used (Linux)
-	# LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g -lhdf5 -larmadillo
-	LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g -lhdf5
+	LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g -lhdf5 -larmadillo	
 endif
 
 # libraries to be linked in
-# LIBS	=   -L$(OCCA_DIR)/lib -L$(LIBSDIR) -lbtwxt $(links) # use to sample initial condition on uniform grid (needed for for GRFs)
-LIBS	=   -L$(OCCA_DIR)/lib $(links)
+#LIBS	=   -L$(OCCA_DIR)/lib -L$(LIBSDIR) -lbtwxt $(links) # use this if GRFs should be computed (sample initial condition on uniform grid)
+LIBS	=   -L$(OCCA_DIR)/lib $(links) # otherwise use this
 
 INCLUDES = acoustics.h
 
@@ -62,7 +61,7 @@ OBJS    = \
 ./src/acousticsSetup.o \
 ./src/acousticsSetupMain.o \
 ./src/acousticsSources.o \
-./src/acousticsWriteVTU.o \
+./src/acousticsWriters.o \
 ./src/acousticsIO.o \
 ./src/acousticsUtils.o \
 ../../src/meshParallelReaderTet3DCurv.o \

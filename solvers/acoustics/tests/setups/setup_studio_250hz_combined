@@ -46,7 +46,7 @@ tests/setups/freq_dep_lr.dat
 [FREQUENCY]
 250 # [Hz]
 
-[WRITE_WAVE_FIELD] # NONE | VTU | XDMF | TXT
+[WRITE_WAVE_FIELD] # NONE | XDMF | H5 | H5Compact
 NONE
 
 [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output pressure field
