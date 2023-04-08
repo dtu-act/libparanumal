@@ -59,6 +59,9 @@ typedef struct {
   dfloat sigma0; // source width
   dfloat sourcePosition[3];
   
+  int sampleRateOut;
+  std::vector<dfloat> timeStepsOut;
+  
   int dim;
   int elementType; // number of edges (3=tri, 4=quad, 6=tet, 12=hex)
   
@@ -249,10 +252,6 @@ void sourceSetup(mesh_t *mesh, acoustics_t *acoustics, setupAide &newOptions);
 
 void acousticsError(acoustics_t *acoustics, dfloat time);
 
-void acousticsCavitySolution(dfloat x, dfloat y, dfloat z, dfloat t,
-		       dfloat *u, dfloat *v, dfloat *w, dfloat *p);
-
-int acousticsWriteIRs(acoustics_t *acoustics, setupAide &newOptions);
 void acousticsWriteSimulationSettings(acoustics_t *acoustics, string filename);
 
 void acousticsDopriStep(acoustics_t *acoustics, const dfloat time);
@@ -260,7 +259,6 @@ void acousticsLserkStep(acoustics_t *acoustics, const dfloat time);
 void acousticsEirkStep(acoustics_t *acoustics, const dfloat time);
 dfloat acousticsDopriEstimate(acoustics_t *acoustics);
 
-void acousticsReceiverInterpolation(acoustics_t *acoustics);
 void acousticsFindReceiverElement(acoustics_t *acoustics);
 void acousticsRecvIntpolOperators(acoustics_t *acoustics);
 

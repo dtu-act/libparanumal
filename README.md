@@ -11,11 +11,11 @@ Papers
 
 ---
 
-
 ## INSTALLATION
 1. Clone the code from git in you home directory <br>
     `> git clone https://github.com/dtu-act/libparanumal`
 2. Build OCCA and libParanumal. To exploit the GPU, you should build in an environment with access to GPUs (see section DTU HPC) <br>
+    `> voltash` (enabling GPU environment) <br>
     `> cd ~/libparanumal/solvers/acoustics` <br>
     and then execute the build script <br>
     `> ./build_acoustics.sh` <br>
@@ -34,7 +34,10 @@ Papers
 
 **NOTE**: You might run out of resources ("out of memory messages) on DTU HPC if the task is not excecuted using the queue. <br>
 
-## Settings file formats
+## GENERATING DATA FOR TRAINING MACHINE LEARNING MODELS
+Please see [instructions](https://github.com/dtu-act/libparanumal/tree/master/solvers/acoustics/simulationSetups/deeponet).
+
+## SETTINGS FILE FORMATS
 
 ### Main settings file
 The main settings file contains the parameters for simulations, such as source and source positions, material parameters, path to the mesh etc.
@@ -44,9 +47,6 @@ The application is executed by <br>
 
 where the argument is the path to the settings file containing the following properties:
 ```
-[FORMAT]
-1.0
-
 [SIMULATION_ID]
 cube_500hz_p4_5ppw_freq_indep
 
@@ -74,8 +74,11 @@ LSERK4
 [RECEIVER] # OPTIONAL
 simulationSetups/setupdata/receivers2_cube.dat
 
-[CFL]
-1
+; [DT] # OPTIONAL: set time step resolution explicitly (CFL will be not be used)
+; 9.296099356709925e-07 
+
+[CFL] # Courant condition. Use CFL=1 for freq.-indep BC and CFL=0.2 for freq.-dep. BC. NOTE: overwritten then [DT] is set
+1.0
 
 [RHO] # Density of the medium
 1.2
@@ -99,7 +102,7 @@ simulationSetups/setupdata/ERDATA14.dat
 NONE
 
 [TEMPORAL_PPW_OUTPUT] # [WRITE_WAVE_FIELD] != NONE: temporal resolution of the output wave field
-4
+2
 
 [MESH_RECTILINEAR_PPW] # [WRITE_WAVE_FIELD] != NONE: Resolution of the mesh for the initial condition
 2
@@ -123,7 +126,6 @@ GAUSSIAN
 0.5
 ```
 
-Some of the settings are explained:
 #### Overall settings
 * `[MESH FILE]`: The mesh (see section "Mesh generation with Gmsh") for the simulation.
 * `[RECEIVER]`: The IRs are written to disk corresponding to the source positions pointed to. Can be skipped if only the wave field output is needed.
@@ -160,7 +162,7 @@ dmat = 0.050000000000
 freqRange = [50,2000]
 ```
 
-## Mesh generation with Gmsh
+## MESH GENERATION WITH GMSH
 The mesh file can be created using [Gmsh](http://gmsh.info). For more complicated geometries, Sketchup or similar can be used to create the geometry and then be imported to Gmsh. The steps for generating the mesh with appropriate element size and boundary conditions in Gmsh is shown below. The geometry is defined inside the `.geo` files and a few examples can be found in `meshes/geo/`. <br>
 
 See also [Gmsh](http://gmsh.info) and [Gmsh video tutorial](https://www.youtube.com/watch?v=xL2LmDsDLYw).
@@ -200,10 +202,8 @@ Physical Volume(10) = {34};
 The input to libParanumal is a mesh discretized in terms of elements. Depending on the polynomial order chosen in libParanumal, the mesh resolution should be chosen accordingly.
 
 <bf>Example:</bf>
-Assume that we have maximun frequency $f_\text{max} = 1000 \text{Hz}$, speed of sound $c = 343$ m/s, points per wavelength $\text{ppw} = 5$ and polynomial order $P = 4$. Then the element resolution $\Delta x$ is calculated as <br>
-$$
-\Delta x = \frac{c}{f_{\text{max}}\times \text{ppw}} \times P = 0.2744 \text{ m}
-$$
+Assume that we have maximun frequency $f_\text{max} = 1000 \text{Hz}$, speed of sound $c = 343$ m/s, points per wavelength $\text{ppw} = 5$ and polynomial order $P = 4$. Then the element resolution $\Delta x_{\text{elem}}$ is calculated as $\Delta x_{\text{elem}} = \frac{c}{f_{\text{max}}\times \text{ppw}} \times P = 0.2744 \text{ m}$.
+
 The element size can be set as follows:
 
 1. In the top menu, select `Tools->Options` and in the popup window choose `Geometry->General` and set `Global model scaling` to 1.
@@ -216,7 +216,7 @@ Having set the boundary materials and element size, the geometry can now be mesh
 1. Choose `Modules->Mesh->3D` and then optimize the mesh by choosing `Optimize 3D (Netgen)`. Note, that if the element resolution is changes, 1D, 2D and 3D needs to be meshed for the changes to take effect.
 2. Save the file by choosing `File->Export` and save the file with `.msh` extension. Choose `Version 2 (ASCII)` and click ok.
 
-## Gaussian Random Fields
+## GAUSSIAN RANDOM FIELDS
 Support for GRFs as initial conditions is not enabled as default. As explained earlier, set the flag `#define INCLUDE_GRF 1` in `acoustics.h` and link the armadillo library with `-larmadillo` inside the makefile. Also, the static library [https://github.com/bigladder/btwxt](https://github.com/bigladder/btwxt) used for interpolating from static grids to Gaussian quadrature points should be linked by assigning `-L$(LIBSDIR) -lbtwxt` to the `LIBS` environment variable . The static library `libbtwxt.a` should be located inside `libparanumal/libs/` and the header files located inside `librapanumal/include/btwxt`. To build the library, do the following:
 
 1. Clone the code from git into e.g. `libparanumal/include/` <br>
@@ -246,7 +246,24 @@ Support for GRFs as initial conditions is not enabled as default. As explained e
 * `> bkill <id>`                        # kill job
 * `> ./the_scripts > logfile.txt`       # run the script and pipe the output to a log file
 
-#### Some references
+## DEVELOPMENT USING VSCODE - REMOTE IDE
+Setting up an environment for effective and easy development is essential. With VS Code, it is possible to work on your local computer, but running the code [remotely](https://code.visualstudio.com/docs/remote/remote-overview) using the [Remote Development](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) extension.
+
+[Here](https://docs.ccv.brown.edu/oscar/connecting-to-oscar/remote-ide) you can find good documentation how to setup such an environment (adjust to your environment).
+
+### DTU remote setup
+The `~/.ssh/config` should look like this for connecting to DTU HPC system:
+
+```
+Host gbar-remote-ide
+User <your username>
+IdentityFile ~/.ssh/gbar
+Hostname nilogin.gbar.dtu.dk
+```
+
+In VSCode, select `Remote-SSH: Connect to Host...` from `View->Command Palette` and select `gbar-remote-ide`. You might need to change the timeout limit when entering the password.
+
+## Some references
 * [VPN](https://www.inside.dtu.dk/en/medarbejder/it-og-telefoni/wifi-og-fjernadgang/vpn-cisco-anyconnect)
 * [HPC](https://www.hpc.dtu.dk/)
 * [HPC GPU parameters](https://www.hpc.dtu.dk/?page_id=2759)
@@ -254,7 +271,7 @@ Support for GRFs as initial conditions is not enabled as default. As explained e
 * [HPC examples](https://www.hpc.dtu.dk/?page_id=2021)
 
 ---
-# General
+# GENERAL
 An experimental set of finite element flow solvers for heterogeneous (GPU/CPU) systems. The initial development of libParanumal was performed by the [Parallel Numerical Algorithms Group at Virginia Tech](http://paranumal.com).   
 
 libParanumal is funded in part by the US Department of Energy as part of the activities of the [Center for Efficient Exscale Discretizations](http://ceed.exascaleproject.org). 

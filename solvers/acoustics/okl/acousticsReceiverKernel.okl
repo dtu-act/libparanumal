@@ -1,46 +1,25 @@
-// NOT IN USE
-@kernel void acousticsReceiverKernel(const dlong Np,
-						  const dlong qOffset, 
-						  const dlong qRecvOffset,
-							@restrict const dfloat *q,
-							@restrict dfloat *qRecv){
-	for(dlong i = 0; i < 1; i++;@outer){
-		for(dlong n=0;n<Np;++n;@inner){
-			qRecv[qRecvOffset+n] = q[qOffset+n];
-		}
-	}
-}
-
-
-
-
 @kernel void acousticsReceiverInterpolation(const dlong NReceivers,
-																		dfloat * res,
-																		@restrict const dlong * receiverElements,
-																		@restrict const dlong * receiverElementsIdx,
-																		@restrict const dfloat * IP,
-																		@restrict const dfloat * q,
-																		const dlong qRecvCounter){
+											dfloat * res,
+											@restrict const dlong * receiverElements,
+											@restrict const dlong * receiverElementsIdx,
+											@restrict const dfloat * IP,
+											@restrict const dfloat * q,
+											const dlong qRecvCounter) {
 
 
-	for(dlong n1=0; n1<(NReceivers+p_blockSize-1)/p_blockSize;++n1;@outer(0)){
-    for(dlong n2=0; n2 < p_blockSize; ++n2;@inner(0)){    
-      dlong i = n1*p_blockSize+n2;
-      if(i < NReceivers){
+	for (dlong n1=0; n1<(NReceivers+p_blockSize-1)/p_blockSize;++n1;@outer(0)) {
+		for (dlong n2=0; n2 < p_blockSize; ++n2;@inner(0)) {
+			dlong i = n1*p_blockSize+n2;
+			if (i < NReceivers) {
 				const dlong id = i*p_recvCopyRate + qRecvCounter;
 				res[id] = 0.0;
 				dlong IPoffset = p_Np*i;
 				dlong ele = receiverElements[receiverElementsIdx[i]];
-				//dlong ele = 927;
 				dlong qoffset = ele*p_Np*p_Nfields;
-				for(dlong j = 0; j < p_Np; j++){
-					res[id] += IP[IPoffset+j]*q[qoffset+j];
+				for (dlong j = 0; j < p_Np; j++) {
+					res[id] += IP[IPoffset+j] * q[qoffset+j];
 				}
 			}
 		}
 	}
 }
-
-
-
-

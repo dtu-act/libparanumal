@@ -55,9 +55,9 @@ int acousticsSetupMain(setupAide &newOptions)
         mesh->device.malloc(acoustics->NReceivers * sizeof(dlong), acoustics->recvElements);
     acoustics->o_recvElementsIdx =
         mesh->device.malloc(acoustics->NReceivers * sizeof(dlong), acoustics->recvElementsIdx);
-    acoustics->qRecv = (dfloat *)calloc(acoustics->NReceiversLocal * (mesh->NtimeSteps + 1), sizeof(dfloat)); // +1 for including IC
+    acoustics->qRecv = (dfloat *)calloc(acoustics->NReceiversLocal * acoustics->timeStepsOut.size(), sizeof(dfloat));
     acoustics->o_qRecv =
-        mesh->device.malloc(acoustics->NReceiversLocal * recvCopyRate * sizeof(dfloat));
+        mesh->device.malloc(acoustics->NReceiversLocal * RECV_COPY_RATE * sizeof(dfloat));
     acousticsRecvIntpolOperators(acoustics);
   }
 
@@ -75,5 +75,5 @@ int acousticsSetupMain(setupAide &newOptions)
   std::string filepathJson = acoustics->outDir + "/simulation_parameters.json";
   acousticsWriteSimulationSettings(acoustics, filepathJson);
 
-  return acousticsWriteIRs(acoustics, newOptions);
+  return EXIT_SUCCESS;
 }

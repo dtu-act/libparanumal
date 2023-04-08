@@ -9,6 +9,9 @@
 #include <highfive/H5DataSet.hpp>
 #include <highfive/H5DataSpace.hpp>
 
+int acousticsWriteWavIRs(acoustics_t *acoustics, setupAide &newOptions);
+int acousticsWriteTxtIRs(acoustics_t *acoustics, setupAide &newOptions);
+
 class IAcousticWriter
 {
 public:
@@ -18,7 +21,7 @@ public:
 class AcousticXdmfWriter : public IAcousticWriter
 {
 public:
-    AcousticXdmfWriter(acoustics_t *acoustics, std::vector<dfloat> timeVector);
+    AcousticXdmfWriter(acoustics_t *acoustics);
     void write(acoustics_t *acoustics, uint iter);
 
 private:
@@ -34,8 +37,7 @@ private:
 class AcousticH5CompactWriter : public IAcousticWriter
 {
 public:
-    AcousticH5CompactWriter(acoustics_t *acoustics, uint nPressurePoints, std::vector<dfloat> timeVector,
-        bool writeConnTable=false);
+    AcousticH5CompactWriter(acoustics_t *acoustics, uint nPressurePoints, bool writeConnTable=false);
     void write(acoustics_t *acoustics, uint iter);
 
 private:

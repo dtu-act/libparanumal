@@ -115,7 +115,7 @@ void sourceSetup(mesh_t *mesh, acoustics_t *acoustics, setupAide &newOptions)
       }
     }
     else {
-      throw std::invalid_argument("[GAUSSIAN_SOURCE_POS] tag missing or invalid. Supported tags: RANDOM|MESH|FIXED");
+      throw std::invalid_argument("[GAUSSIAN_SOURCE_POS] tag missing or invalid. Supported tags: RANDOM | MESH | FIXED");
     }
     
     dfloat ppw_initial;
@@ -456,20 +456,25 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
       hmin = mymin(hmin, hest);
     }
   }
-  // need to change cfl and defn of dt
-  // dfloat cfl = 0.5; // depends on the stability region size
-  dfloat cfl;
-  newOptions.getArgs("CFL", cfl);
+  
+  dfloat cfl = -1.0;
+  if (newOptions.getArgs("DT", mesh->dt) == 0) {
+    // dt was not set explicitly, instead calculate from CFL    
+    if (newOptions.getArgs("CFL", cfl) == 0) {
+      throw std::invalid_argument("[CFL] tag missing. Should be set in the interval (0,1] or [DT] should be set explicitly.");
+    }
 
-  dfloat dtConstant = 5.0; // [EA] Empirical constant we found to be suitable
-  dfloat dtAdv = hmin / (343.0 * (mesh->N + 1.) * (mesh->N + 1.));
-  // dfloat dtAdv  = hmin/(343.0);
-  dfloat dt = dtConstant * cfl * dtAdv;
+    dfloat dtConstant = 5.0; // [EA] Empirical constant we found to be suitable
+    dfloat dtAdv = hmin / (343.0 * (mesh->N + 1.) * (mesh->N + 1.));
+    dfloat dt = dtConstant * cfl * dtAdv;
 
-  // MPI_Allreduce to get global minimum dt
-  MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
-
-  //
+    // MPI_Allreduce to get global minimum dt
+    MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
+  }
+  
+  // adjust final time to fit dt
+  mesh->NtimeSteps = ceil(mesh->finalTime / mesh->dt);
+  mesh->finalTime = mesh->NtimeSteps * mesh->dt;
   newOptions.getArgs("FINAL TIME", mesh->finalTime);
 
   mesh->NtimeSteps = mesh->finalTime / mesh->dt;
@@ -481,6 +486,23 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
   {
     mesh->dt = mesh->finalTime / mesh->NtimeSteps;
   }
+
+  // setup temporal output time vector from user-defined resolution
+  int ppwWaveField;
+  if (newOptions.getArgs("TEMPORAL_PPW_OUTPUT", ppwWaveField) == 0) {
+    throw std::invalid_argument("[TEMPORAL_PPW_OUTPUT] tag missing");
+  }
+  
+  dfloat dtWrite = (1.0/acoustics->fmax)/ppwWaveField;
+  int tstepsWrite = std::max((int)floor(dtWrite/mesh->dt), 1);
+  
+  acoustics->timeStepsOut.resize(0);
+  for (int tstep = 0; tstep < mesh->NtimeSteps; tstep++) {
+    if (tstep % tstepsWrite == 0) {
+      acoustics->timeStepsOut.push_back(tstep * mesh->dt);
+    }
+  }
+  acoustics->sampleRateOut = (int)round(1.0/(acoustics->timeStepsOut[1]-acoustics->timeStepsOut[0]));
 
   //---------RECEIVER---------
   acoustics->qRecvCounter = 0; // Counter needed for later
@@ -518,6 +540,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
     acoustics->NReceiversLocal = 0;
     acoustics->recvElementsIdx = (dlong *)calloc(acoustics->NReceivers, sizeof(dlong));
   }
+
   //---------RECEIVER---------
 
   acoustics->frame = 0;
@@ -1475,12 +1498,6 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
                                "acousticsErrorEstimate",
                                kernelInfo);
 
-  // [EA] Copy from q to qRecv (Currently not in use, changed to using copyTo instead)
-  acoustics->receiverKernel =
-      mesh->device.buildKernel(DACOUSTICS "/okl/acousticsReceiverKernel.okl",
-                               "acousticsReceiverKernel",
-                               kernelInfo);
-
   acoustics->ERMoveVT =
       mesh->device.buildKernel(DACOUSTICS "/okl/acousticsERKernel.okl",
                                "ERMoveVT",
@@ -1531,8 +1548,12 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char *boundaryH
   {
     printf("-----SETUP PARAMETERS START-----\n");
     printf("Final Time: %g\n", mesh->finalTime);
-    printf("CFL = %g\n", cfl);
-    printf("dt = %g\n", mesh->dt);
+    if (cfl > 0) {
+      printf("CFL = %g\n", cfl);
+      printf("dt = %g\n", mesh->dt);
+    } else {
+      printf("dt = %g (set explicitly)\n", mesh->dt);
+    }    
     printf("N = %d\n", mesh->N);
     printf("SXYZ = %f (overwrite by setting optional parameter [SXYZ] in the settings file).\n", acoustics->sigma0);
 

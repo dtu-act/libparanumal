@@ -31,19 +31,26 @@ SOFTWARE.
 #include <stdexcept>
 
 void dopri5(acoustics_t *acoustics, dfloat outputInterval);
-void lseRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, std::shared_ptr<IAcousticWriter> writer);
-void eiRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, std::shared_ptr<IAcousticWriter> writer);
+void lseRK4(acoustics_t *acoustics, std::shared_ptr<IAcousticWriter> writer);
+void eiRK4(acoustics_t *acoustics, std::shared_ptr<IAcousticWriter> writer);
 void eiRK4adap(acoustics_t *acoustics);
 
-// helper
-void copyReceiverToHost(acoustics_t *acoustics) {
-  for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){
-        dlong offset = recvCopyRate*acoustics->qRecvCopyCounter + acoustics->qRecvCounter*iRecv;
+void copyReceiverToHost(acoustics_t *acoustics) 
+{
+  for (int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++) {
+    // NOTE: when acoustics->qRecvCopyCounter > 0 the number of timesteps is larger than RECV_COPY_RATE
+    // The host qRecv is allocated with acoustics->qRecvCounter per source position
+    dlong offsetHost = RECV_COPY_RATE * acoustics->qRecvCopyCounter + acoustics->qRecvCounter * iRecv;
 
-        acoustics->o_qRecv.copyTo(acoustics->qRecv + offset,
-              acoustics->qRecvCounter * sizeof(dfloat), 
-              recvCopyRate * iRecv * sizeof(dfloat));  
-      }
+    acoustics->o_qRecv.copyTo(
+      acoustics->qRecv + offsetHost, // destination (host)
+      acoustics->qRecvCounter * sizeof(dfloat), // bytes to copy from src (device) to dest (host)
+      RECV_COPY_RATE * iRecv * sizeof(dfloat) // src offset (allocated with RECV_COPY_RATE per source position)
+      );
+  }
+
+  acoustics->qRecvCounter = 0;
+  acoustics->qRecvCopyCounter++;
 }
 
 void acousticsBCChange(acoustics_t *acoustics, dfloat time)
@@ -78,8 +85,7 @@ void acousticsBCChange(acoustics_t *acoustics, dfloat time)
 
 void acousticsRun(acoustics_t *acoustics, setupAide &newOptions)
 {
-  WriteWaveFieldType waveFieldWriteType;
-  int ppwWaveField;
+  WriteWaveFieldType waveFieldWriteType;  
 
   if (newOptions.compareArgs("WRITE_WAVE_FIELD", "NONE")) {
     waveFieldWriteType = None;
@@ -98,28 +104,10 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions)
     waveFieldWriteType = None;
   }
 
-  if (waveFieldWriteType != None) {
-    if (newOptions.getArgs("TEMPORAL_PPW_OUTPUT", ppwWaveField) == 0) {
-      throw std::invalid_argument("[TEMPORAL_PPW_OUTPUT] tag missing");
-    }
-  }
-
-  std::vector<dfloat> timeStepsWrite;
-  if (waveFieldWriteType != None) {
-    dfloat dt_write = (1.0/acoustics->fmax)/ppwWaveField;
-    int tstepsWrite = std::max((int)floor(dt_write/acoustics->mesh->dt), 1);
-    
-    for (int tstep = 0; tstep < acoustics->mesh->NtimeSteps; tstep++) {
-      if (tstep % tstepsWrite == 0) {
-        timeStepsWrite.push_back(tstep * acoustics->mesh->dt);
-      }
-    }
-  }
-
   std::shared_ptr<IAcousticWriter> writer;
 
   if (waveFieldWriteType == Xdmf) {
-    writer.reset(new AcousticXdmfWriter(acoustics, timeStepsWrite));
+    writer.reset(new AcousticXdmfWriter(acoustics));
   }
   else if (waveFieldWriteType == H5Compact || waveFieldWriteType == H5) {
     auto conn = std::vector<std::vector<uint>>();
@@ -132,7 +120,7 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions)
     printf("waveFieldWriteType: %i", waveFieldWriteType);
     
     extractUniquePoints(acoustics->mesh, acoustics, conn, x1d, y1d, z1d, p1d);
-    writer.reset(new AcousticH5CompactWriter(acoustics, p1d.size(), timeStepsWrite, writeConnTable));
+    writer.reset(new AcousticH5CompactWriter(acoustics, p1d.size(), writeConnTable));
   } 
   else if (waveFieldWriteType == None) {
     // dummy writer doesn't write - easy way to handle 4
@@ -150,11 +138,11 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions)
   }
   else if (newOptions.compareArgs("TIME INTEGRATOR", "LSERK4"))
   {
-    lseRK4(acoustics, timeStepsWrite, writer);
+    lseRK4(acoustics, writer);
   }
   else if (newOptions.compareArgs("TIME INTEGRATOR", "EIRK4"))
   {
-    eiRK4(acoustics, timeStepsWrite, writer);
+    eiRK4(acoustics, writer);
   }
   else if (newOptions.compareArgs("TIME INTEGRATOR", "EIRK4ADAP"))
   {
@@ -163,52 +151,50 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions)
   else {
     throw std::invalid_argument("TIME INTEGRATOR type not supported. Supported types: DOPRI5, LSERK4, EIRK4, EIRK4ADAP.");
   }
-  //timer.toc("Run");
 
-  // [EA] Copy remaining o_qRecv from device to host
-  if (acoustics->NReceiversLocal > 0) {
-    copyReceiverToHost(acoustics);
-  }
+  // Copy remaining o_qRecv from device to host
+  copyReceiverToHost(acoustics);
+
+  // acousticsWriteTxtIRs(acoustics, newOptions);
+  acousticsWriteWavIRs(acoustics, newOptions);
 }
 
 void updateReceivers(acoustics_t *acoustics) {
   if (acoustics->NReceiversLocal > 0)  {
-    acoustics->acousticsReceiverInterpolation(acoustics->NReceiversLocal,
-                                      acoustics->o_qRecv,
-                                      acoustics->o_recvElements,
-                                      acoustics->o_recvElementsIdx,
-                                      acoustics->o_recvintpol,
-                                      acoustics->o_q,
-                                      acoustics->qRecvCounter);
+
+    acoustics->acousticsReceiverInterpolation(
+      acoustics->NReceiversLocal,
+      acoustics->o_qRecv,
+      acoustics->o_recvElements,
+      acoustics->o_recvElementsIdx,
+      acoustics->o_recvintpol,
+      acoustics->o_q,
+      acoustics->qRecvCounter);
+
     acoustics->qRecvCounter++;
 
-    if(acoustics->qRecvCounter == recvCopyRate) {
+    if (acoustics->qRecvCounter == RECV_COPY_RATE) {
       copyReceiverToHost(acoustics);
-      acoustics->qRecvCounter = 0;
-      acoustics->qRecvCopyCounter++;  
     }
   }
 }
 
-void lseRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, std::shared_ptr<IAcousticWriter> writer) {
+void lseRK4(acoustics_t *acoustics, std::shared_ptr<IAcousticWriter> writer) {
   mesh_t *mesh = acoustics->mesh;
-  
-  updateReceivers(acoustics); // update receivers at t=0 (IC)
 
   int tstepWrite = 0;
-  for (int tstep = 0; tstep < mesh->NtimeSteps; ++tstep)
+  for (int tstep = 0; tstep < mesh->NtimeSteps; tstep++)
   {
     dfloat time = tstep*mesh->dt;
 
-    if (timeStepsWrite.size() > 0 && abs(timeStepsWrite[tstepWrite] - time) < 1e-10) {
-      acoustics->o_q.copyTo(acoustics->q); // copy from GPU to CPU
-      writer->write(acoustics, tstepWrite);
+    if (acoustics->timeStepsOut.size() > 0 && abs(acoustics->timeStepsOut[tstepWrite] - time) < 1e-10) {
+      updateReceivers(acoustics);
+      writer->write(acoustics, tstepWrite);      
       tstepWrite++;
     }
         
     acousticsBCChange(acoustics, time);
-    acousticsLserkStep(acoustics, time);
-    updateReceivers(acoustics);
+    acousticsLserkStep(acoustics, time);    
 
     if (tstep % 500 == 0 && !mesh->rank)
     {
@@ -217,38 +203,33 @@ void lseRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, std::sha
   }
 }
 
-void eiRK4(acoustics_t *acoustics, std::vector<dfloat> timeStepsWrite, std::shared_ptr<IAcousticWriter> writer) {
+void eiRK4(acoustics_t *acoustics, std::shared_ptr<IAcousticWriter> writer) {
   mesh_t *mesh = acoustics->mesh;
-
-  updateReceivers(acoustics); // update receivers at t=0 (IC)
 
   int tstepWrite = 0;
   for (int tstep = 0; tstep < mesh->NtimeSteps; ++tstep)
   {
     dfloat time = tstep*mesh->dt;
 
-    if (timeStepsWrite.size() > 0 && abs(timeStepsWrite[tstepWrite] - time) < 1e-10) {
-      acoustics->o_q.copyTo(acoustics->q); // copy from GPU to CPU
-      writer->write(acoustics, tstepWrite);
+    if (acoustics->timeStepsOut.size() > 0 && abs(acoustics->timeStepsOut[tstepWrite] - time) < 1e-10) {
+      updateReceivers(acoustics);
+      writer->write(acoustics, tstepWrite);      
       tstepWrite++;
     }
 
     acousticsBCChange(acoustics, time);
-    acousticsEirkStep(acoustics, time);
-    updateReceivers(acoustics);    
+    acousticsEirkStep(acoustics, time);    
 
     if (tstep % 500 == 0 && !mesh->rank)
     {
       printf("EIRK4 - Step: %d, out of: %d\n", tstep, mesh->NtimeSteps);
     }
-  }    
+  }
 }
 
 void eiRK4adap(acoustics_t *acoustics) {
   dfloat time = 0.0;
   mesh_t *mesh = acoustics->mesh;
-
-  updateReceivers(acoustics); // update receivers at t=0 (IC)
 
   dfloat dt = mesh->dt; // Initial dt
   while (time < mesh->finalTime)

@@ -9,8 +9,8 @@ dlong factorial(dlong x){
   return res;
 }
 
-// OLD - From when interpolation was done on host.
-void acousticsReceiverInterpolation(acoustics_t *acoustics){
+// Interpolation was done on host - not used
+void acousticsReceiverInterpolationCPUHost(acoustics_t *acoustics){
 	
   mesh_t *mesh = acoustics->mesh;
   for(int iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++){

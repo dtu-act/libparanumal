@@ -23,7 +23,7 @@ LSERK4
 1.0
 
 [RECEIVER]
-simulationSetups/setupdata/receivers2_bedroon.dat
+simulationSetups/setupdata/receivers2_bedroom.dat
 
 [CFL]
 1

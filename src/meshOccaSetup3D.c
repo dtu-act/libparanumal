@@ -775,7 +775,7 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
   kernelInfo["defines/" "p_c"]= mesh->c;
   kernelInfo["defines/" "p_AcConstant"]= mesh->rho*mesh->c*mesh->c;
   kernelInfo["defines/" "p_Z_IND"]= Z_IND;
-  kernelInfo["defines/" "p_recvCopyRate"] = recvCopyRate;
+  kernelInfo["defines/" "p_recvCopyRate"] = RECV_COPY_RATE;
 }
 
 

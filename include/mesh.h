@@ -46,9 +46,8 @@ SOFTWARE.
 #define TETRAHEDRA 6
 #define HEXAHEDRA 12
 
-
-// Copy o_qRecv to host every recvCopyRate
-#define recvCopyRate 5000
+// Copy o_qRecv to host every
+#define RECV_COPY_RATE 500
 
 typedef struct {
 

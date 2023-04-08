@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "acoustics.h"
 #include <limits.h>
-#include<filesystem>
+#include <filesystem>
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
@@ -37,46 +37,19 @@ void acousticsWriteSimulationSettings(acoustics_t *acoustics, string filename) {
   std::ofstream file(filename.c_str());
   json j;
 
+  j["SimulationParameters"]["sampleRate"] = acoustics->sampleRateOut;
+  j["SimulationParameters"]["dt"] = acoustics->timeStepsOut[1] - acoustics->timeStepsOut[0];
+  j["SimulationParameters"]["dtSim"] = acoustics->mesh->dt;
   j["SimulationParameters"]["fmax"] = acoustics->fmax;
   j["SimulationParameters"]["c"] = acoustics->mesh->c;
   j["SimulationParameters"]["rho"] = acoustics->mesh->rho;
   j["SimulationParameters"]["sigma"] = acoustics->sigma0;
-  j["SimulationParameters"]["dt"] = acoustics->mesh->dt;
-
+  
   if (acoustics->sourceType == GaussianFunction) {
     j["SimulationParameters"]["SourcePosition"] = acoustics->sourcePosition;
   }
 
   file << j.dump(4) << std::endl;
-}
-
-// Print interpolated receiver to file
-int acousticsWriteIRs(acoustics_t *acoustics, setupAide &newOptions) {      
-  if (acoustics->NReceiversLocal > 0) {
-    mesh_t *mesh = acoustics->mesh;  
-    char fname[BUFSIZ];
-    
-    for (dlong iRecv = 0; iRecv < acoustics->NReceiversLocal; iRecv++) {
-      sprintf(fname, "%s/%s_%02d.txt", (char*)acoustics->outDir.c_str(), (char*)acoustics->simulationID.c_str(), acoustics->recvElementsIdx[iRecv]);
-
-      FILE *iFP = fopen(fname,"w");
-      if (iFP == NULL) {
-        printf("ERROR: receiver output file could not be opened %s)\n", fname);      
-        return 1;
-      }
-
-      dfloat time = 0;
-
-      for(int i = 0; i < mesh->NtimeSteps + 1; i++) { // +1 for including IC
-        fprintf(iFP, "%.15lf %.15le\n", time, acoustics->qRecv[i+iRecv*mesh->NtimeSteps]);
-        time += mesh->dt;
-      }
-      
-      fclose(iFP);
-    }
-  }
-
-  return 0;
 }
 
 int createDir(string path, bool deleteIfExists) {

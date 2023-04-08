@@ -1,0 +1,137 @@
+[SIMULATION_ID]
+furnished_1000hz_p4_5ppw_src3
+
+[MESH FILE]
+/work3/nibor/data/libP/meshes/furnished_1000hz_dx0.2744_mesh.msh
+
+[OUTPUT DIRECTORY]
+/work3/nibor/1TB/input3D/furnished_1000hz_p4_5ppw_srcpos5_test
+
+[POLYNOMIAL DEGREE]
+4
+
+[CURVILINEAR MESH] # 0: Off, 1: On. Mesh order MUST match [POLYNOMIAL DEGREE]
+0
+
+[TIME INTEGRATOR] # LSERK4 | EIRK4 | DOPRI5 (broken)
+LSERK4
+
+[FINAL TIME]
+0.05
+
+[DT]
+9.48568609967559e-07 # should correspond to the temporal resolution of the training data
+
+[RHO] # Density of the medium
+1.2
+
+[C] # Speed of sound in the medium
+343.0
+
+[Z_IND] # Z value for frequency independent boundary condition
+7400
+
+[LRVECTFIT] # Generated using vectorfitDriverLR.m
+simulationSetups/deeponet/freq_dep_lr.dat
+
+[FREQUENCY]
+1000 # [Hz]
+
+[WRITE_WAVE_FIELD] # NONE | XDMF | H5 | H5Compact
+H5Compact
+
+[TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
+2
+
+[SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
+GAUSSIAN
+
+[GAUSSIAN_SOURCE_POS] # MESH ([MESH FILE IC] needs to be set) | FIXED
+FIXED
+
+[MESH_RECTILINEAR_PPW] # Resolution of the mesh for the initial condition
+2
+
+; [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
+; 0.3
+
+; [SXYZ] # OPTIONAL: Width of initial pulse (will be computed automatically if not defined)
+; 0.4
+
+[SX] # x coordinate of initial pulse (ignored for GRF)
+1.5
+
+[SY] # y coordinate of initial pulse (ignored for GRF)
+0.9
+
+[SZ] # z coordinate of initial pulse (ignored for GRF)
+1.2
+
+### DON'T CHANGE BELOW ###
+[FORMAT]
+1.0
+
+[MESH DIMENSION]
+3
+
+[ELEMENT TYPE] # number of edges
+6
+
+[THREAD MODEL]
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+[ADVECTION TYPE]
+NODAL
+
+[VISCOSITY]
+5.e-3
+
+[MACH NUMBER]
+.2
+
+[RBAR]
+1.0
+
+[UBAR]
+1.0
+
+[VBAR]
+0.0
+
+[WBAR]
+0.0
+
+[COMPUTE ERROR FLAG]
+1
+
+[TSTEPS FOR ERROR COMPUTE]
+1000
+
+[TSTEPS FOR SOLUTION OUTPUT]
+1000
+
+[REPORT FREQUENCY]
+1000
+
+[START TIME]
+0
+
+[OUTPUT INTERVAL]
+.14
+
+[MAX MRAB LEVELS]
+1
+
+[RESTART FROM FILE]
+0
+
+[VERBOSE]
+FALSE
+
+

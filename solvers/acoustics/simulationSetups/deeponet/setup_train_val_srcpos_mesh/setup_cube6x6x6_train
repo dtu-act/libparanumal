@@ -1,0 +1,125 @@
+[SIMULATION_ID]
+cube6x6x6_1000hz_p6_5ppw_srcs393_train
+
+[MESH FILE]
+/work3/nibor/data/libP/meshes/cube6x6x6_1000hz_dx0.4116_mesh.msh # used with polynomial order 6 => 5 ppw at 1000 Hz
+
+[MESH FILE IC]
+/work3/nibor/data/libP/meshes/cube6x6x6_1000hz_srcpos393_train.msh
+
+[OUTPUT DIRECTORY]
+/work3/nibor/1TB/input3D/cube6x6x6_1000hz_p6_5ppw_srcs393_train
+
+[POLYNOMIAL DEGREE]
+6
+
+[CURVILINEAR MESH] # 0: Off, 1: On. Mesh order MUST match [POLYNOMIAL DEGREE]
+0
+
+[TIME INTEGRATOR] # LSERK4 | EIRK4 | DOPRI5 (broken)
+LSERK4
+
+[FINAL TIME]
+0.03
+
+[CFL] # Ignored when [DT] is set
+1.0 # 1.0 for frequency indep, 0.2 for frequency dep
+
+[RHO] # Density of the medium
+1.2
+
+[C] # Speed of sound in the medium
+343.0
+
+[Z_IND] # Z value for frequency independent boundary condition
+7400
+
+[LRVECTFIT] # Generated using vectorfitDriverLR.m
+simulationSetups/deeponet/freq_dep_lr.dat
+
+[FREQUENCY]
+1000 # [Hz]
+
+[WRITE_WAVE_FIELD] # NONE | XDMF | H5 | H5Compact
+H5Compact
+
+[TEMPORAL_PPW_OUTPUT] # OPTIONAL: temporal resolution of the output wave field
+2
+
+[SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
+GAUSSIAN
+
+[GAUSSIAN_SOURCE_POS] # MESH ([MESH FILE IC] needs to be set) | FIXED
+MESH
+
+[MESH_RECTILINEAR_PPW] # Resolution of the mesh for the initial condition
+2
+
+### DON'T CHANGE BELOW ###
+[FORMAT]
+1.0
+
+[MESH DIMENSION]
+3
+
+[ELEMENT TYPE] # number of edges
+6
+
+[THREAD MODEL]
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+[ADVECTION TYPE]
+NODAL
+
+[VISCOSITY]
+5.e-3
+
+[MACH NUMBER]
+.2
+
+[RBAR]
+1.0
+
+[UBAR]
+1.0
+
+[VBAR]
+0.0
+
+[WBAR]
+0.0
+
+[COMPUTE ERROR FLAG]
+1
+
+[TSTEPS FOR ERROR COMPUTE]
+1000
+
+[TSTEPS FOR SOLUTION OUTPUT]
+1000
+
+[REPORT FREQUENCY]
+1000
+
+[START TIME]
+0
+
+[OUTPUT INTERVAL]
+.14
+
+[MAX MRAB LEVELS]
+1
+
+[RESTART FROM FILE]
+0
+
+[VERBOSE]
+FALSE
+
+

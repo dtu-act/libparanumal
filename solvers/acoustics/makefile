@@ -38,7 +38,7 @@ endif
 #LIBS	=   -L$(OCCA_DIR)/lib -L$(LIBSDIR) -lbtwxt $(links) # use this if GRFs should be computed (sample initial condition on uniform grid)
 LIBS	=   -L$(OCCA_DIR)/lib $(links) # otherwise use this
 
-INCLUDES = acoustics.h
+INCLUDES = acoustics.h tinywav.h
 
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
@@ -64,6 +64,7 @@ OBJS    = \
 ./src/acousticsWriters.o \
 ./src/acousticsIO.o \
 ./src/acousticsUtils.o \
+./src/tinywav.o \
 ../../src/meshParallelReaderTet3DCurv.o \
 ../../src/meshSetupTet3DCurv.o \
 ../../src/meshGeometricPartition3DCurv.o \

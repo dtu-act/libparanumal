@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/solvers/acoustics/acousticsMain",
             //"args": ["${workspaceFolder}/solvers/acoustics/simulationSetups/deeponet/setup_1000Hz_p4_rand_src", "2"],
-            "args": ["${workspaceFolder}/solvers/acoustics/simulationSetups/deeponet/Lshape/setup_Lshape_1000Hz_p4_src[0.9,1.0,1.0]"],
+            "args": ["${workspaceFolder}/solvers/acoustics/simulationSetups/deeponet/setup_test_srcpos_fixed/cube2x2x2_src8/cube_1000Hz_p4_src1_1"],
             "stopAtEntry": true,
             "cwd": "${workspaceFolder}/solvers/acoustics",
             // "environment": [
