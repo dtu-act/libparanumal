@@ -87,12 +87,12 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions)
   else if (newOptions.compareArgs("WRITE_WAVE_FIELD", "XDMF")) {
     waveFieldWriteType = Xdmf;
   }
-  else if (newOptions.compareArgs("WRITE_WAVE_FIELD", "H5")) {
-    waveFieldWriteType = H5;
-  }
   else if (newOptions.compareArgs("WRITE_WAVE_FIELD", "H5Compact")) {
     waveFieldWriteType = H5Compact;
   }
+  else if (newOptions.compareArgs("WRITE_WAVE_FIELD", "H5")) {
+    waveFieldWriteType = H5;
+  }  
   else {
     printf("[WRITE_WAVE_FIELD] not valid [NONE | XDMF | H5 | H5Compact]: defaulting to None\n");
     waveFieldWriteType = None;
@@ -123,18 +123,23 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions)
   }
   else if (waveFieldWriteType == H5Compact || waveFieldWriteType == H5) {
     auto conn = std::vector<std::vector<uint>>();
-    auto x1d = std::vector<dfloat>();
-    auto y1d = std::vector<dfloat>();
-    auto z1d = std::vector<dfloat>();
-    auto p1d = std::vector<dfloat>();
+    auto x1d = std::vector<float>();
+    auto y1d = std::vector<float>();
+    auto z1d = std::vector<float>();
+    auto p1d = std::vector<float>();
 
     auto writeConnTable = waveFieldWriteType == H5;
+    printf("waveFieldWriteType: %i", waveFieldWriteType);
     
     extractUniquePoints(acoustics->mesh, acoustics, conn, x1d, y1d, z1d, p1d);
     writer.reset(new AcousticH5CompactWriter(acoustics, p1d.size(), timeStepsWrite, writeConnTable));
+  } 
+  else if (waveFieldWriteType == None) {
+    // dummy writer doesn't write - easy way to handle 4
+    writer.reset(new AcousticH5DummyWriter());
   }
   else {
-    throw std::exception();
+    throw std::invalid_argument("Internal error: waveFieldWriteType is not exhaustive.");
   }
 
   if (newOptions.compareArgs("TIME INTEGRATOR", "DOPRI5"))

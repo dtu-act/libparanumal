@@ -1,5 +1,4 @@
-#ifndef ACOUSTICS_WRITERS_H
-#define ACOUSTICS_WRITERS_H
+#pragma once
 
 #include "acoustics.h"
 #include <fstream>
@@ -28,7 +27,7 @@ private:
                          std::string fileNameXdmf, std::string filenameH5, std::string dataTag, std::vector<dfloat> timeVector);
 
     void writeMeshH5(std::string fileName, std::string fileTag0, std::string fileTag1,
-                     std::vector<dfloat> &x1d, std::vector<dfloat> &y1d, std::vector<dfloat> &z1d, uint fileAttr);
+                     std::vector<float> &x1d, std::vector<float> &y1d, std::vector<float> &z1d, uint fileAttr);
 };
 
 // https://github.com/BlueBrain/HighFive/blob/master/src/examples/create_extensible_dataset.cpp
@@ -42,10 +41,15 @@ public:
 private:
     HighFive::DataSet _presssureDataset; // constructor is called - dummy
     void writeMeshH5(std::string fileName, std::string fileTag0,
-                     std::vector<dfloat> &x1d, std::vector<dfloat> &y1d, std::vector<dfloat> &z1d, uint fileAttr);
+                     std::vector<float> &x1d, std::vector<float> &y1d, std::vector<float> &z1d, uint fileAttr);
     void writeMeshH5(std::string fileName, std::string fileTag0, std::string fileTag1,
-                     std::vector<dfloat> &x1d, std::vector<dfloat> &y1d, std::vector<dfloat> &z1d, 
+                     std::vector<float> &x1d, std::vector<float> &y1d, std::vector<float> &z1d, 
                      std::vector<std::vector<uint>> &conn, uint fileAttr);
 };
 
-#endif
+class AcousticH5DummyWriter : public IAcousticWriter
+{
+public:
+    AcousticH5DummyWriter() = default;
+    void write(acoustics_t *acoustics, uint iter) { /* do nothing */};
+};

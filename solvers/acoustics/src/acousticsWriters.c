@@ -51,11 +51,11 @@ AcousticXdmfWriter::AcousticXdmfWriter(acoustics_t *acoustics, std::vector<dfloa
   std::string filepathXdmf = acoustics->outDir + "/" + acoustics->simulationID + ".xdmf";
   std::string filepathRectilinearXdmf = acoustics->outDir + "/" + acoustics->simulationID + "_rectilinear.xdmf";
 
-  auto conn_not_used = std::vector<std::vector<uint>>();
-  auto x1d = std::vector<dfloat>();
-  auto y1d = std::vector<dfloat>();
-  auto z1d = std::vector<dfloat>();
-  auto p1d = std::vector<dfloat>();
+  auto conn_not_used = std::vector<std::vector<unsigned int>>();
+  auto x1d = std::vector<float>();
+  auto y1d = std::vector<float>();
+  auto z1d = std::vector<float>();
+  auto p1d = std::vector<float>();
   extractUniquePoints(acoustics->mesh, acoustics, conn_not_used, x1d, y1d, z1d, p1d);
 
   writeXdmfHeader(acoustics, x1d.size(), filepathXdmf, filenameH5, FILE_TAG, timeVector);
@@ -78,7 +78,10 @@ AcousticXdmfWriter::AcousticXdmfWriter(acoustics_t *acoustics, std::vector<dfloa
   if (acoustics->sourceType == GaussianFunction)
   {
     // write source position
-    auto src_pos = std::vector<dfloat>({acoustics->sourcePosition[0], acoustics->sourcePosition[1], acoustics->sourcePosition[2]});
+    auto src_pos = std::vector<float>({
+      (float)acoustics->sourcePosition[0], 
+      (float)acoustics->sourcePosition[1], 
+      (float)acoustics->sourcePosition[2]});
     H5Easy::dump(file, "/source_position", src_pos);
   }
 }
@@ -87,11 +90,11 @@ void AcousticXdmfWriter::write(acoustics_t *acoustics, uint iter)
 {
   const std::string FILE_TAG = "/data";
 
-  auto conn = std::vector<std::vector<uint>>();
-  auto x1d = std::vector<dfloat>();
-  auto y1d = std::vector<dfloat>();
-  auto z1d = std::vector<dfloat>();
-  auto p1d = std::vector<dfloat>();
+  auto conn = std::vector<std::vector<unsigned int>>();
+  auto x1d = std::vector<float>();
+  auto y1d = std::vector<float>();
+  auto z1d = std::vector<float>();
+  auto p1d = std::vector<float>();
 
   extractUniquePoints(acoustics->mesh, acoustics, conn, x1d, y1d, z1d, p1d);
 
@@ -148,7 +151,7 @@ void AcousticXdmfWriter::writeXdmfHeader(acoustics_t *acoustics, size_t Nelem,
 }
 
 void AcousticXdmfWriter::writeMeshH5(string fileName, string fileTag0, string fileTag1,
-                                     std::vector<dfloat> &x1d, std::vector<dfloat> &y1d, std::vector<dfloat> &z1d, uint fileAttr)
+                                     std::vector<float> &x1d, std::vector<float> &y1d, std::vector<float> &z1d, uint fileAttr)
 {
   File file(fileName, fileAttr);
 
@@ -167,7 +170,7 @@ void AcousticXdmfWriter::writeMeshH5(string fileName, string fileTag0, string fi
     vertexData[i] = i;
   }
 
-  DataSet dataset = file.createDataSet<dfloat>(fileTag0, DataSpace::From(meshData));
+  DataSet dataset = file.createDataSet<float>(fileTag0, DataSpace::From(meshData));
   dataset.write(meshData);
 
   dataset = file.createDataSet<int>(fileTag1, DataSpace::From(vertexData));
@@ -187,11 +190,11 @@ AcousticH5CompactWriter::AcousticH5CompactWriter(acoustics_t *acoustics, uint nP
   string filepathH5 = acoustics->outDir + "/" + filenameH5;
 
   // write mesh only once
-  auto conn = std::vector<std::vector<uint>>();
-  auto x1d = std::vector<dfloat>();
-  auto y1d = std::vector<dfloat>();
-  auto z1d = std::vector<dfloat>();
-  auto p1d = std::vector<dfloat>();
+  auto conn = std::vector<std::vector<unsigned int>>();
+  auto x1d = std::vector<float>();
+  auto y1d = std::vector<float>();
+  auto z1d = std::vector<float>();
+  auto p1d = std::vector<float>();
   extractUniquePoints(acoustics->mesh, acoustics, conn, x1d, y1d, z1d, p1d);
 
   if (writeConnTable) {
@@ -217,7 +220,10 @@ AcousticH5CompactWriter::AcousticH5CompactWriter(acoustics_t *acoustics, uint nP
   if (acoustics->sourceType == GaussianFunction)
   {
     // write source position
-    auto src_pos = std::vector<dfloat>({acoustics->sourcePosition[0], acoustics->sourcePosition[1], acoustics->sourcePosition[2]});
+    auto src_pos = std::vector<float>({
+      (float)acoustics->sourcePosition[0], 
+      (float)acoustics->sourcePosition[1], 
+      (float)acoustics->sourcePosition[2]});
     H5Easy::dump(file, "/source_position", src_pos);
   }
 
@@ -226,18 +232,18 @@ AcousticH5CompactWriter::AcousticH5CompactWriter(acoustics_t *acoustics, uint nP
 
   DataSetCreateProps props;
   props.add(Chunking(std::vector<hsize_t>{1, nPressurePoints}));
-  _presssureDataset = file.createDataSet(TAG_PRESSURES, dataspace, create_datatype<dfloat>(), props);
+  _presssureDataset = file.createDataSet(TAG_PRESSURES, dataspace, create_datatype<float>(), props);
   
   H5Easy::dumpAttribute(file, TAG_PRESSURES, "time_steps", timeVector);
 }
 
 void AcousticH5CompactWriter::write(acoustics_t *acoustics, uint iter)
 {
-  auto conn = std::vector<std::vector<uint>>();
-  auto x1d = std::vector<dfloat>();
-  auto y1d = std::vector<dfloat>();
-  auto z1d = std::vector<dfloat>();
-  auto p1d = std::vector<dfloat>();
+  auto conn = std::vector<std::vector<unsigned int>>();
+  auto x1d = std::vector<float>();
+  auto y1d = std::vector<float>();
+  auto z1d = std::vector<float>();
+  auto p1d = std::vector<float>();
 
   extractUniquePoints(acoustics->mesh, acoustics, conn, x1d, y1d, z1d, p1d);
 
@@ -246,9 +252,9 @@ void AcousticH5CompactWriter::write(acoustics_t *acoustics, uint iter)
 }
 
 void AcousticH5CompactWriter::writeMeshH5(string fileName, string fileTag,
-                                          std::vector<dfloat> &x1d, 
-                                          std::vector<dfloat> &y1d, 
-                                          std::vector<dfloat> &z1d, 
+                                          std::vector<float> &x1d, 
+                                          std::vector<float> &y1d, 
+                                          std::vector<float> &z1d, 
                                           uint fileAttr)
 {
   File file(fileName, fileAttr);
@@ -266,23 +272,23 @@ void AcousticH5CompactWriter::writeMeshH5(string fileName, string fileTag,
     meshData[i][2] = z1d[i];
   }
 
-  DataSet dataset = file.createDataSet<dfloat>(fileTag, DataSpace::From(meshData));
+  DataSet dataset = file.createDataSet<float>(fileTag, DataSpace::From(meshData));
   dataset.write(meshData);
 }
 
 void AcousticH5CompactWriter::writeMeshH5(string fileName, string fileTag, string connTag,
-                                          std::vector<dfloat> &x1d, 
-                                          std::vector<dfloat> &y1d, 
-                                          std::vector<dfloat> &z1d,
-                                          std::vector<std::vector<uint>> &connData, 
+                                          std::vector<float> &x1d, 
+                                          std::vector<float> &y1d, 
+                                          std::vector<float> &z1d,
+                                          std::vector<std::vector<unsigned int>> &connData, 
                                           uint fileAttr)
 {
   File file(fileName, fileAttr);
 
   size_t Nelem = x1d.size();
 
-  std::vector<dfloat> rowMesh(3);
-  std::vector<std::vector<dfloat>> meshData(Nelem, rowMesh);  
+  std::vector<float> rowMesh(3);
+  std::vector<std::vector<float>> meshData(Nelem, rowMesh);  
 
   // compute plot node coordinates on the fly
   for (dlong i = 0; i < x1d.size(); i++)
@@ -292,9 +298,9 @@ void AcousticH5CompactWriter::writeMeshH5(string fileName, string fileTag, strin
     meshData[i][2] = z1d[i];
   }
 
-  DataSet dataset = file.createDataSet<dfloat>(fileTag, DataSpace::From(meshData));
+  DataSet dataset = file.createDataSet<float>(fileTag, DataSpace::From(meshData));
   dataset.write(meshData);
 
-  dataset = file.createDataSet<int>(connTag, DataSpace::From(connData));
+  dataset = file.createDataSet<unsigned int>(connTag, DataSpace::From(connData));
   dataset.write(connData);
 }

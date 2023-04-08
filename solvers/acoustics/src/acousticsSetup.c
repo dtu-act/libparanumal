@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "acoustics.h"
+#include "acousticsSources.h"
 #include <stdio.h>
 #include <vector>
 #include <unordered_map>
@@ -153,8 +154,9 @@ void sourceSetup(mesh_t *mesh, acoustics_t *acoustics, setupAide &newOptions)
   }
 }
 
-void setupRectilinearGrid(mesh_t *mesh, vector<dfloat> xaxis, vector<dfloat> yaxis, vector<dfloat> zaxis, int ppw,
-  vector<dfloat> &x1dRectilinear, vector<dfloat> &y1dRectilinear, vector<dfloat> &z1dRectilinear) {
+template <typename T, typename U>
+void setupRectilinearGrid(mesh_t *mesh, std::vector<T> xaxis, std::vector<T> yaxis, std::vector<T> zaxis, int ppw,
+  std::vector<U> &x1dRectilinear, std::vector<U> &y1dRectilinear, std::vector<U> &z1dRectilinear) {
   int Ntot = xaxis.size()*yaxis.size()*zaxis.size();
   x1dRectilinear.resize(Ntot);
   y1dRectilinear.resize(Ntot);
@@ -163,9 +165,9 @@ void setupRectilinearGrid(mesh_t *mesh, vector<dfloat> xaxis, vector<dfloat> yax
   for (arma::uword i=0; i < xaxis.size(); ++i) { 
     for (arma::uword j=0; j < yaxis.size(); ++j) { 
       for (arma::uword k=0; k < zaxis.size(); ++k) { 
-        x1dRectilinear[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = xaxis[i];
-        y1dRectilinear[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = yaxis[j];
-        z1dRectilinear[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = zaxis[k];
+        x1dRectilinear[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = (U)xaxis[i];
+        y1dRectilinear[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = (U)yaxis[j];
+        z1dRectilinear[i * (yaxis.size() * zaxis.size()) + j * zaxis.size() + k] = (U)zaxis[k];
       }
     }
   }
@@ -197,12 +199,17 @@ void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, d
   setupRectilinearGrid(mesh,xaxis,yaxis,zaxis,ppw_initial,
     acoustics->x1dRectilinear,acoustics->y1dRectilinear,acoustics->z1dRectilinear);
   
+  std::vector<dfloat> x1dRectilinear(acoustics->x1dRectilinear.begin(), acoustics->x1dRectilinear.end());
+  std::vector<dfloat> y1dRectilinear(acoustics->y1dRectilinear.begin(), acoustics->y1dRectilinear.end());
+  std::vector<dfloat> z1dRectilinear(acoustics->z1dRectilinear.begin(), acoustics->z1dRectilinear.end());
+  std::vector<dfloat> pRectilinearMesh(acoustics->pRectilinearMesh.begin(), acoustics->pRectilinearMesh.end());  
+
   printf("Calculating GRF...\n");  
-  grfWindowed(acoustics->x1dRectilinear, 
-              acoustics->y1dRectilinear, 
-              acoustics->z1dRectilinear,
+  grfWindowed(x1dRectilinear, 
+              y1dRectilinear, 
+              z1dRectilinear,
               xminmax,yminmax,zminmax,
-              1.0, length_scale, sigma0_window, acoustics->pRectilinearMesh);
+              1.0, length_scale, sigma0_window, pRectilinearMesh);
   printf("... done\n");
 
   // INTERPOLATE TO QUADRATURE POINTS
@@ -211,7 +218,7 @@ void grfSourceSetup(mesh_t *mesh, acoustics_t *acoustics, dfloat length_scale, d
   Btwxt::GridAxis zaxis_(zaxis, Btwxt::Method::CUBIC);
 
   std::vector<Btwxt::GridAxis> grf_grid{xaxis_, yaxis_, zaxis_};
-  Btwxt::GriddedData gridded_data(grf_grid, {acoustics->pRectilinearMesh});
+  Btwxt::GriddedData gridded_data(grf_grid, {pRectilinearMesh});
   Btwxt::RegularGridInterpolator grf_interpolator(gridded_data);
 
   for (dlong e = 0; e < mesh->Nelements; ++e)
@@ -254,9 +261,9 @@ void initializeGridsWithGaussianSource(mesh_t *mesh, acoustics_t *acoustics, dfl
   int Ny = ceil((yminmax[1]-yminmax[0])/(mesh->c/(acoustics->fmax*ppw_initial)));
   int Nz = ceil((zminmax[1]-zminmax[0])/(mesh->c/(acoustics->fmax*ppw_initial)));
 
-  auto xaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(xminmax[0],xminmax[1], Nx));
-  auto yaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(yminmax[0],yminmax[1], Ny));
-  auto zaxis = arma::conv_to< std::vector<dfloat> >::from(arma::linspace(zminmax[0],zminmax[1], Nz));
+  auto xaxis = arma::conv_to< std::vector<float> >::from(arma::linspace(xminmax[0],xminmax[1], Nx));
+  auto yaxis = arma::conv_to< std::vector<float> >::from(arma::linspace(yminmax[0],yminmax[1], Ny));
+  auto zaxis = arma::conv_to< std::vector<float> >::from(arma::linspace(zminmax[0],zminmax[1], Nz));
 
   acoustics->rectilinearMeshShape[0] = xaxis.size();
   acoustics->rectilinearMeshShape[1] = yaxis.size();
@@ -282,7 +289,7 @@ void initializeGridWithGaussianSource(mesh_t *mesh, acoustics_t *acoustics, dflo
       dlong qbase = e * mesh->Np * mesh->Nfields + n;
 
       dfloat vel_x = 0, vel_y = 0, vel_z = 0;
-      auto pressure = gaussianSource(x, y, z, 0, sloc, sigma0);
+      auto pressure = gaussianSource(x, y, z, 0.0, sloc, sigma0);
 
       acoustics->q[qbase + 0 * mesh->Np] = pressure;
       acoustics->q[qbase + 1 * mesh->Np] = vel_x;

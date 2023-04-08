@@ -10,8 +10,8 @@
 
 std::string generateUUID(int length);
 void extractUniquePoints(mesh_t *mesh, acoustics_t *acoustics, 
-  std::vector<std::vector<uint>> &conn, std::vector<dfloat> &x1d, 
-  std::vector<dfloat> &y1d, std::vector<dfloat> &z1d, std::vector<dfloat> &p1d);
+  std::vector<std::vector<uint>> &conn, std::vector<float> &x1d, 
+  std::vector<float> &y1d, std::vector<float> &z1d, std::vector<float> &p1d);
 void meshMinMax(mesh_t *mesh, dfloat xminmax[2], dfloat yminmax[2], dfloat zminmax[2]);
 void pointReader3D(char *fileName, std::vector<dfloat> &VX, std::vector<dfloat> &VY, std::vector<dfloat> &VZ);
 

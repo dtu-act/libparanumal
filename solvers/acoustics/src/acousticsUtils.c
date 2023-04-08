@@ -75,10 +75,10 @@ void pointReader3D(char *fileName, std::vector<dfloat> &VX, std::vector<dfloat> 
 
   fclose(fp);
 }
-
+ 
 void extractUniquePoints(mesh_t *mesh, acoustics_t *acoustics, 
   std::vector<std::vector<uint>> &conn, 
-  std::vector<dfloat> &x1d, std::vector<dfloat> &y1d, std::vector<dfloat> &z1d, std::vector<dfloat> &p1d)
+  std::vector<float> &x1d, std::vector<float> &y1d, std::vector<float> &z1d, std::vector<float> &p1d)
 {  
   struct Coord3D { dfloat x, y, z; };
 
@@ -118,12 +118,12 @@ void extractUniquePoints(mesh_t *mesh, acoustics_t *acoustics,
       if (ret.second)
       {
         // a new coordinate set was found
-        x1d.push_back(x);
-        y1d.push_back(y);
-        z1d.push_back(z);
+        x1d.push_back((float)x);
+        y1d.push_back((float)y);
+        z1d.push_back((float)z);
 
         dlong qbase = e * mesh->Np * mesh->Nfields + n;
-        p1d.push_back(acoustics->q[qbase + 0 * mesh->Np]);
+        p1d.push_back((float)acoustics->q[qbase + 0 * mesh->Np]);
       }
 
       conn[e][n] = ret.first->second;

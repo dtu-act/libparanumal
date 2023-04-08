@@ -23,7 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "acoustics.h"
+#include "acousticsSources.h"
 #include <iostream>
 #include <vector>
 #include <math.h>
@@ -37,15 +37,6 @@ using namespace arma;
 
 dfloat gaussianSource(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *sloc, dfloat sxyz, dfloat amplitude) {
   return amplitude*std::exp(-((x - sloc[0])*(x - sloc[0]) + (y - sloc[1])*(y - sloc[1]) + (z - sloc[2])*(z - sloc[2]))/(sxyz*sxyz));
-}
-
-void gaussianSource(const vector<dfloat> x1d, const vector<dfloat> y1d, const vector<dfloat> z1d, dfloat *sloc, dfloat sxyz, 
-    vector<dfloat> &pressures, dfloat amplitude)
-{
-  pressures.resize(x1d.size());
-  for (uint i=0; i < x1d.size(); ++i) { 
-    pressures[i] = gaussianSource(x1d[i],y1d[i],z1d[i],0,sloc,sxyz,amplitude);
-  }
 }
 
 #if INCLUDE_GRF

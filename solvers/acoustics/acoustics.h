@@ -38,8 +38,7 @@ SOFTWARE.
 #include "mesh2D.h"
 #include "mesh3D.h"
 
-// block size for reduction (hard coded)
-#define blockSize 256
+#define blockSize 256 // block size for reduction (hard coded)
 #define INCLUDE_GRF 0 // include Gaussian random fields
 #define AMPLITUDE 2   // source multiplication factor
 
@@ -72,10 +71,10 @@ typedef struct {
 
   dfloat xminmax[2], yminmax[2], zminmax[2];
   
-  std::vector<dfloat> pRectilinearMesh;
-  std::vector<dfloat> x1dRectilinear;
-  std::vector<dfloat> y1dRectilinear;
-  std::vector<dfloat> z1dRectilinear;
+  std::vector<float> pRectilinearMesh;
+  std::vector<float> x1dRectilinear;
+  std::vector<float> y1dRectilinear;
+  std::vector<float> z1dRectilinear;
   dfloat rectilinearMeshShape[3];
   
   //---------RECEIVER---------
@@ -252,15 +251,6 @@ void acousticsError(acoustics_t *acoustics, dfloat time);
 
 void acousticsCavitySolution(dfloat x, dfloat y, dfloat z, dfloat t,
 		       dfloat *u, dfloat *v, dfloat *w, dfloat *p);
-
-dfloat gaussianSource(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *sloc, dfloat sxyz, dfloat amplitude = AMPLITUDE);
-void gaussianSource(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d, dfloat *sloc, dfloat sxyz, 
-    vector<dfloat> &pressures, dfloat ampl = AMPLITUDE);
-#if INCLUDE_GRF
-void grfWindowed(vector<dfloat> x1d, vector<dfloat> y1d, vector<dfloat> z1d, 
-    dfloat xminmax[2], dfloat yminmax[2], dfloat zminmax[2], 
-    dfloat sigma_0, dfloat l_0, dfloat sigma0_window, vector<dfloat> &samples_out, dfloat amplitude = AMPLITUDE);
-#endif
 
 int acousticsWriteIRs(acoustics_t *acoustics, setupAide &newOptions);
 void acousticsWriteSimulationSettings(acoustics_t *acoustics, string filename);
