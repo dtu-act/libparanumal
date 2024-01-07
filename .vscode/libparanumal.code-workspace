@@ -76,7 +76,8 @@
 			"valarray": "c",
 			"algorithm": "c",
 			"btwxt.h": "c",
-			"h5file.hpp": "c"
+			"h5file.hpp": "c",
+			"catch.hpp": "c"
 		}
 	}
 }

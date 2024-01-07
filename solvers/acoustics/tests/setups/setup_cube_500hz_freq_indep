@@ -50,13 +50,13 @@ tests/setups/receivers_cube.dat
 NONE
 
 [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output wave field
-8
+2
 
 [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
 GAUSSIAN
 
-; [GRF_LENGTH_SCALE] # Gaussian random field length scale: bigger values lead to smoother functions
-; 0.3
+[GAUSSIAN_SOURCE_POS]
+FIXED
 
 [SXYZ] # OPTIONAL: Width of initial pulse
 0.4

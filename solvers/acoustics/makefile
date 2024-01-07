@@ -130,10 +130,7 @@ OBJS_MAIN    = \
 ./src/acousticsMain.o
 
 OBJS_TESTS    = \
-./tests/acousticsTestMain.o \
-./tests/utils/comparePressureFiles.o \
-./tests/utils/compareFiles.o \
-./tests/utils/openFile.o
+./tests/acousticsTestMain.o
 
 acousticsMain:$(OBJS) $(OBJS_MAIN)
 	$(LD)  $(LDFLAGS)  -o acousticsMain $(OBJS) $(OBJS_MAIN) $(paths) $(LIBS)

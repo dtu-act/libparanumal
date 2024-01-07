@@ -50,10 +50,13 @@ tests/setups/receiver_cylinder.dat
 NONE
 
 [TEMPORAL_PPW_OUTPUT] # temporal resolution of the output pressure field
-8
+2
 
 [SOURCE_TYPE] # GAUSSIAN | GRF (gaussian random fields)
 GAUSSIAN
+
+[GAUSSIAN_SOURCE_POS]
+FIXED
 
 [SXYZ] # Width of initial pulse
 0.8

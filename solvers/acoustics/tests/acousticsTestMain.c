@@ -32,16 +32,22 @@ SOFTWARE.
 //#define CATCH_CONFIG_MAIN  // This tells Catch to provide a main() - only do this in one cpp file
 
 #define CATCH_CONFIG_RUNNER
-#include<acoustics.h>
-#include<acousticsTests.h>
-#include<filesystem>
-#include"catch.hpp" // <catch2/catch.hpp>
-#include<limits.h>
-#include<stdio.h> 
-#include<string.h> 
-#include<mpi.h>
+#include <acoustics.h>
+#include <acousticsTests.h>
+#include "catch.hpp" // <catch2/catch.hpp>
+#include <mpi.h>
+#include <tinywav.h>
+
+#include <filesystem>
+#include <limits.h>
+#include <stdio.h> 
+#include <string.h> 
+#include <vector>
+
 
 namespace fs = std::filesystem;
+
+#define BLOCK_SIZE 512
 
 int main( int argc, char* argv[] ) {
     MPI_Init(&argc, &argv);
@@ -51,17 +57,32 @@ int main( int argc, char* argv[] ) {
 }
 
 void compareAndCleanup(string filepathGen, string filepathRef, string dirGenCleanup) {
-    FILE *iFPGen = NULL;
-    FILE *iFPRef = NULL;
 
-    REQUIRE( openFile(filepathGen, &iFPGen) == 0 );
-    REQUIRE( openFile(filepathRef, &iFPRef) == 0 );
-        
-    int line;        
-    REQUIRE( comparePressureFiles(iFPGen, iFPRef, &line, 10e-8) == 0 );
+    TinyWav wavefileGen;
+    tinywav_open_read(&wavefileGen, 
+        filepathGen.c_str(),
+        TW_INLINE
+    );
 
-    fclose(iFPGen);
-    fclose(iFPRef);
+    float samplesGen[BLOCK_SIZE]{0};
+    tinywav_read_f(&wavefileGen, samplesGen, BLOCK_SIZE);
+
+    TinyWav wavefileRef;
+    tinywav_open_read(&wavefileRef, 
+        filepathRef.c_str(),
+        TW_INLINE
+    );
+
+    float samplesRef[BLOCK_SIZE]{0};
+    tinywav_read_f(&wavefileRef, samplesRef, BLOCK_SIZE);
+
+    std::vector<float> samplesGen_vec(samplesGen, samplesGen + BLOCK_SIZE);
+    std::vector<float> samplesRef_vec(samplesRef, samplesRef + BLOCK_SIZE);   
+
+    REQUIRE( samplesGen_vec == samplesRef_vec);
+    
+    tinywav_close_read(&wavefileGen);
+    tinywav_close_read(&wavefileRef);
 
     // cleanup
     std::error_code ec;
@@ -74,61 +95,61 @@ void compareAndCleanup(string filepathGen, string filepathRef, string dirGenClea
 // STUDIO
 TEST_CASE( "Studio with freq. indep. boundaries", "[studio][freq_indep]" ) {
     string dirGen = "tests/data/generated/studio_250hz_p4_5ppw_freq_indep/";
-    string filepathGen = dirGen + "studio_250hz_p4_5ppw_freq_indep_00.txt";
-    string filepathRef = "tests/data/ref/studio_250hz_p4_5ppw_freq_indep_00_REF.txt";
+    string filepathGen = dirGen + "00_x0=['0.70', '1.00', '1.50']_r0=['1.00', '3.00', '1.70'].wav";
+    string filepathRef = "tests/data/ref/studio_250hz_p4_5ppw_freq_indep_00_REF.wav";
 
     setupAide newOptions("tests/setups/setup_studio_250hz_freq_indep");
 
-    REQUIRE( acousticsSetupMain(newOptions) == 0 );
+    REQUIRE( acousticsSetupMain(newOptions) == EXIT_SUCCESS );
     
     compareAndCleanup(filepathGen, filepathRef, dirGen);
 }
 
 TEST_CASE( "Studio with freq. dep. LR boundaries", "[studio][freq_dep_lr]" ) {
     string dirGen = "tests/data/generated/studio_250hz_p4_5ppw_freq_dep_lr/";
-    string filepathGen = dirGen + "studio_250hz_p4_5ppw_freq_dep_lr_00.txt";
-    string filepathRef = "tests/data/ref/studio_250hz_p4_5ppw_freq_dep_lr_00_REF.txt";
+    string filepathGen = dirGen + "00_x0=['0.70', '1.00', '1.50']_r0=['1.00', '3.00', '1.70'].wav";
+    string filepathRef = "tests/data/ref/studio_250hz_p4_5ppw_freq_dep_lr_00_REF.wav";
 
     setupAide newOptions("tests/setups/setup_studio_250hz_freq_dep_lr");
 
-    REQUIRE( acousticsSetupMain(newOptions) == 0 );
+    REQUIRE( acousticsSetupMain(newOptions) == EXIT_SUCCESS );
     
     compareAndCleanup(filepathGen, filepathRef, dirGen);
 }
 
 TEST_CASE( "Studio with perf. refl. boundaries", "[studio][perf_refl]" ) {
     string dirGen = "tests/data/generated/studio_250hz_p4_5ppw_perf_refl/";
-    string filepathGen = dirGen + "studio_250hz_p4_5ppw_perf_refl_00.txt";
-    string filepathRef = "tests/data/ref/studio_250hz_p4_5ppw_perf_refl_00_REF.txt";
+    string filepathGen = dirGen + "00_x0=['0.70', '1.00', '1.50']_r0=['1.00', '3.00', '1.70'].wav";
+    string filepathRef = "tests/data/ref/studio_250hz_p4_5ppw_perf_refl_00_REF.wav";
 
     setupAide newOptions("tests/setups/setup_studio_250hz_perf_refl");
 
-    REQUIRE( acousticsSetupMain(newOptions) == 0 );
+    REQUIRE( acousticsSetupMain(newOptions) == EXIT_SUCCESS );
     
     compareAndCleanup(filepathGen, filepathRef, dirGen);
 }
 
 TEST_CASE( "Studio with combined boundaries (freq. indep. + LR + perf. refl)", "[studio][combined]" ) {
     string dirGen = "tests/data/generated/studio_250hz_p4_5ppw_combined/";
-    string filepathGen = dirGen + "studio_250hz_p4_5ppw_combined_00.txt";
-    string filepathRef = "tests/data/ref/studio_250hz_p4_5ppw_combined_00_REF.txt";
+    string filepathGen = dirGen + "00_x0=['0.70', '1.00', '1.50']_r0=['1.00', '3.00', '1.70'].wav";
+    string filepathRef = "tests/data/ref/studio_250hz_p4_5ppw_combined_00_REF.wav";
 
     setupAide newOptions("tests/setups/setup_studio_250hz_combined");
 
-    REQUIRE( acousticsSetupMain(newOptions) == 0 );
+    REQUIRE( acousticsSetupMain(newOptions) == EXIT_SUCCESS );
     
     compareAndCleanup(filepathGen, filepathRef, dirGen);
 }
 
-// CURVILINEAR
+// Cylinder
 TEST_CASE( "Cylinder with perf. refl. boundaries", "[cylinder][perf_refl]" ) {
     string dirGen = "tests/data/generated/cylinder_250hz_p8_5ppw_perf_refl/";
-    string filepathGen = dirGen + "cylinder_250hz_p8_5ppw_perf_refl_00.txt";
-    string filepathRef = "tests/data/ref/cylinder_250hz_p8_5ppw_perf_refl_00_REF.txt";
+    string filepathGen = dirGen + "00_x0=['0.00', '0.00', '0.50']_r0=['0.75', '0.00', '0.75'].wav";
+    string filepathRef = "tests/data/ref/cylinder_250hz_p8_5ppw_perf_refl_00_REF.wav";
 
     setupAide newOptions("tests/setups/setup_cylinder_250hz_perf_refl");
 
-    REQUIRE( acousticsSetupMain(newOptions) == 0 );
+    REQUIRE( acousticsSetupMain(newOptions) == EXIT_SUCCESS );
     
     compareAndCleanup(filepathGen, filepathRef, dirGen);
 }
@@ -136,12 +157,12 @@ TEST_CASE( "Cylinder with perf. refl. boundaries", "[cylinder][perf_refl]" ) {
 // CUBE (use this for testing purposes using argument [cube])
 TEST_CASE( "Cube with freq. indep. (quick)", "[cube]" ) {
     string dirGen = "tests/data/generated/cube_500hz_p4_5ppw_freq_indep/";
-    string filepathGen = dirGen + "cube_500hz_p4_5ppw_freq_indep_00.txt";
-    string filepathRef = "tests/data/ref/cube_500hz_p4_5ppw_freq_indep_00_REF.txt";
+    string filepathGen = dirGen + "00_x0=['0.50', '0.50', '0.50']_r0=['0.10', '0.10', '0.10'].wav";
+    string filepathRef = "tests/data/ref/cube_500hz_p4_5ppw_freq_indep_00_REF.wav";
 
     setupAide newOptions("tests/setups/setup_cube_500hz_freq_indep");
 
-    REQUIRE( acousticsSetupMain(newOptions) == 0 );
+    REQUIRE( acousticsSetupMain(newOptions) == EXIT_SUCCESS );
     
     compareAndCleanup(filepathGen, filepathRef, dirGen);
 }

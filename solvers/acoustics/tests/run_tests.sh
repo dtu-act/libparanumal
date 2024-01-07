@@ -1,6 +1,6 @@
 #!/bin/bash
 #BSUB -q gpuv100
-#BSUB -n 1
+#BSUB -n 4
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -R "span[hosts=1]"
 #BSUB -R "rusage[mem=8GB]"
@@ -24,4 +24,4 @@ export OCCA_DIR=~/libparanumal/occa
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 
 # Run solver
-mpirun -n 1 ./acousticsTestMain # [cylinder][freq_indep]
+mpirun -n 1 ./acousticsTestMain # [studio][freq_dep_lr]
